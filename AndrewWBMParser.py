@@ -58,6 +58,7 @@ class AndrewWBMParser(HTMLParser):
         self.DeliveredLumiByLS = {}
         self.LiveLumiByLS = {}
         self.PSColumnByLS = {}
+        self.PrescaleColumnString=''
         self.AvInstLumi = 0
         self.AvDeliveredLumi = 0
         self.AvLiveLumi = 0
@@ -218,23 +219,30 @@ class AndrewWBMParser(HTMLParser):
             self.tmpRow.append(data)
 
     def ParsePage1(self):   ## Parse the Run list page to figure out what the most recent run was
-        # Find the first non-empty row on page one
-        MostRecent = self.table[0]
-        for line in self.table:
-            if line == []:
-                continue # skip empty rows, not exactly sure why they show up
-            MostRecent = line
-            break # find first non-empty line
-        TriggerMode = MostRecent[3]
-        self.RunNumber = MostRecent[0]    ## Set the run number
+        try:
+            # Find the first non-empty row on page one
+            MostRecent = self.table[0]
+            print MostRecent
+            for line in self.table:
+                if line == []:
+                    continue # skip empty rows, not exactly sure why they show up
+                MostRecent = line
+                break # find first non-empty line
+            TriggerMode = MostRecent[3]
+            self.RunNumber = MostRecent[0]    ## Set the run number
 
-        isCollisions = not (TriggerMode.find('l1_hlt_collisions') == -1)  ## Is the most recent run a collisions run?
-        if not isCollisions:
+        
+
+            isCollisions = not (TriggerMode.find('l1_hlt_collisions') == -1)  ## Is the most recent run a collisions run?
+            if not isCollisions:
+                return ''
+            for link in self.hyperlinks:
+                if not link.find('RUN='+self.RunNumber)==-1:
+                    self.RunPage = link   ## Get the link to the run summary page and return
+                    return link
+        except:
+            print 'No Recent run'
             return ''
-        for link in self.hyperlinks:
-            if not link.find('RUN='+self.RunNumber)==-1:
-                self.RunPage = link   ## Get the link to the run summary page and return
-                return link
         
     def ParseRunPage(self):
         for entry in self.hyperlinks:
@@ -308,7 +316,7 @@ class AndrewWBMParser(HTMLParser):
         if EndLS <= StartLS:
             print "In ParseLumiPage, EndLS <= StartLS"
 
-        print "In ParseLumiPage, StartLS = "+str(StartLS)+" and EndLS = "+str(EndLS)
+        #print "In ParseLumiPage, StartLS = "+str(StartLS)+" and EndLS = "+str(EndLS)
 
         self.AvLiveLumi = 1000*(self.LiveLumiByLS[EndLS] - self.LiveLumiByLS[StartLS])/(23.3*(EndLS-StartLS))
         self.AvDeliveredLumi = 1000*(self.DeliveredLumiByLS[EndLS] - self.DeliveredLumiByLS[StartLS])/(23.3*(EndLS-StartLS))
@@ -319,8 +327,10 @@ class AndrewWBMParser(HTMLParser):
                 value_iterator+=1
         self.AvInstLumi = self.AvInstLumi / value_iterator
 
-        self.LumiInfo = [self.LSByLS, self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.AvInstLumi, self.AvDeliveredLumi, self.AvLiveLumi]
+        ### PS column info
 
+        self.LumiInfo = [self.LSByLS, self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.AvInstLumi, self.AvDeliveredLumi, self.AvLiveLumi]
+            
         return [self.LumiInfo,StartLS,EndLS]
     
 

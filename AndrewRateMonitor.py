@@ -10,12 +10,18 @@ import getopt
 import time
 from colors import *
 from TablePrint import *
+from AddTableInfo import MoreTableInfo
 from math import *
 
 WBMPageTemplate = "http://cmswbm/cmsdb/servlet/RunSummary?RUN=%s&DB=cms_omds_lb"
 WBMRunInfoPage = "https://cmswbm/cmsdb/runSummary/RunSummary_1.html"
 
 RefRunNameTemplate = "RefRuns/Run_%s.pk"
+
+# define a function that clears the terminal screen
+def clear():
+    print("\x1B[2J")
+
 
 def usage():
     print sys.argv[0]+" [Options]"
@@ -60,6 +66,12 @@ def main():
     PrintLumi         = False
     RefRunNum         = int(Config.ReferenceRun)
     ShowPSTriggers    = True
+    
+
+    if Config.ShifterMode:
+        print "ShifterMode!!"
+    else:
+        print "ExpertMode"
 
     if Config.LSWindow > 0:
         FirstLS = -1*Config.LSWindow
@@ -92,17 +104,17 @@ def main():
             print "Invalid Option "+a
             sys.exit(1)
 
+    
     RefLumisExists = False
     if RefRunNum > 0:
         RefRates = {}
         for Iterator in range(1,100):
-
             if RefLumisExists:  ## Quits at the end of a run
                 if max(RefLumis[0]) <= (Iterator+1)*10:
                     break
 
             RefRunFile = RefRunNameTemplate % str( RefRunNum*100 + Iterator )  # place to save the reference run info
-
+            print "RefRunFile=",RefRunFile
             if not os.path.exists(RefRunFile[:RefRunFile.rfind('/')]):  # folder for ref run file must exist
                 print "Reference run folder does not exist, please create" # should probably create programmatically, but for now force user to create
                 print RefRunFile[:RefRunFile.rfind('/')]
@@ -113,13 +125,14 @@ def main():
                 print "Creating ..."
                 try:
                     RefParser = GetRun(RefRunNum, RefRunFile, True, Iterator*10, (Iterator+1)*10)
+                    print "parsing"
                 except:
                     print "GetRun failed from LS "+str(Iterator*10)+" to "+str((Iterator+1)*10)
                     continue
                     
             else: # otherwise load it from the file
                 RefParser = pickle.load( open( RefRunFile ) )
-
+                print "loading"
             if not RefLumisExists:
                 RefLumis = RefParser.LumiInfo
                 RefLumisExists = True
@@ -137,10 +150,10 @@ def main():
     SaveRun = False
     if CompareRunNum=="":  # if no run # specified on the CL, get the most recent run
         RunListParser = AndrewWBMParser()
-
+        
         RunListParser._Parse(WBMRunInfoPage)  # this is the page that lists all the runs in the last 24 hours with at least 1 trigger
         RunListPage = RunListParser.ParsePage1()
-        if RunListPage == '':  # this will be '' if the mode of the most recent run is not l1_hlt_collisions/v*
+        if RunListPage == '':  #this will be '' if the mode of the most recent run is not l1_hlt_collisions/v*
             print "Most Recent run, "+str(RunListParser.RunNumber)+", is NOT collisions"
             sys.exit(0) # maybe we should walk back and try to find a collisions run, but for now just exit
         CompareRunNum = RunListParser.RunNumber
@@ -148,11 +161,11 @@ def main():
 
     HeadRunFile = RefRunNameTemplate % CompareRunNum
 
-    if os.path.exists(HeadRunFile):  # check if a run file for the run we want to compare already exists, it probably won't but just in case we don't have to interrogate WBM
+   
+    if os.path.exists(HeadRunFile):  #check if a run file for the run we want to compare already exists, it probably won't but just in case we don't have to interrogate WBM
         HeadParser = pickle.load( open( HeadRunFile ) )
     else:
         HeadParser = GetRun(CompareRunNum,HeadRunFile,SaveRun,FirstLS,LastLS)
-
     if PrintLumi:
         for LS in HeadParser.LumiInfo[0]:
             try:
@@ -163,34 +176,38 @@ def main():
                 print "Lumisection "+str(LS-1)+" was not parsed from the LumiSections page"
                                                                                                                                  
         sys.exit(0)
+
     if RefRunNum == 0:
         RefRates = 0
         RefLumis = 0
         LastSuccessfulIterator = 0
 
-    RunComparison(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
-
-    if FindL1Zeros:
-        L1Zeros=[]
-        for key in HeadParser.TriggerRates:
-            ## Skip events in the skip list
-            skipTrig=False
-            ##for trig in Config.ExcludeList:
-                ##if not trigN.find(trig) == -1:
-                    ##skipTrig=True
-                    ##break
-            if skipTrig:
-                continue
-                ## if no events pass the L1, add it to the L1Zeros list if not already there
-            if HeadParser.TriggerRates[key][1]==0 and not HeadParser.TriggerRates[key][4] in L1Zeros:
-                L1Zeros.append(HeadParser.TriggerRates[key][4])
-        if len(L1Zeros) == 0:
-            print "It looks like no masked L1 bits seed trigger paths"
-        else:
-            print "The following seeds are used to seed HLT bits but accept 0 events:"
-            print "The average lumi of this run is: "+str(round(HeadParser.LumiInfo[6],1))+"e30"
-            for Seed in L1Zeros:
-                print Seed
+### Now actually compare the rates, make tables and look at L1. Loops for ShifterMode
+    CheckTriggerList(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+   
+    try:
+        while True:
+            RunComparison(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+    
+            if FindL1Zeros:
+                CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+            if int(Config.ShifterMode)==0:
+                print "Expert Mode. Quitting."
+                sys.exit(0)
+            else:
+                print "Shifter Mode. Continuing"
+            
+            print "Sleeping for 1 minute before repeating  "
+            for iSleep in range(6):
+                for iDot in range(iSleep+1):
+                    print ".",
+                print "."
+                time.sleep(10)
+            clear()
+        #end while True
+    #end try
+    except KeyboardInterrupt:
+        print "Quitting. Peace Out."
 
             
 def RunComparison(HeadParser,RefRunNum,RefRates,RefLumis,Iterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config):
@@ -213,6 +230,7 @@ def RunComparison(HeadParser,RefRunNum,RefRates,RefLumis,Iterator,ShowPSTriggers
     [L1_zero,HLT_zero,IdealPrescale,IdealHLTPrescale,n1,n2,L1,L2,H1,H2] = TotalPSInfo
     [RealPrescale,xLS,L1,L2,H1,H2] = CorrectedPSInfo
 
+    
     for key in TriggerRates:
 ##  SKIP triggers in the skip list
         skipTrig=False
@@ -228,7 +246,7 @@ def RunComparison(HeadParser,RefRunNum,RefRates,RefLumis,Iterator,ShowPSTriggers
             continue
                 
         [TriggerRate,L1Pass,PSPass,RealHLTPrescale,Seed,StartLS,EndLS] = TriggerRates[key]
-
+        
         OverallPrescale = RealPrescale[key]
 
         PSCorrectedRate = TriggerRate * OverallPrescale
@@ -236,7 +254,10 @@ def RunComparison(HeadParser,RefRunNum,RefRates,RefLumis,Iterator,ShowPSTriggers
 
 
         if RefRunNum == 0:  ## Use rate prediction functions
+           
             PSCorrectedExpectedRate = Config.GetExpectedRate(key,AvLiveLumi)
+           
+            
             if PSCorrectedExpectedRate < 0:  ##This means we don't have a prediction for this trigger
                 continue
             ExpectedRate = round((PSCorrectedExpectedRate / OverallPrescale),2)
@@ -252,11 +273,18 @@ def RunComparison(HeadParser,RefRunNum,RefRates,RefLumis,Iterator,ShowPSTriggers
                 continue
 
             VC = ""
+            
             Data.append([key,TriggerRate,ExpectedRate,PerDiff,OverallPrescale,VC]) 
             continue
 
         else:  ## Use a reference run
-
+            ## cheap trick to only get triggers in list when in shifter mode
+            print "shifter mode=",int(Config.ShifterMode)
+            if int(Config.ShifterMode)==1:
+                PSCorrectedExpectedRate = Config.GetExpectedRate(key,AvLiveLumi)
+                if PSCorrectedExpectedRate < 0:  ##This means we don't have a prediction for this trigger
+                    continue
+            
             if not L1Prescale[HLTSeed[key]][StartLS] == 1 or not L1Prescale[HLTSeed[key]][EndLS] == 1:
                 continue
             
@@ -292,9 +320,42 @@ def RunComparison(HeadParser,RefRunNum,RefRates,RefLumis,Iterator,ShowPSTriggers
             VC = ""
             Data.append([key,TriggerRate,ScaledRefRate,PerDiff,OverallPrescale,VC]) 
             continue
-            
+
+    
     PrettyPrintTable(Header,Data,[80,10,10,10,10,20],Warn)
 
+    MoreTableInfo(PSColumnByLS,LiveLumiByLS,DeliveredLumiByLS,StartLS,EndLS)
+
+def CheckTriggerList(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config):
+    print "checking trigger list"
+
+def CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config):
+    L1Zeros=[]
+    IgnoreBits = ["L1_PreCollisions","L1_InterBunch_Bsc","L1_BeamHalo","L1_BeamGas_Hf"]
+    for key in HeadParser.TriggerRates:
+    ## Skip events in the skip list
+        skipTrig=False
+    ##for trig in Config.ExcludeList:
+    ##if not trigN.find(trig) == -1:
+    ##skipTrig=True
+    ##break
+        if skipTrig:
+            continue
+        ## if no events pass the L1, add it to the L1Zeros list if not already there
+        if HeadParser.TriggerRates[key][1]==0 and not HeadParser.TriggerRates[key][4] in L1Zeros:
+            if HeadParser.TriggerRates[key][4].find('L1_BeamHalo')==-1 and HeadParser.TriggerRates[key][4].find('L1_PreCollisions')==-1 and HeadParser.TriggerRates[key][4].find('L1_InterBunch_Bsc')==-1:
                 
+                L1Zeros.append(HeadParser.TriggerRates[key][4])
+                print "L1Zeros=", L1Zeros
+        
+    if len(L1Zeros) == 0:
+       #print "It looks like no masked L1 bits seed trigger paths"
+        pass
+    else:
+        print "The following seeds are used to seed HLT bits but accept 0 events:"
+    #print "The average lumi of this run is: "+str(round(HeadParser.LumiInfo[6],1))+"e30"
+        for Seed in L1Zeros:
+            print Seed
+        
 if __name__=='__main__':
     main()

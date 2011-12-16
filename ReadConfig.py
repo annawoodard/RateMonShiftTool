@@ -19,6 +19,7 @@ class RateMonConfig:
         self.FindL1Zeros=0
         self.LSWindow=-1
         self.CompareReference=0
+        self.ShifterMode=0
 
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -84,6 +85,9 @@ class RateMonConfig:
                 self.LSWindow=int(arg)
             elif par=="CompareReference":
                 self.CompareReference=int(arg)
+            elif par=="ShifterMode":
+                self.ShifterMode=arg
+            
             else:
                 print "Invalid Option : "+strippedLine
         f.close()
@@ -98,9 +102,13 @@ class RateMonConfig:
     def GetExpectedRate(self,TrigName,lumi):
         for trig,intercept,slope,quad in zip(self.MonitorList,self.MonitorIntercept,self.MonitorSlope,self.MonitorQuad):
             if trig==TrigName:
+                #print "mon list",self.MonitorList
                 if lumi:
                     return intercept + lumi*slope/1000 + lumi*lumi*quad/1000000
                 else:
                     return intercept + 3000*slope/1000 + 3000*3000*quad/1000000
         return -1
 
+
+       
+    

@@ -11,6 +11,7 @@ def GetRun(RunNum, fileName, Save, StartLS=999999, EndLS=111111):
     
     RunSumPage = WBMPageTemplate % str(RunNum)
     
+    
     Parser = AndrewWBMParser()
     Parser._Parse(RunSumPage)
     [HLTLink,LumiLink,L1Link,PrescaleLink,TriggerLink] = Parser.ParseRunPage()
@@ -24,6 +25,7 @@ def GetRun(RunNum, fileName, Save, StartLS=999999, EndLS=111111):
     HLTLink = HLTLink.replace("HLTSummary?","HLTSummary?fromLS="+str(StartLS)+"&toLS="+str(EndLS)+"&")
     Parser._Parse(HLTLink)
     TriggerRates = Parser.ParseHLTSummaryPage(StartLS,EndLS)
+    
  
     Parser._Parse(L1Link)
     L1Rates = Parser.ParseL1Page()
