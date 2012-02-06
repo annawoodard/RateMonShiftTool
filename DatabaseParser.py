@@ -27,33 +27,29 @@ class DatabaseParser:
         self.ConfigId=0
 
         ##-- Defined in ParseHLTSummaryPage --##
-        self.TriggerRates = [] ## contains the HLT rates for the current LS range
-        self.RateTable = []   ## Rates per LS, useful but maybe enormous!
+        self.TriggerRates = {} ## contains the HLT rates for the current LS range
+        self.RateTable = {}   ## Rates per LS, useful but maybe enormous!
 
+        self.nAlgoBits=0
         self.L1PrescaleTable=[]
         self.AvgL1Prescales=[] ## contains the average L1 prescales for the current LS range range
         self.HLTList=[]
-        self.AvgTotalPrescales=[]
+        self.AvgTotalPrescales={}
         self.HLTPrescaleTable=[] ## can't fill this yet
-        self.UnprescaledRates=[]
-        self.PrescaledRates=[]
+        self.UnprescaledRates={}
+        self.PrescaledRates={}
         ##-- Defined in ParseLumiPage --##
         self.LastLSParsed=-1
-        self.LSByLS = []
-        self.InstLumiByLS = []
-        self.DeliveredLumiByLS = []
-        self.LiveLumiByLS = []
-        self.PSColumnByLS = []
+        self.InstLumiByLS = {}
+        self.DeliveredLumiByLS = {}
+        self.LiveLumiByLS = {}
+        self.PSColumnByLS = {}
         self.AvInstLumi = 0
         self.AvDeliveredLumi = 0
         self.AvLiveLumi = 0
-        self.LumiInfo = []  ##Returns
-        self.DeadTime = []
-        self.Physics = []
-
-
-        ##-- Defined in ParseL1Page (not currently used) --##
-        self.L1Rates={}  ##Returns
+        self.LumiInfo = {}  ##Returns
+        self.DeadTime = {}
+        self.Physics = {}
 
         ##-- Defined in ParsePSColumnPage (not currently used) --##
         self.PSColumnChanges=[]  ##Returns
@@ -61,13 +57,13 @@ class DatabaseParser:
         ##-- Defined in ParseTriggerModePage --##
         self.L1TriggerMode={}  ## 
         self.HLTTriggerMode={} ## 
-        self.HLTSeed=[]
+        self.HLTSeed={}
         self.HLTSequenceMap=[]
         self.TriggerInfo = []  ##Returns
 
         ##-- Defined in AssemblePrescaleValues --##
-        self.L1Prescale=[]
-        self.L1IndexNameMap=[]
+        self.L1Prescale={}
+        self.L1IndexNameMap={}
         self.HLTPrescale=[]
         self.MissingPrescale=[]
         self.PrescaleValues=[]  ##Returns
@@ -112,20 +108,14 @@ class DatabaseParser:
 
         query = sqlquery % (self.RunNumber,StartLS,EndLS)
         self.curs.execute(query)
-        self.TriggerRates=['']*len(self.HLTList)
         for L1Pass,PSPass,HLTPass,HLTExcept,name in self.curs.fetchall():
             rate = HLTPass/23.3
             ps = 0
             if PSPass:
                 ps = float(L1Pass)/PSPass
-            if not [name] in self.RateTable:
-                continue
-            nameI = self.GetHLTIndex(name) #self.RateTable.index([name])
-            if nameI==-1:
-                continue
-            self.RateTable[nameI].append([ps,rate])
-            self.TriggerRates[nameI]= [rate,L1Pass,PSPass,ps,StartLS,EndLS]
-        ##self.RateTable
+            self.RateTable[name] = [ps,rate]
+            self.TriggerRates[name]= [rate,L1Pass,PSPass,ps,StartLS,EndLS]
+            
         return self.TriggerRates
 
     def GetTriggerRatesByLS(self,triggerName, minLS=-1, maxLS=9999):
@@ -150,13 +140,12 @@ class DatabaseParser:
         self.curs.execute(query)
         pastLSCol=-1
         for run,ls,psi,inst,live,dlive,dt,dcs,phys in self.curs.fetchall():
-            self.LSByLS.append(ls)
-            self.PSColumnByLS.append(psi)
-            self.InstLumiByLS.append(inst)
-            self.LiveLumiByLS.append(inst)
-            self.DeliveredLumiByLS.append(inst)
-            self.DeadTime.append(dt)
-            self.Physics.append(phys)
+            self.PSColumnByLS[ls]=psi
+            self.InstLumiByLS[ls]=inst
+            self.LiveLumiByLS[ls]=live
+            self.DeliveredLumiByLS[ls]=dlive
+            self.DeadTime[ls]=dt
+            self.Physics[ls]=phys
             if pastLSCol!=-1 and ls!=pastLSCol:
                 self.PSColumnChanges.append([ls,psi])
             pastLSCol=ls
@@ -172,13 +161,13 @@ class DatabaseParser:
         self.AvLiveLumi = 1000*(self.LiveLumiByLS[EndLS] - self.LiveLumiByLS[StartLS])/(23.3*(EndLS-StartLS))
         self.AvDeliveredLumi = 1000*(self.DeliveredLumiByLS[EndLS] - self.DeliveredLumiByLS[StartLS])/(23.3*(EndLS-StartLS))
         value_iterator = 0
-        for value in self.LSByLS:
-            if value >= StartLS and value <= EndLS:
-                self.AvInstLumi+=self.InstLumiByLS[value]
+        for ls,lumi in self.InstLumiByLS.iteritems():
+            if ls >= StartLS and ls <= EndLS:
+                self.AvInstLumi+=lumi
                 value_iterator+=1
         self.AvInstLumi = self.AvInstLumi / value_iterator
 
-        self.LumiInfo = [self.LSByLS, self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.AvInstLumi, self.AvDeliveredLumi, self.AvLiveLumi]
+        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.AvInstLumi, self.AvDeliveredLumi, self.AvLiveLumi]
 
         return [self.LumiInfo,StartLS,EndLS]
     
@@ -192,13 +181,8 @@ class DatabaseParser:
         WHERE MENU_IMPLEMENTATION IN (SELECT L1T_MENU_FK FROM CMS_GT.GT_SETUP WHERE ID='%s')
         ORDER BY ALGO_INDEX""" % (self.GT_Key,)
         self.curs.execute(AlgoNameQuery)
-        nextIndex=0
         for index,name in self.curs.fetchall():
-            while nextIndex<index:
-                self.L1IndexNameMap.append('')
-                nextIndex+=1 ## skips empty seeds
-            self.L1IndexNameMap.append(name)
-            nextIndex+=1
+            self.L1IndexNameMap[name] = index
             
     def GetL1AlgoPrescales(self):
         L1PrescalesQuery= """
@@ -236,6 +220,7 @@ class DatabaseParser:
         for line in tmp[1:]: # now fill it
             for ps,index in zip(line,range(len(line))):
                 self.L1PrescaleTable[index].append(ps)
+        self.nAlgoBits=128
 
     def GetHLTIndex(self,name):
         for i,n in enumerate(self.HLTList):
@@ -244,13 +229,6 @@ class DatabaseParser:
         #print name
         return -1
 
-    def GetL1Index(self,name):
-        for i,n in enumerate(self.L1IndexNameMap):
-            if n==name:
-                return i
-        #print name
-        return -1
-    
     def GetHLTPrescaleMatrix(self,cursor):
         ##NOT WORKING 1/19/2012
         return
@@ -378,10 +356,8 @@ class DatabaseParser:
         """ % (self.HLT_Key,)
         tmpcurs.execute(sqlquery)
         for HLTPath,L1Seed in tmpcurs.fetchall():
-            self.HLTList.append(HLTPath)
-            self.HLTSeed.append([HLTPath,L1Seed])
-            self.TriggerRates.append([HLTPath])
-            self.RateTable.append([HLTPath])
+            if not self.HLTSeed.has_key(HLTPath): ## this should protect us from L1_SingleMuOpen
+                self.HLTSeed[HLTPath] = L1Seed.lstrip('"').rstrip('"') 
         #self.GetHLTPrescaleMatrix(tmpcurs)
 
     def ParseRunSetup(self):
@@ -415,36 +391,42 @@ class DatabaseParser:
         self.UnprescaleRates()
 
     def CalculateAvL1Prescales(self,StartLS,EndLS):
-        self.AvgL1Prescales=[0]*len(self.L1IndexNameMap) ## make it an array of 0s of the right length (should be 128, but don't assume)
+        self.AvgL1Prescales = [0]*self.nAlgoBits
         for index in range(StartLS,EndLS+1):
             psi = self.PSColumnByLS[index]
             if not psi:
                 print "Cannot figure out PSI for LS "+str(index)
                 continue
-            for algo in range(len(self.L1IndexNameMap)):
+            for algo in range(self.nAlgoBits):
                 self.AvgL1Prescales[algo]+=self.L1PrescaleTable[algo][psi]                
         for i in range(len(self.AvgL1Prescales)):
             self.AvgL1Prescales[i] = self.AvgL1Prescales[i]/(EndLS-StartLS+1)
         
     def CalculateTotalPrescales(self):
-        self.AvgTotalPrescales=[]
-        for i,n in enumerate(self.HLTList):
+        self.AvgTotalPrescales={}
+        for hltName,v in self.RateTable.iteritems():
+            if not self.HLTSeed.has_key(hltName):
+                continue 
             hltPS=0
-            if len(self.TriggerRates[i])>0:
-                hltPS = self.TriggerRates[i][3]
-            l1Index = self.GetL1Index(self.HLTSeed[i][1].lstrip('"').rstrip('"'))
+            if len(v)>0:
+                hltPS = v[0]
+            l1Index=-1
+            if self.L1IndexNameMap.has_key(self.HLTSeed[hltName]):
+                l1Index = self.L1IndexNameMap[self.HLTSeed[hltName]]
+
             l1PS=0
             if l1Index==-1:
-                l1PS = self.UnwindORSeed(self.HLTSeed[i][1].lstrip('"').rstrip('"'))
-                #print "Could not find prescale for seed "+self.HLTSeed[i][1]
+                l1PS = self.UnwindORSeed(self.HLTSeed[hltName])
             else:
                 l1PS = self.AvgL1Prescales[l1Index]
-            #print hltPS+" "+l1PS
-            self.AvgTotalPrescales.append(hltPS*l1PS)
+            self.AvgTotalPrescales[hltName]=l1PS*hltPS
 
 
     def UnwindORSeed(self,expression):
-        print "Unwinding "+expression
+        """
+        Figures out the effective prescale for the OR of several seeds
+        we take this to be the *LOWEST* prescale of the included seeds
+        """
         if expression.find(" OR ") == -1:
             return -1  # Not an OR of seeds
         seedList = expression.split(" OR ")
@@ -452,32 +434,26 @@ class DatabaseParser:
             return -1 # Not an OR of seeds, really shouldn't get here...
         minPS = 99999999999
         for seed in seedList:
-            l1Index = self.GetL1Index(seed)
-            if l1Index == -1:
-                pass
-            else:
-                ps = self.AvgL1Prescales[l1Index]
-                if ps:
-                    minPS = min(ps,minPS)
-                print seed+"  "+str(ps)+"  "+str(minPS)
+            if not self.L1IndexNameMap.has_key(seed):
+                continue
+            ps = self.AvgL1Prescales[self.L1IndexNameMap[seed]]
+            if ps:
+                minPS = min(ps,minPS)
         if minPS==99999999999:
             return 0
         else:
             return minPS
     
     def UnprescaleRates(self):
-        self.PrescaledRates=[]
-        self.UnprescaledRates=[]
-        for i,n in enumerate(self.HLTList):
-            psRate=0
-            if len(self.TriggerRates[i])>0:
-                psRate = self.TriggerRates[i][0]
-            totalPS = self.AvgTotalPrescales[i]
-            unpsRate = psRate
-            if totalPS:
-                unpsRate = psRate*totalPS
-            self.PrescaledRates.append(psRate)
-            self.UnprescaledRates.append(unpsRate)
+        for k,v in self.RateTable.iteritems():
+            if self.AvgTotalPrescales.has_key(k):
+                ps = self.AvgTotalPrescales[k]
+                if ps:                    
+                    self.UnprescaledRates[k] = v[1]/ps
+                else:
+                    self.UnprescaledRates[k] = v[1]
+            else:
+                self.UnprescaledRates[k] = v[1]
         
     def AssemblePrescaleValues(self): ##Depends on output from ParseLumiPage and ParseTriggerModePage
         return ## WHAT DOES THIS FUNCTION DO???
@@ -601,6 +577,20 @@ class DatabaseParser:
 
         return self.CorrectedPSInfo
         
+    def GetAvLumiPerRange(self, NMergeLumis=10):
+        """
+        This function returns a per-LS table of the average lumi of the next NMergeLumis LS
+        """
+        AvLumiRange = self.InstLumiByLS[0:NMergeLumis]
+        AvLumiTable = [sum(AvLumiRange)/NMergeLumis]
+        for lumi in self.InstLumiByLS[NMergeLumis:]:
+            AvLumiRange.append(lumi)
+            AvLumiRange = AvLumiRange[1:]
+            AvLumiTable.append(sum(AvLumiRange)/NMergeLumis)
+        return AvLumiTable
+        
+
+
     def Save(self, fileName):
         dir = os.path.dirname(fileName)    
         if not os.path.exists(dir):
