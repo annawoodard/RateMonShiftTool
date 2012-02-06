@@ -128,7 +128,16 @@ class DatabaseParser:
         ##self.RateTable
         return self.TriggerRates
 
-	
+    def GetTriggerRatesByLS(self,triggerName, minLS=-1, maxLS=9999):
+        sqlquery = """SELECT SUM(A.L1PASS),SUM(A.PSPASS),SUM(A.PACCEPT)
+        ,SUM(A.PEXCEPT)
+        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
+        WHERE RUNNUMBER=%s AND A.LSNUMBER>=%d AND A.LSNUMBER<%d AND B.NAME = \'%s\' AND A.PATHID = B.PATHID
+        GROUP BY A.LSNUMBER,A.PATHID""" % (self.RunNumber,minLS,maxLS,triggerName)
+
+        self.curs.execute(sqlquery)
+        return self.curs.fetchall()
+
     def GetLumiInfo(self): 
         sqlquery="""SELECT RUNNUMBER,LUMISECTION,PRESCALE_INDEX,INSTLUMI,LIVELUMI,DELIVLUMISECTION,DEADTIME
         ,DCSSTATUS,PHYSICS_FLAG
