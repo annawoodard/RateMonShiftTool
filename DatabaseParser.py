@@ -59,8 +59,8 @@ class DatabaseParser:
         self.PSColumnChanges=[]  ##Returns
 
         ##-- Defined in ParseTriggerModePage --##
-        self.L1TriggerMode={}
-        self.HLTTriggerMode={}
+        self.L1TriggerMode={}  ## 
+        self.HLTTriggerMode={} ## 
         self.HLTSeed=[]
         self.HLTSequenceMap=[]
         self.TriggerInfo = []  ##Returns
@@ -73,7 +73,7 @@ class DatabaseParser:
         self.PrescaleValues=[]  ##Returns
 
         ##-- Defined in ComputeTotalPrescales --##
-        self.TotalPSInfo = []  ##Returns
+        self.TotalPSInfo = []  ##Returns # #collection 
 
         ##-- Defined in CorrectForPrescaleChange --##
         self.CorrectedPSInfo = []  ##Returns
@@ -82,6 +82,14 @@ class DatabaseParser:
         ##    - LS range is set from the outside for each individual function
         #self.FirstLS = -1
         #self.LastLS = -1
+
+    def GetLatestRunNumber(self):
+        RunNoQuery="""
+        SELECT MAX(A.RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_WBM.RUNSUMMARY B WHERE A.RUNNUMBER=B.RUNNUMBER AND B.TRIGGERS>0
+        """
+        self.curs.execute(RunNoQuery)
+        r, = self.curs.fetchone()
+        return r
 
     def GetRunInfo(self):
         ## This query gets the L1_HLT Key (A), the associated HLT Key (B) and the Config number for that key (C)
@@ -224,14 +232,14 @@ class DatabaseParser:
         for i,n in enumerate(self.HLTList):
             if n.find(name)!=-1:
                 return i
-        print name
+        #print name
         return -1
 
     def GetL1Index(self,name):
         for i,n in enumerate(self.L1IndexNameMap):
             if n==name:
                 return i
-        print name
+        #print name
         return -1
     
     def GetHLTPrescaleMatrix(self,cursor):
@@ -306,7 +314,7 @@ class DatabaseParser:
         ORDER BY F.SEQUENCENB,J.SEQUENCENB
         """ % (self.ConfigId,)
 
-        print self.HLTSequenceMap
+        #print self.HLTSequenceMap
         cursor.execute(SequencePrescaleQuery)
         self.HLTPrescaleTable=[ [] ]*len(self.HLTList)
         lastIndex=-1
@@ -357,6 +365,7 @@ class DatabaseParser:
         I.PATHID=G.PATHID AND
         G.CONFIGID=H.CONFIGID AND
         H.CONFIGDESCRIPTOR='%s' 
+        ORDER BY A.VALUE
         """ % (self.HLT_Key,)
         tmpcurs.execute(sqlquery)
         for HLTPath,L1Seed in tmpcurs.fetchall():
@@ -417,13 +426,36 @@ class DatabaseParser:
             l1Index = self.GetL1Index(self.HLTSeed[i][1].lstrip('"').rstrip('"'))
             l1PS=0
             if l1Index==-1:
-                print "Could not find prescale for seed "+self.HLTSeed[i][1]
+                l1PS = self.UnwindORSeed(self.HLTSeed[i][1].lstrip('"').rstrip('"'))
+                #print "Could not find prescale for seed "+self.HLTSeed[i][1]
             else:
                 l1PS = self.AvgL1Prescales[l1Index]
             #print hltPS+" "+l1PS
             self.AvgTotalPrescales.append(hltPS*l1PS)
 
 
+    def UnwindORSeed(self,expression):
+        print "Unwinding "+expression
+        if expression.find(" OR ") == -1:
+            return -1  # Not an OR of seeds
+        seedList = expression.split(" OR ")
+        if len(seedList)==1:
+            return -1 # Not an OR of seeds, really shouldn't get here...
+        minPS = 99999999999
+        for seed in seedList:
+            l1Index = self.GetL1Index(seed)
+            if l1Index == -1:
+                pass
+            else:
+                ps = self.AvgL1Prescales[l1Index]
+                if ps:
+                    minPS = min(ps,minPS)
+                print seed+"  "+str(ps)+"  "+str(minPS)
+        if minPS==99999999999:
+            return 0
+        else:
+            return minPS
+    
     def UnprescaleRates(self):
         self.PrescaledRates=[]
         self.UnprescaledRates=[]
