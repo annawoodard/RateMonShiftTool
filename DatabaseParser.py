@@ -2,6 +2,9 @@ import cx_Oracle
 import cPickle as pickle
 import os, sys
 import time
+import re
+from sets import Set
+
 
 class DatabaseParser:
     
@@ -27,8 +30,8 @@ class DatabaseParser:
         self.ConfigId=0
 
         ##-- Defined in ParseHLTSummaryPage --##
-        self.TriggerRates = {} ## contains the HLT rates for the current LS range
-        self.RateTable = {}   ## Rates per LS, useful but maybe enormous!
+        self.HLTRatesByLS = {}
+        self.HLTPSByLS = {}
 
         self.nAlgoBits=0
         self.L1PrescaleTable=[]
@@ -47,10 +50,12 @@ class DatabaseParser:
         self.AvInstLumi = 0
         self.AvDeliveredLumi = 0
         self.AvLiveLumi = 0
+        self.AvDeadTime = 0
         self.LumiInfo = {}  ##Returns
         self.DeadTime = {}
         self.Physics = {}
-
+        self.Active = {}
+        
         ##-- Defined in ParsePSColumnPage (not currently used) --##
         self.PSColumnChanges=[]  ##Returns
 
@@ -79,14 +84,6 @@ class DatabaseParser:
         #self.FirstLS = -1
         #self.LastLS = -1
 
-    def GetLatestRunNumber(self):
-        RunNoQuery="""
-        SELECT MAX(A.RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_WBM.RUNSUMMARY B WHERE A.RUNNUMBER=B.RUNNUMBER AND B.TRIGGERS>0
-        """
-        self.curs.execute(RunNoQuery)
-        r, = self.curs.fetchone()
-        return r
-
     def GetRunInfo(self):
         ## This query gets the L1_HLT Key (A), the associated HLT Key (B) and the Config number for that key (C)
         KeyQuery = """
@@ -100,37 +97,45 @@ class DatabaseParser:
     def UpdateRateTable(self):  # lets not rebuild the rate table every time, rather just append new LSs
         pass
 
-    def GetHLTRates(self,StartLS,EndLS):
+    def GetHLTRates(self,LSRange):
         sqlquery = """SELECT SUM(A.L1PASS),SUM(A.PSPASS),SUM(A.PACCEPT)
         ,SUM(A.PEXCEPT),(SELECT L.NAME FROM CMS_HLT.PATHS L WHERE L.PATHID=A.PATHID) PATHNAME 
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER>=%d AND A.LSNUMBER<%d
         GROUP BY A.LSNUMBER,A.PATHID"""
 
-        query = sqlquery % (self.RunNumber,StartLS,EndLS)
+        #print "Getting HLT Rates for LS from %d to %d" % (LSRange[0],LSRange[-1],)
+        query = sqlquery % (self.RunNumber,LSRange[0],LSRange[-1],)
         self.curs.execute(query)
+
+        TriggerRates = {}
         for L1Pass,PSPass,HLTPass,HLTExcept,name in self.curs.fetchall():
             rate = HLTPass/23.3
             ps = 0
             if PSPass:
                 ps = float(L1Pass)/PSPass
-            self.RateTable[name] = [ps,rate]
-            self.TriggerRates[name]= [rate,L1Pass,PSPass,ps,StartLS,EndLS]
+            TriggerRates[name]= [ps,rate,L1Pass,PSPass]
             
-        return self.TriggerRates
+        return TriggerRates
 
-    def GetTriggerRatesByLS(self,triggerName, minLS=-1, maxLS=9999):
-        sqlquery = """SELECT SUM(A.L1PASS),SUM(A.PSPASS),SUM(A.PACCEPT)
-        ,SUM(A.PEXCEPT)
+    def GetTriggerRatesByLS(self,triggerName):
+        sqlquery = """SELECT A.LSNUMBER, A.PACCEPT
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
-        WHERE RUNNUMBER=%s AND A.LSNUMBER>=%d AND A.LSNUMBER<%d AND B.NAME = \'%s\' AND A.PATHID = B.PATHID
-        GROUP BY A.LSNUMBER,A.PATHID""" % (self.RunNumber,minLS,maxLS,triggerName)
+        WHERE RUNNUMBER=%s AND B.NAME = \'%s\' AND A.PATHID = B.PATHID
+        GROUP BY A.LSNUMBER,A.PATHID""" % (self.RunNumber,triggerName,)
 
         self.curs.execute(sqlquery)
-        return self.curs.fetchall()
+        r={}
+        for ls,accept in  self.curs.fetchall():
+            r[ls] = accept/23.3
+        return r
+    
+    def GetAllTriggerRatesByLS(self):
+        for hltName in self.HLTSeed:
+            self.HLTRatesByLS[hltName] = self.GetTriggerRatesByLS(hltName)
 
     def GetLumiInfo(self): 
-        sqlquery="""SELECT RUNNUMBER,LUMISECTION,PRESCALE_INDEX,INSTLUMI,LIVELUMI,DELIVLUMISECTION,DEADTIME
-        ,DCSSTATUS,PHYSICS_FLAG
+        sqlquery="""SELECT RUNNUMBER,LUMISECTION,PRESCALE_INDEX,INSTLUMI,LIVELUMI,DELIVLUMI,DEADTIME
+        ,DCSSTATUS,PHYSICS_FLAG,CMS_ACTIVE
         FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS A,CMS_GT_MON.LUMI_SECTIONS B WHERE A.RUNNUMBER=%s
         AND B.RUN_NUMBER(+)=A.RUNNUMBER AND B.LUMI_SECTION(+)=A.LUMISECTION AND A.LUMISECTION > %d
         ORDER BY A.RUNNUMBER,A.LUMISECTION"""
@@ -139,39 +144,40 @@ class DatabaseParser:
         query = sqlquery % (self.RunNumber,self.LastLSParsed)
         self.curs.execute(query)
         pastLSCol=-1
-        for run,ls,psi,inst,live,dlive,dt,dcs,phys in self.curs.fetchall():
+        for run,ls,psi,inst,live,dlive,dt,dcs,phys,active in self.curs.fetchall():
             self.PSColumnByLS[ls]=psi
             self.InstLumiByLS[ls]=inst
             self.LiveLumiByLS[ls]=live
             self.DeliveredLumiByLS[ls]=dlive
             self.DeadTime[ls]=dt
             self.Physics[ls]=phys
+            self.Active[ls]=active
             if pastLSCol!=-1 and ls!=pastLSCol:
                 self.PSColumnChanges.append([ls,psi])
             pastLSCol=ls
             if ls>self.LastLSParsed:
                 self.LastLSParsed=ls
+        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime]
 
-    def FillLumiInfo(self,StartLS,EndLS):
-        if EndLS <= StartLS:
-            print "In ParseLumiPage, EndLS <= StartLS"
-
-        print "In ParseLumiPage, StartLS = "+str(StartLS)+" and EndLS = "+str(EndLS)
-
-        self.AvLiveLumi = 1000*(self.LiveLumiByLS[EndLS] - self.LiveLumiByLS[StartLS])/(23.3*(EndLS-StartLS))
-        self.AvDeliveredLumi = 1000*(self.DeliveredLumiByLS[EndLS] - self.DeliveredLumiByLS[StartLS])/(23.3*(EndLS-StartLS))
-        value_iterator = 0
-        for ls,lumi in self.InstLumiByLS.iteritems():
-            if ls >= StartLS and ls <= EndLS:
-                self.AvInstLumi+=lumi
-                value_iterator+=1
-        self.AvInstLumi = self.AvInstLumi / value_iterator
-
-        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.AvInstLumi, self.AvDeliveredLumi, self.AvLiveLumi]
-
-        return [self.LumiInfo,StartLS,EndLS]
+    def GetAvLumiInfo(self,LSRange):
+        nLS=0;
+        AvInstLumi=0
+        StartLS = LSRange[0]
+        EndLS   = LSRange[-1]
+        AvLiveLumi=self.LiveLumiByLS[EndLS]-self.LiveLumiByLS[StartLS]
+        AvDeliveredLumi=self.DeliveredLumiByLS[EndLS]-self.DeliveredLumiByLS[StartLS]
+        AvDeadTime=AvDeliveredLumi/AvLiveLumi * 100
+        PSCols=Set()
+        for ls in LSRange:
+            try:
+                AvInstLumi+=self.InstLumiByLS[ls]
+                PSCols.add(self.PSColumnByLS[ls])
+                nLS+=1
+            except:
+                print "ERROR: Lumi section "+str(ls)+" not in bounds"
+                return
+        return [AvInstLumi/nLS,AvLiveLumi/nLS, AvDeliveredLumi/nLS, AvDeadTime/nLS,PSCols]
     
-
     def ParsePSColumnPage(self): ## this is now done automatically when we read the db
         pass
 
@@ -366,45 +372,57 @@ class DatabaseParser:
         self.GetL1NameIndexAssoc()
         self.GetL1AlgoPrescales()
         self.GetHLTSeeds()
-
-    def UpdateRun(self,StartLS,EndLS):
-        if EndLS<StartLS:
-            print "Invalid Lumi Section Range"
-            return
         self.GetLumiInfo()
-        if StartLS < 0:
-            EndLS = max(self.LSByLS) - 1
-            StartLS = EndLS + StartLS
-        if StartLS < 2: #The parser does not parse the first LS
-            StartLS = 2
-        if StartLS == 999999:
-            StartLS = min(self.LSByLS)
-        if EndLS == 111111:
-            EndLS = max(self.LSByLS)
-        if EndLS>self.LastLSParsed:
-            print "EndLS out of range"
-            return
-        self.FillLumiInfo(StartLS,EndLS)
-        self.GetHLTRates(StartLS,EndLS)
-        self.CalculateAvL1Prescales(StartLS,EndLS)
-        self.CalculateTotalPrescales()
-        self.UnprescaleRates()
 
-    def CalculateAvL1Prescales(self,StartLS,EndLS):
-        self.AvgL1Prescales = [0]*self.nAlgoBits
-        for index in range(StartLS,EndLS+1):
+    def UpdateRun(self,LSRange):
+        self.GetLumiInfo()
+        TriggerRates     = self.GetHLTRates(LSRange)
+        L1Prescales      = self.CalculateAvL1Prescales(LSRange)
+        TotalPrescales   = self.CalculateTotalPrescales(TriggerRates,L1Prescales)
+        UnprescaledRates = self.UnprescaleRates(TriggerRates,TotalPrescales)
+
+        return [UnprescaledRates, TotalPrescales, L1Prescales, TriggerRates]
+
+    def GetLSRange(self,StartLS, NLS):
+        """
+        returns an array of valid LumiSections
+        if NLS < 0, count backwards from StartLS
+        """
+        self.GetLumiInfo()
+        LS=[]
+        curLS=StartLS
+        step = NLS/abs(NLS)
+        NLS=abs(NLS)
+        while len(LS)<NLS:
+            if (curLS<0 and step<0) or (curLS>=self.LastLSParsed and step>0):
+                break
+            if curLS>=0 and curLS<self.LastLSParsed:
+                if not self.Physics.has_key(curLS) or not self.Active.has_key(curLS):
+                    break
+                if self.Physics[curLS] and self.Active[curLS]:
+                    if step>0:
+                        LS.append(curLS)
+                    else:
+                        LS.insert(0,curLS)
+            curLS += step
+        return LS
+
+    def CalculateAvL1Prescales(self,LSRange):
+        AvgL1Prescales = [0]*self.nAlgoBits
+        for index in LSRange:
             psi = self.PSColumnByLS[index]
             if not psi:
-                print "Cannot figure out PSI for LS "+str(index)
-                continue
+                print "Cannot figure out PSI for LS "+str(index)+"  setting to 0"
+                psi = 0
             for algo in range(self.nAlgoBits):
-                self.AvgL1Prescales[algo]+=self.L1PrescaleTable[algo][psi]                
-        for i in range(len(self.AvgL1Prescales)):
-            self.AvgL1Prescales[i] = self.AvgL1Prescales[i]/(EndLS-StartLS+1)
-        
-    def CalculateTotalPrescales(self):
-        self.AvgTotalPrescales={}
-        for hltName,v in self.RateTable.iteritems():
+                AvgL1Prescales[algo]+=self.L1PrescaleTable[algo][psi]
+        for i in range(len(AvgL1Prescales)):
+            AvgL1Prescales[i] = AvgL1Prescales[i]/len(LSRange)
+        return AvgL1Prescales
+    
+    def CalculateTotalPrescales(self,TriggerRates, L1Prescales):
+        AvgTotalPrescales={}
+        for hltName,v in TriggerRates.iteritems():
             if not self.HLTSeed.has_key(hltName):
                 continue 
             hltPS=0
@@ -416,13 +434,13 @@ class DatabaseParser:
 
             l1PS=0
             if l1Index==-1:
-                l1PS = self.UnwindORSeed(self.HLTSeed[hltName])
+                l1PS = self.UnwindORSeed(self.HLTSeed[hltName],L1Prescales)
             else:
-                l1PS = self.AvgL1Prescales[l1Index]
-            self.AvgTotalPrescales[hltName]=l1PS*hltPS
+                l1PS = L1Prescales[l1Index]
+            AvgTotalPrescales[hltName]=l1PS*hltPS
+        return AvgTotalPrescales
 
-
-    def UnwindORSeed(self,expression):
+    def UnwindORSeed(self,expression,L1Prescales):
         """
         Figures out the effective prescale for the OR of several seeds
         we take this to be the *LOWEST* prescale of the included seeds
@@ -436,7 +454,7 @@ class DatabaseParser:
         for seed in seedList:
             if not self.L1IndexNameMap.has_key(seed):
                 continue
-            ps = self.AvgL1Prescales[self.L1IndexNameMap[seed]]
+            ps = L1Prescales[self.L1IndexNameMap[seed]]
             if ps:
                 minPS = min(ps,minPS)
         if minPS==99999999999:
@@ -444,17 +462,19 @@ class DatabaseParser:
         else:
             return minPS
     
-    def UnprescaleRates(self):
-        for k,v in self.RateTable.iteritems():
-            if self.AvgTotalPrescales.has_key(k):
-                ps = self.AvgTotalPrescales[k]
+    def UnprescaleRates(self,TriggerRates,TotalPrescales):
+        UnprescaledRates = {}
+        for hltName,v in TriggerRates.iteritems():
+            if TotalPrescales.has_key(hltName):
+                ps = TotalPrescales[hltName]
                 if ps:                    
-                    self.UnprescaledRates[k] = v[1]/ps
+                    UnprescaledRates[hltName] = v[1]*ps
                 else:
-                    self.UnprescaledRates[k] = v[1]
+                    UnprescaledRates[hltName] = v[1]
             else:
-                self.UnprescaledRates[k] = v[1]
-        
+                UnprescaledRates[hltName] = v[1]
+        return UnprescaledRates
+    
     def AssemblePrescaleValues(self): ##Depends on output from ParseLumiPage and ParseTriggerModePage
         return ## WHAT DOES THIS FUNCTION DO???
         MissingName = "Nemo"
@@ -579,18 +599,20 @@ class DatabaseParser:
         
     def GetAvLumiPerRange(self, NMergeLumis=10):
         """
-        This function returns a per-LS table of the average lumi of the next NMergeLumis LS
+        This function returns a per-LS table of the average lumi of the previous NMergeLumis LS
         """
-        AvLumiRange = self.InstLumiByLS[0:NMergeLumis]
-        AvLumiTable = [sum(AvLumiRange)/NMergeLumis]
-        for lumi in self.InstLumiByLS[NMergeLumis:]:
-            AvLumiRange.append(lumi)
-            AvLumiRange = AvLumiRange[1:]
-            AvLumiTable.append(sum(AvLumiRange)/NMergeLumis)
+        AvLumiRange = []
+        AvLumiTable = {}
+        for ls,lumi in self.InstLumiByLS.iteritems():
+            try:
+                AvLumiRange.append(int(lumi))
+            except:
+                continue
+            if len(AvLumiRange) == NMergeLumis:
+                AvLumiRange = AvLumiRange[1:]
+                AvLumiTable[ls] = sum(AvLumiRange)/NMergeLumis
         return AvLumiTable
         
-
-
     def Save(self, fileName):
         dir = os.path.dirname(fileName)    
         if not os.path.exists(dir):
@@ -599,3 +621,43 @@ class DatabaseParser:
 
     def Load(self, fileName):
         self = pickle.load( open( fileName ) )
+
+
+
+def GetLatestRunNumber():
+    cmd='cat ~centraltspro/secure/cms_trg_r.txt'
+    line=os.popen(cmd).readlines()
+    magic = line[0].rstrip("\n\r")
+    connect= 'cms_trg_r/' + magic + '@cms_omds_lb'
+    # connect to the DB
+    orcl = cx_Oracle.connect(connect)
+    curs = orcl.cursor()
+    RunNoQuery="""
+    SELECT MAX(A.RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_WBM.RUNSUMMARY B WHERE A.RUNNUMBER=B.RUNNUMBER AND B.TRIGGERS>0
+    """
+    curs.execute(RunNoQuery)
+    r, = curs.fetchone()
+    TrigModeQuery = """
+    SELECT TRIGGERMODE FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
+    """ % r
+    curs.execute(TrigModeQuery)
+    trigm, = curs.fetchone()
+    isCol=0
+    if trigm.find('l1_hlt_collisions')!=-1:
+        isCol=1
+    return (r,isCol,)
+
+def ClosestIndex(value,table):
+    diff = 999999999;
+    index = 0
+    for i,thisVal in table.iteritems():
+        if abs(thisVal-value)<diff:
+            diff = abs(thisVal-value)
+            index =i
+    return index
+
+
+def StripVersion(name):
+    if re.match('.*_v[0-9]+',name):
+        name = name[:name.rfind('_')]
+    return name
