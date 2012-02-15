@@ -31,5 +31,24 @@ def MoreTableInfo(parser,LumiRange):
     write(str(round(AvDeadTime,1))+"%")
     write(bcolors.ENDC+"\n")
 
-    print "Used prescale column(s): "+str(PrescaleColumnString)
-    print "Lumisections: "+str(LumiRange)
+    print "Used prescale column(s): "+str(PrescaleColumnString)    
+    write("Lumisections: "+str(LumiRange))
+    if not isSequential(LumiRange):
+        write("   Lumisections are not sequential (bad LS skipped)\n")
+    print "\nLast Lumisection of the run is:        "+str(parser.GetLastLS())
+    write(  "Last Lumisection good for physics is:  "+str(parser.GetLastLS(True)) )
+    if parser.GetLastLS(True)!=max(LumiRange):
+        write(bcolors.WARNING)
+        write("  << This exceeds the last lumisection parsed")
+        write(bcolors.ENDC+"\n")
+
+def isSequential(t):
+    try:
+        if len(t)<2:
+            return True
+    except:
+        return True        
+    for i,e in enumerate(t[1:]):
+        if not abs(e-t[i])==1:
+            return False
+    return True

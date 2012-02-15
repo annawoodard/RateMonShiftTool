@@ -423,10 +423,20 @@ class DatabaseParser:
             curLS += step
         return LS
 
-    def GetLastLS(self):
+    def GetLastLS(self,phys=False):
         self.GetLumiInfo()
         try:
-            return InstLumiByLS.keys()[-1]
+            if not phys:
+                return max(self.Physics.keys())
+            else:
+                maxLS=-1
+                for ls,phys in self.Physics.iteritems():
+                    if phys and self.Active[ls] and ls > maxLS:
+                        maxLS=ls
+                if maxLS==-1:
+                    return 0
+                else:
+                    return maxLS                             
         except:
             return 0
 
