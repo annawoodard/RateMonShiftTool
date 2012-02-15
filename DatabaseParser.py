@@ -110,24 +110,85 @@ class DatabaseParser:
             StartLS = 0
             EndLS   = 9999
 
+        AvgL1Prescales = [0]*self.nAlgoBits
+        
         #print "Getting HLT Rates for LS from %d to %d" % (LSRange[0],LSRange[-1],)
         query = sqlquery % (self.RunNumber,StartLS,EndLS,)
         self.curs.execute(query)
 
         TriggerRates = {}
         for L1Pass,PSPass,HLTPass,HLTExcept,name in self.curs.fetchall():
+            if not self.HLTSeed.has_key(name):
+                continue 
+            
             rate = HLTPass/23.3
-            ps = 0
+            hltps = 0
             if PSPass:
-                ps = float(L1Pass)/PSPass
+                hltps = float(L1Pass)/PSPass
             if not TriggerRates.has_key(name):
-                TriggerRates[name]= [ps,rate,L1Pass,PSPass,1]
+                try:
+                    psi = self.PSColumnByLS[LSRange[0]]
+                #except:
+                    #psi = self.PSColumnByLS[1]
+                #if not psi:
+                except:
+                    print "Cannot figure out PSI for LS "+str(StartLS)+"  setting to 0"
+                    print "The value of LSRange[0] is:"
+                    print str(LSRange[0])
+                    psi = 0
+ 
+                if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
+                    l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
+                else:
+                    AvL1Prescales = self.CalculateAvL1Prescales([LSRange[0]])
+                    l1ps = self.UnwindORSeed(self.HLTSeed[name],AvL1Prescales)
+                    #l1ps = 1
+                    #print "L1IndexNameMap has no key for "+str(self.HLTSeed[name])
+
+                ps = l1ps*hltps
+                if ps < 1:
+                    #print "Oops! somehow ps for "+str(name)+" = "+str(ps)+", where L1 PS = "+str(l1ps)+" and HLT PS = "+str(hltps)
+                    ps = 1
+                psrate = ps*rate
+                TriggerRates[name]= [ps,rate,psrate,1]
             else:
-                [ops,orate,ol1,opsp,on] = TriggerRates[name]
-                TriggerRates[name]= [ops+ps,orate+rate,ol1+L1Pass,opsp+PSPass,on+1]                
+                [ops,orate,opsrate,on] = TriggerRates[name]
+                try:
+                    psi = self.PSColumnByLS[LSRange[on]]
+                #except:
+                    #psi = self.PSColumnByLS[1]
+                #if not psi:
+                except:
+                    print "Cannot figure out PSI for index"+str(on)+" setting to 0"
+                    print "The value of LSRange[on] is:"
+                    print str(LSRange[on])
+                    psi = 0
+
+                if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
+                    l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
+                else:
+                    AvL1Prescales = self.CalculateAvL1Prescales([LSRange[on]])
+                    l1ps = self.UnwindORSeed(self.HLTSeed[name],AvL1Prescales)
+                    #l1ps = 1
+                    #print "L1IndexNameMap has no key for "+str(self.HLTSeed[name])
+
+                ps = l1ps*hltps
+                if ps < 1:
+                    ##print "Oops! somehow ps for "+str(name)+" = "+str(ps)+", where L1 PS = "+str(l1ps)+" and HLT PS = "+str(hltps)
+                    ps = 1
+                psrate = ps*rate
+                TriggerRates[name]= [ops+ps,orate+rate,opsrate+psrate,on+1]                
+
         for name,val in TriggerRates.iteritems():
-            [ps,rate,l1,psp,n] = val
-            TriggerRates[name] = [ps/n,rate/n,l1/n,psp/n]
+            [ps,rate,psrate,n] = val
+            avps = ps/n
+            try:
+                ps = psrate/rate
+            except:
+                #print "Rate = 0 for "+str(name)+", setting ps to 1"
+                ps = 1
+            TriggerRates[name] = [avps,ps,rate/n,psrate/n]
+
         return TriggerRates
 
     def GetTriggerRatesByLS(self,triggerName):
@@ -393,12 +454,13 @@ class DatabaseParser:
     def UpdateRun(self,LSRange):
         self.GetLumiInfo()
         TriggerRates     = self.GetHLTRates(LSRange)
-        L1Prescales      = self.CalculateAvL1Prescales(LSRange)
-        TotalPrescales   = self.CalculateTotalPrescales(TriggerRates,L1Prescales)
-        UnprescaledRates = self.UnprescaleRates(TriggerRates,TotalPrescales)
+        #L1Prescales      = self.CalculateAvL1Prescales(LSRange)
+        #TotalPrescales   = self.CalculateTotalPrescales(TriggerRates,L1Prescales)
+        #UnprescaledRates = self.UnprescaleRates(TriggerRates,TotalPrescales)
 
-        return [UnprescaledRates, TotalPrescales, L1Prescales, TriggerRates]
-
+        #return [UnprescaledRates, TotalPrescales, L1Prescales, TriggerRates]
+        return TriggerRates
+    
     def GetLSRange(self,StartLS, NLS):
         """
         returns an array of valid LumiSections

@@ -245,27 +245,28 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     IgnoredRates=[]
 
     [HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols] = HeadParser.GetAvLumiInfo(HeadLumiRange)
-    [HeadUnprescaledRates, HeadTotalPrescales, HeadL1Prescales, HeadTriggerRates] = HeadParser.UpdateRun(HeadLumiRange)
+    ##[HeadUnprescaledRates, HeadTotalPrescales, HeadL1Prescales, HeadTriggerRates] = HeadParser.UpdateRun(HeadLumiRange)
+    HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS] = HeadParser.LumiInfo
 
-    for HeadName in HeadTriggerRates:
+    for HeadName in HeadUnprescaledRates:
 ##  SKIP triggers in the skip list
-        if not HeadTotalPrescales.has_key(HeadName): ## for whatever reason we have no prescale here, so skip (calibration paths)
-            continue
-        if not HeadTotalPrescales[HeadName]: ## prescale is thought to be 0
-            continue
+##         if not HeadTotalPrescales.has_key(HeadName): ## for whatever reason we have no prescale here, so skip (calibration paths)
+##             continue
+##         if not HeadTotalPrescales[HeadName]: ## prescale is thought to be 0
+##             continue
         skipTrig=False
-        TriggerRate = round(HeadTriggerRates[HeadName][1],2)
+        TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
            
             PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
             
             if PSCorrectedExpectedRate < 0:  ##This means we don't have a prediction for this trigger
                 continue
-            if not HeadTotalPrescales[HeadName]:
-                print HeadName+ " has total prescale 0"
-                continue
-            ExpectedRate = round((PSCorrectedExpectedRate / HeadTotalPrescales[HeadName]),2)
+##             if not HeadTotalPrescales[HeadName]:
+##                 print HeadName+ " has total prescale 0"
+##                 continue
+            ExpectedRate = round((PSCorrectedExpectedRate / HeadUnprescaledRates[HeadName][1]),2)
             PerDiff=0
             if ExpectedRate>0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
@@ -279,7 +280,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 
             VC = ""
             
-            Data.append([HeadName,TriggerRate,ExpectedRate,PerDiff,round(HeadTotalPrescales[HeadName],1),VC]) 
+            Data.append([HeadName,TriggerRate,ExpectedRate,PerDiff,round(HeadUnprescaledRates[HeadName][1],1),VC]) 
 
         else:  ## Use a reference run
             ## cheap trick to only get triggers in list when in shifter mode
@@ -294,14 +295,15 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             RefStartIndex = ClosestIndex(HeadAvInstLumi,RefParser.GetAvLumiPerRange())
             RefLen   = -10
 
-            [RefUnprescaledRates, RefTotalPrescales, RefL1Prescales, RefTriggerRates] = RefParser.UpdateRun(RefParser.GetLSRange(RefStartIndex,RefLen))
+            ##[RefUnprescaledRates, RefTotalPrescales, RefL1Prescales, RefTriggerRates] = RefParser.UpdateRun(RefParser.GetLSRange(RefStartIndex,RefLen))
+            RefUnprescaledRates = RefParser.UpdateRun(RefParser.GetLSRange(RefStartIndex,RefLen))
             [RefAvInstLumi,RefAvLiveLumi,RefAvDeliveredLumi,RefAvDeadTime,RefPSCols] = RefParser.GetAvLumiInfo(RefParser.GetLSRange(RefStartIndex,RefLen))
             RefRate = -1
             for k,v in RefUnprescaledRates.iteritems():
                 if StripVersion(HeadName) == StripVersion(k): # versions may not match
                     RefRate = v
 
-            ScaledRefRate = round( RefRate*HeadAvLiveLumi/RefAvLiveLumi/HeadTotalPrescales[HeadName], 2  )
+            ScaledRefRate = round( RefRate*HeadAvLiveLumi/RefAvLiveLumi/(HeadUnprescaledRates[HeadName][1]), 2  )
 
             if ScaledRefRate == 0:
                 PerDiff = 100
@@ -316,7 +318,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             else:
                 Warn.append(False)
             VC = ""
-            Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,round(HeadTotalPrescales[HeadName],1),VC]) 
+            Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,round((HeadUnprescaledRates[HeadName][1]),1),VC]) 
 
     
     PrettyPrintTable(Header,Data,[80,10,10,10,10,20],Warn)
