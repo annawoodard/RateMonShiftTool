@@ -649,6 +649,12 @@ class DatabaseParser:
                 AvLumiTable[ls] = sum(AvLumiRange)/NMergeLumis
         return AvLumiTable
         
+    def GetTriggerVersion(self,triggerName):
+        for key in self.HLTSeed.iterkeys():
+            if StripVersion(key)==triggerName:
+                return key
+        return ""
+
     def Save(self, fileName):
         dir = os.path.dirname(fileName)    
         if not os.path.exists(dir):
