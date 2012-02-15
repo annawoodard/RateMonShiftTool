@@ -7,8 +7,10 @@ def MoreTableInfo(parser,LumiRange):
     [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
 
     if AvDeadTime==0:  ## For some reason the dead time in the DB is occasionally broken
-        AvDeadTime = AvLiveLumi/AvDeliveredLumi * 100
-
+        try:
+            AvDeadTime = AvLiveLumi/AvDeliveredLumi * 100
+        except:
+            AvDeadTime = 100
     PrescaleColumnString=''
     for c in PSCols:
         PrescaleColumnString = PrescaleColumnString + str(c) + ","
@@ -26,7 +28,7 @@ def MoreTableInfo(parser,LumiRange):
         write(bcolors.WARNING)
     else:
         write(bcolors.OKBLUE)
-        write(str(round(AvDeadTime,1))+"%")
+    write(str(round(AvDeadTime,1))+"%")
     write(bcolors.ENDC+"\n")
 
     print "Used prescale column(s): "+str(PrescaleColumnString)

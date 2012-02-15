@@ -103,8 +103,15 @@ class DatabaseParser:
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER>=%d AND A.LSNUMBER<%d
         GROUP BY A.LSNUMBER,A.PATHID"""
 
+        try:
+            StartLS = LSRange[0]
+            EndLS   = LSRange[-1]
+        except:
+            StartLS = 0
+            EndLS   = 9999
+
         #print "Getting HLT Rates for LS from %d to %d" % (LSRange[0],LSRange[-1],)
-        query = sqlquery % (self.RunNumber,LSRange[0],LSRange[-1],)
+        query = sqlquery % (self.RunNumber,StartLS,EndLS,)
         self.curs.execute(query)
 
         TriggerRates = {}
@@ -113,8 +120,14 @@ class DatabaseParser:
             ps = 0
             if PSPass:
                 ps = float(L1Pass)/PSPass
-            TriggerRates[name]= [ps,rate,L1Pass,PSPass]
-            
+            if not TriggerRates.has_key(name):
+                TriggerRates[name]= [ps,rate,L1Pass,PSPass,1]
+            else:
+                [ops,orate,ol1,opsp,on] = TriggerRates[name]
+                TriggerRates[name]= [ops+ps,orate+rate,ol1+L1Pass,opsp+PSPass,on+1]                
+        for name,val in TriggerRates.iteritems():
+            [ps,rate,l1,psp,n] = val
+            TriggerRates[name] = [ps/n,rate/n,l1/n,psp/n]
         return TriggerRates
 
     def GetTriggerRatesByLS(self,triggerName):
@@ -162,22 +175,25 @@ class DatabaseParser:
     def GetAvLumiInfo(self,LSRange):
         nLS=0;
         AvInstLumi=0
-        StartLS = LSRange[0]
-        EndLS   = LSRange[-1]
-        AvLiveLumi=self.LiveLumiByLS[EndLS]-self.LiveLumiByLS[StartLS]
-        AvDeliveredLumi=self.DeliveredLumiByLS[EndLS]-self.DeliveredLumiByLS[StartLS]
-        AvDeadTime=AvDeliveredLumi/AvLiveLumi * 100
-        PSCols=Set()
-        for ls in LSRange:
-            try:
-                AvInstLumi+=self.InstLumiByLS[ls]
-                PSCols.add(self.PSColumnByLS[ls])
-                nLS+=1
-            except:
-                print "ERROR: Lumi section "+str(ls)+" not in bounds"
-                return
-        return [AvInstLumi/nLS,AvLiveLumi/nLS, AvDeliveredLumi/nLS, AvDeadTime/nLS,PSCols]
-    
+        try:
+            StartLS = LSRange[0]
+            EndLS   = LSRange[-1]
+            AvLiveLumi=self.LiveLumiByLS[EndLS]-self.LiveLumiByLS[StartLS]
+            AvDeliveredLumi=self.DeliveredLumiByLS[EndLS]-self.DeliveredLumiByLS[StartLS]
+            AvDeadTime=AvDeliveredLumi/AvLiveLumi * 100
+            PSCols=Set()
+            for ls in LSRange:
+                try:
+                    AvInstLumi+=self.InstLumiByLS[ls]
+                    PSCols.add(self.PSColumnByLS[ls])
+                    nLS+=1
+                except:
+                    print "ERROR: Lumi section "+str(ls)+" not in bounds"
+                    return [0.,0.,0.,0.,[]]
+            return [AvInstLumi/nLS,AvLiveLumi/nLS, AvDeliveredLumi/nLS, AvDeadTime/nLS,PSCols]
+        except:
+            return [0.,0.,0.,0.,[]]
+
     def ParsePSColumnPage(self): ## this is now done automatically when we read the db
         pass
 
@@ -417,7 +433,10 @@ class DatabaseParser:
             for algo in range(self.nAlgoBits):
                 AvgL1Prescales[algo]+=self.L1PrescaleTable[algo][psi]
         for i in range(len(AvgL1Prescales)):
-            AvgL1Prescales[i] = AvgL1Prescales[i]/len(LSRange)
+            try:
+                AvgL1Prescales[i] = AvgL1Prescales[i]/len(LSRange)
+            except:
+                AvgL1Prescales[i] = AvgL1Prescales[i]
         return AvgL1Prescales
     
     def CalculateTotalPrescales(self,TriggerRates, L1Prescales):

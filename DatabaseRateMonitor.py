@@ -38,13 +38,14 @@ def usage():
     print "--PrintLumi                          Prints Instantaneous, Delivered, and Live lumi by LS for the run"
     print "--RefRun=<Run #>                     Specifies <Run #> as the reference run to use (Default in defaults.cfg)"
     print "--ShowPSTriggers                     Show prescaled triggers in rate comparison"
+    print "--force                              Override the check for collisions run"
     print "--help                               Print this help"
     
 def main():
     try:
         opt, args = getopt.getopt(sys.argv[1:],"",["AllowedDiff=","CompareRun=","FindL1Zeros",\
                                                    "FirstLS=","NumberLS=","IgnoreLowRate=","ListIgnoredPaths",\
-                                                   "PrintLumi","RefRun=","ShowPSTriggers","help"])
+                                                   "PrintLumi","RefRun=","ShowPSTriggers","force","help"])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -60,15 +61,15 @@ def main():
     CompareRunNum     = ""
     FindL1Zeros       = False
     FirstLS           = 9999
-    NumLS            = -10
+    NumLS             = -10
     IgnoreThreshold   = Config.DefAllowIgnoreThresh
     ListIgnoredPaths  = False
     PrintLumi         = False
     RefRunNum         = int(Config.ReferenceRun)
     ShowPSTriggers    = True
-    
+    Force             = False
 
-    if Config.ShifterMode:
+    if int(Config.ShifterMode):
         print "ShifterMode!!"
     else:
         print "ExpertMode"
@@ -97,6 +98,8 @@ def main():
             RefRunNum=int(a)
         elif o=="--ShowPSTriggers":
             ShowPSTriggers=True
+        elif o=="--force":
+            Force = True
         elif o=="--help":
             usage()
             sys.exit(0)
@@ -177,8 +180,9 @@ def main():
 
         if not isCol:
             print "Most Recent run, "+str(CompareRunNum)+", is NOT collisions"
-            sys.exit(0) # maybe we should walk back and try to find a collisions run, but for now just exit
-        print "Most Recent run is "+CompareRunNum
+            if not Force:
+                sys.exit(0) # maybe we should walk back and try to find a collisions run, but for now just exit
+        print "Most Recent run is "+str(CompareRunNum)
 
     HeadRunFile = RefRunNameTemplate % CompareRunNum
     if os.path.exists(HeadRunFile):  #check if a run file for the run we want to compare already exists, it probably won't but just in case we don't have to interrogate WBM
@@ -213,11 +217,12 @@ def main():
     
             if FindL1Zeros:
                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
-            if int(Config.ShifterMode)==0:
+            if int(Config.ShifterMode):
+                print "Shifter Mode. Continuing"
+            else:
                 print "Expert Mode. Quitting."
                 sys.exit(0)
-            else:
-                print "Shifter Mode. Continuing"
+
             
             print "Sleeping for 1 minute before repeating  "
             for iSleep in range(6):
@@ -250,7 +255,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         if not HeadTotalPrescales[HeadName]: ## prescale is thought to be 0
             continue
         skipTrig=False
-        TriggerRate = HeadTriggerRates[HeadName][1]
+        TriggerRate = round(HeadTriggerRates[HeadName][1],2)
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
            
             PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
