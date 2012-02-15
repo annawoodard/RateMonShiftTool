@@ -423,6 +423,13 @@ class DatabaseParser:
             curLS += step
         return LS
 
+    def GetLastLS(self):
+        self.GetLumiInfo()
+        try:
+            return InstLumiByLS.keys()[-1]
+        except:
+            return 0
+
     def CalculateAvL1Prescales(self,LSRange):
         AvgL1Prescales = [0]*self.nAlgoBits
         for index in LSRange:
