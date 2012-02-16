@@ -251,9 +251,9 @@ class DatabaseParser:
                 except:
                     print "ERROR: Lumi section "+str(ls)+" not in bounds"
                     return [0.,0.,0.,0.,[]]
-            return [AvInstLumi/nLS,AvLiveLumi/nLS, AvDeliveredLumi/nLS, AvDeadTime/nLS,PSCols]
+            return [AvInstLumi/nLS,AvLiveLumi/nLS, AvDeliveredLumi/nLS, AvDeadTime/nLS,PSCols,self.PSColumnByLS[EndLS]]
         except:
-            return [0.,0.,0.,0.,[]]
+            return [0.,0.,0.,0.,[],[]]
 
     def ParsePSColumnPage(self): ## this is now done automatically when we read the db
         pass

@@ -14,6 +14,7 @@ class RateMonConfig:
         self.MonitorIntercept=[]
         self.MonitorSlope=[]
         self.MonitorQuad=[]
+        self.L1Predictions=[]
         self.MonitorOnly=0
         self.MonTargetLumi=0
         self.FindL1Zeros=0
@@ -75,6 +76,8 @@ class RateMonConfig:
                     self.MonitorIntercept.append(float(line[1]))
                     self.MonitorSlope.append(float(line[2]))
                     self.MonitorQuad.append(float(line[3]))
+            elif par=="L1CrossSection":
+                self.L1Predictions = self.ReadList(arg)
             elif par == "MonitorOnlyListed":
                 self.MonitorOnly=int(arg)
             elif par=="MonitorTargetLumi":
@@ -109,6 +112,15 @@ class RateMonConfig:
                     return intercept + 3000*slope/1000 + 3000*3000*quad/1000000
         return -1
 
-
+    def GetExpectedL1Rates(self,lumi):
+        if not lumi:
+            return {}
+        expectedRates = {}
+        for col,inter,slope,quad in self.L1Predictions:
+            try:
+                expectedRates[int(col)] = lumi*(float(inter)+float(slope)*lumi+float(quad)*lumi*lumi)
+            except:
+                return {}
+        return expectedRates
        
     
