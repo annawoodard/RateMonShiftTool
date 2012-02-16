@@ -323,7 +323,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     
     PrettyPrintTable(Header,Data,[80,10,10,10,10,20],Warn)
 
-    MoreTableInfo(HeadParser,HeadLumiRange)
+    MoreTableInfo(HeadParser,HeadLumiRange,Config)
 
 def CheckTriggerList(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config):
     print "checking trigger list"

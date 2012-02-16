@@ -3,7 +3,7 @@ from colors import *
 from DatabaseParser import *
 write = sys.stdout.write
 
-def MoreTableInfo(parser,LumiRange):
+def MoreTableInfo(parser,LumiRange,config):
     [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
 
     if AvDeadTime==0:  ## For some reason the dead time in the DB is occasionally broken
@@ -42,7 +42,14 @@ def MoreTableInfo(parser,LumiRange):
     if parser.GetLastLS(True)!=max(LumiRange):
         write(bcolors.WARNING)
         write("  << This exceeds the last lumisection parsed")
-    write(bcolors.ENDC+"\n")
+    write(bcolors.ENDC+"\n\n\n")
+
+    L1RatePredictions = config.GetExpectedL1Rates(AvInstLumi)
+    if len(L1RatePredictions):
+        print "Expected Level 1 Rates:"
+    for key,val in L1RatePredictions.iteritems():
+        print "Prescale Column "+str(key)+":  "+str(round(val/1000,1))+" kHz"
+    
 
 def isSequential(t):
     try:
