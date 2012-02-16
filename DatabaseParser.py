@@ -195,7 +195,7 @@ class DatabaseParser:
         sqlquery = """SELECT A.LSNUMBER, A.PACCEPT
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
         WHERE RUNNUMBER=%s AND B.NAME = \'%s\' AND A.PATHID = B.PATHID
-        GROUP BY A.LSNUMBER,A.PATHID""" % (self.RunNumber,triggerName,)
+        """ % (self.RunNumber,triggerName,)
 
         self.curs.execute(sqlquery)
         r={}
@@ -573,6 +573,16 @@ class DatabaseParser:
                 UnprescaledRates[hltName] = v[1]
         return UnprescaledRates
     
+    def GetTotalL1Rates(self):
+        query = "SELECT LUMISEGMENTNR, L1ASPHYSICS/23.3 FROM CMS_WBM.LEVEL1_TRIGGER_CONDITIONS WHERE RUNNUMBER=%s" % self.RunNumber
+        self.curs.execute(query)
+        L1Rate = {}
+        for LS,rate in self.curs.fetchall():
+            psi = self.PSColumnByLS.get(LS,0)
+            lumi = self.InstLumiByLS.get(LS,0)
+            L1Rate[LS] = [rate,psi,lumi]
+        return L1Rate
+
     def AssemblePrescaleValues(self): ##Depends on output from ParseLumiPage and ParseTriggerModePage
         return ## WHAT DOES THIS FUNCTION DO???
         MissingName = "Nemo"
