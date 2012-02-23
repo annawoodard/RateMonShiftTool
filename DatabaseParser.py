@@ -103,6 +103,11 @@ class DatabaseParser:
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER>=%d AND A.LSNUMBER<%d
         GROUP BY A.LSNUMBER,A.PATHID"""
 
+        sqlquery1 = """SELECT A.L1PASS, A.PSPASS, A.PACCEPT
+        ,A.PEXCEPT,(SELECT L.NAME FROM CMS_HLT.PATHS L WHERE L.PATHID=A.PATHID) PATHNAME
+        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER>=%d AND A.LSNUMBER<=%d
+        """
+
         try:
             StartLS = LSRange[0]
             EndLS   = LSRange[-1]
@@ -113,7 +118,10 @@ class DatabaseParser:
         AvgL1Prescales = [0]*self.nAlgoBits
         
         #print "Getting HLT Rates for LS from %d to %d" % (LSRange[0],LSRange[-1],)
-        query = sqlquery % (self.RunNumber,StartLS,EndLS,)
+        if StartLS == EndLS:
+            query = sqlquery1 % (self.RunNumber,StartLS,EndLS)
+        else:
+            query = sqlquery % (self.RunNumber,StartLS,EndLS,)
         self.curs.execute(query)
 
         TriggerRates = {}
@@ -186,7 +194,7 @@ class DatabaseParser:
                 ps = psrate/rate
             except:
                 #print "Rate = 0 for "+str(name)+", setting ps to 1"
-                ps = 1
+                ps = avps
             TriggerRates[name] = [avps,ps,rate/n,psrate/n]
 
         return TriggerRates
@@ -213,7 +221,7 @@ class DatabaseParser:
         FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS A,CMS_GT_MON.LUMI_SECTIONS B WHERE A.RUNNUMBER=%s
         AND B.RUN_NUMBER(+)=A.RUNNUMBER AND B.LUMI_SECTION(+)=A.LUMISECTION AND A.LUMISECTION > %d
         ORDER BY A.RUNNUMBER,A.LUMISECTION"""
-        
+
         ## Get the lumi information for the run, just update the table, don't rebuild it every time
         query = sqlquery % (self.RunNumber,self.LastLSParsed)
         self.curs.execute(query)
@@ -233,6 +241,8 @@ class DatabaseParser:
                 self.LastLSParsed=ls
         self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime]
 
+        return self.LumiInfo
+
     def GetAvLumiInfo(self,LSRange):
         nLS=0;
         AvInstLumi=0
@@ -241,7 +251,7 @@ class DatabaseParser:
             EndLS   = LSRange[-1]
             AvLiveLumi=self.LiveLumiByLS[EndLS]-self.LiveLumiByLS[StartLS]
             AvDeliveredLumi=self.DeliveredLumiByLS[EndLS]-self.DeliveredLumiByLS[StartLS]
-            AvDeadTime=AvDeliveredLumi/AvLiveLumi * 100
+            AvDeadTime = 1 - AvDeliveredLumi/AvLiveLumi
             PSCols=Set()
             for ls in LSRange:
                 try:
@@ -251,9 +261,21 @@ class DatabaseParser:
                 except:
                     print "ERROR: Lumi section "+str(ls)+" not in bounds"
                     return [0.,0.,0.,0.,[]]
-            return [AvInstLumi/nLS,AvLiveLumi/nLS, AvDeliveredLumi/nLS, AvDeadTime/nLS,PSCols,self.PSColumnByLS[EndLS]]
+            return [AvInstLumi/nLS,(1000.0/23.3)*AvLiveLumi/(EndLS-StartLS),(1000.0/23.3)*AvDeliveredLumi/(EndLS-StartLS), AvDeadTime,PSCols]
         except:
-            return [0.,0.,0.,0.,[],[]]
+            if StartLS == EndLS:
+                AvInstLumi = self.InstLumiByLS[StartLS]
+                try:
+                    AvLiveLumi = self.LiveLumiByLS[StartLS]-self.LiveLumiByLS[StartLS-1]
+                    AvDeliveredLumi = self.DeliveredLumiByLS[StartLS]-self.DeliveredLumiByLS[StartLS-1]
+                except:
+                    AvLiveLumi = self.LiveLumiByLS[StartLS+1]-self.LiveLumiByLS[StartLS]
+                    AvDeliveredLumi = self.DeliveredLumiByLS[StartLS+1]-self.DeliveredLumiByLS[StartLS]
+                AvDeadTime = 1 - AvDeliveredLumi/AvLiveLumi
+                PSCols = [self.PSColumnByLS[StartLS]]
+                return [AvInstLumi,(1000.0/23.3)*AvLiveLumi,(1000.0/23.3)*AvDeliveredLumi,AvDeadTime,PSCols]
+            else:
+                return [0.,0.,0.,0.,[]]
 
     def ParsePSColumnPage(self): ## this is now done automatically when we read the db
         pass
@@ -572,7 +594,7 @@ class DatabaseParser:
             else:
                 UnprescaledRates[hltName] = v[1]
         return UnprescaledRates
-    
+
     def GetTotalL1Rates(self):
         query = "SELECT LUMISEGMENTNR, L1ASPHYSICS/23.3 FROM CMS_WBM.LEVEL1_TRIGGER_CONDITIONS WHERE RUNNUMBER=%s" % self.RunNumber
         self.curs.execute(query)
@@ -582,7 +604,7 @@ class DatabaseParser:
             lumi = self.InstLumiByLS.get(LS,0)
             L1Rate[LS] = [rate,psi,lumi]
         return L1Rate
-
+    
     def AssemblePrescaleValues(self): ##Depends on output from ParseLumiPage and ParseTriggerModePage
         return ## WHAT DOES THIS FUNCTION DO???
         MissingName = "Nemo"
