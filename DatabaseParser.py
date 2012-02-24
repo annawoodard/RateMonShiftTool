@@ -251,7 +251,12 @@ class DatabaseParser:
             EndLS   = LSRange[-1]
             AvLiveLumi=self.LiveLumiByLS[EndLS]-self.LiveLumiByLS[StartLS]
             AvDeliveredLumi=self.DeliveredLumiByLS[EndLS]-self.DeliveredLumiByLS[StartLS]
-            AvDeadTime = 1 - AvDeliveredLumi/AvLiveLumi
+            if AvDeliveredLumi > 0:
+                AvDeadTime = 1 - AvLiveLumi/AvDeliveredLumi
+            else:
+                if AvLiveLumi > 0:
+                    print "Live Lumi > 0 but Delivered <= 0: problem"
+                AvDeadTime = 0.0
             PSCols=Set()
             for ls in LSRange:
                 try:
@@ -271,7 +276,12 @@ class DatabaseParser:
                 except:
                     AvLiveLumi = self.LiveLumiByLS[StartLS+1]-self.LiveLumiByLS[StartLS]
                     AvDeliveredLumi = self.DeliveredLumiByLS[StartLS+1]-self.DeliveredLumiByLS[StartLS]
-                AvDeadTime = 1 - AvDeliveredLumi/AvLiveLumi
+                if AvDeliveredLumi > 0:
+                    AvDeadTime = 1 - AvLiveLumi/AvDeliveredLumi
+                else:
+                    if AvLiveLumi > 0:
+                        print "Live Lumi > 0 but Delivered <= 0: problem"
+                    AvDeadTime = 0.0
                 PSCols = [self.PSColumnByLS[StartLS]]
                 return [AvInstLumi,(1000.0/23.3)*AvLiveLumi,(1000.0/23.3)*AvDeliveredLumi,AvDeadTime,PSCols]
             else:
