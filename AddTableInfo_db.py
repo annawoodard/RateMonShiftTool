@@ -4,7 +4,8 @@ from DatabaseParser import *
 write = sys.stdout.write
 
 def MoreTableInfo(parser,LumiRange,config):
-    [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols,LastPSCol] = parser.GetAvLumiInfo(LumiRange)
+    ##[AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols,LastPSCol] = parser.GetAvLumiInfo(LumiRange)
+    [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
 
     if AvDeadTime==0:  ## For some reason the dead time in the DB is occasionally broken
         try:
@@ -49,9 +50,9 @@ def MoreTableInfo(parser,LumiRange,config):
         print "Expected Level 1 Rates:"
     for key,val in L1RatePredictions.iteritems():
         write("Prescale Column "+str(key)+":  "+str(round(val/1000,1))+" kHz")
-        if key == LastPSCol:
-            write(' << We Are here!')
-        write('\n')
+        ##if key == LastPSCol:
+        ##    write(' << We Are here!')
+        ##write('\n')
         
     
 
