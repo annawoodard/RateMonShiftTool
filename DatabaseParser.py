@@ -225,6 +225,7 @@ class DatabaseParser:
         ## Get the lumi information for the run, just update the table, don't rebuild it every time
         query = sqlquery % (self.RunNumber,self.LastLSParsed)
         self.curs.execute(query)
+
         pastLSCol=-1
         for run,ls,psi,inst,live,dlive,dt,dcs,phys,active in self.curs.fetchall():
             self.PSColumnByLS[ls]=psi
@@ -239,7 +240,7 @@ class DatabaseParser:
             pastLSCol=ls
             if ls>self.LastLSParsed:
                 self.LastLSParsed=ls
-        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime]
+        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime, self.Physics, self.Active]
 
         return self.LumiInfo
 
@@ -249,8 +250,16 @@ class DatabaseParser:
         try:
             StartLS = LSRange[0]
             EndLS   = LSRange[-1]
-            AvLiveLumi=self.LiveLumiByLS[EndLS]-self.LiveLumiByLS[StartLS]
-            AvDeliveredLumi=self.DeliveredLumiByLS[EndLS]-self.DeliveredLumiByLS[StartLS]
+            maxlive = self.LiveLumiByLS[EndLS]
+            maxdelivered = self.DeliveredLumiByLS[EndLS]
+            for iterator in LSRange:
+                if self.LiveLumiByLS[iterator] > maxlive:
+                    maxlive = self.LiveLumiByLS[iterator]
+                if self.DeliveredLumiByLS[iterator] > maxdelivered:
+                    maxdelivered = self.DeliveredLumiByLS[iterator]
+            AvLiveLumi=maxlive-self.LiveLumiByLS[StartLS]
+            AvDeliveredLumi=maxdelivered-self.DeliveredLumiByLS[StartLS]
+
             if AvDeliveredLumi > 0:
                 AvDeadTime = 1 - AvLiveLumi/AvDeliveredLumi
             else:
