@@ -42,6 +42,7 @@ def main():
     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
     save_fits = False
     
+    
     ########  END PARAMETERS ##########
     
     Rates = GetDBRates(run_list, trig_name, num_ls, debug_print)
@@ -82,8 +83,11 @@ def GetDBRates(run_list,trig_name,num_ls, debug_print):
                 RefParser = DatabaseParser()
                 RefParser.RunNumber = RefRunNum
                 RefParser.ParseRunSetup()
-                RefLumiRange = RefParser.GetLSRange(1,9999)
-                #RefLumiArray = RefParser.GetLumiInfo()
+                RefLumiRangePhysicsActive = RefParser.GetLSRange(1,9999)
+                RefLumiArray = RefParser.GetLumiInfo()
+                RefLumiRange = []
+                for iterator in RefLumiArray[0]:
+                    RefLumiRange.append(iterator)
 
                 nls = RefLumiRange[0]
                 LSRange = {}
@@ -92,14 +96,30 @@ def GetDBRates(run_list,trig_name,num_ls, debug_print):
                     continue
                 while nls < RefLumiRange[-1]-num_ls:
                     if num_ls > 1:
-                        LSRange[nls] = RefParser.GetLSRange(nls,num_ls)
+                        #LSRange[nls] = RefParser.GetLSRange(nls,num_ls)
+                        LSRange[nls] = []
+                        for iterator in RefLumiRange:
+                            if iterator >= nls and iterator < nls+num_ls:
+                                LSRange[nls].append(iterator)
                     else:
                         LSRange[nls] = [nls]
                     nls = LSRange[nls][-1]+1
                 print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
                 for nls in LSRange:
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
+                
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
+                    physics = 1
+                    active = 1
+                    for iterator in LSRange[nls]:
+                        if RefLumiArray[5][iterator] == 0:
+                            physics = 0
+                        if RefLumiArray[6][iterator] == 0:
+                            active = 0
+
+                    if live < 0:
+                        print "Run "+str(RefRunNum)+" LS "+str(nls)+" live lumi = "+str(live)+", delivered = "+str(delivered)+", physics = "+str(physics)+", active = "+str(active)
+
                     for key in TriggerRates:
                         if not trig_name in key:
                             continue
@@ -120,9 +140,8 @@ def GetDBRates(run_list,trig_name,num_ls, debug_print):
                             Rates[name]["rate"] = []
                             Rates[name]["rawxsec"] = []
                             Rates[name]["xsec"] = []
-
-                        if delivered == 0:
-                            continue
+                            Rates[name]["physics"] = []
+                            Rates[name]["active"] = []
                         [avps, ps, rate, psrate] = TriggerRates[key]
                         Rates[name]["run"].append(RefRunNum)
                         Rates[name]["ls"].append(nls)
@@ -133,8 +152,14 @@ def GetDBRates(run_list,trig_name,num_ls, debug_print):
                         Rates[name]["deadtime"].append(dead)
                         Rates[name]["rawrate"].append(rate)
                         Rates[name]["rate"].append(psrate/(1.0-dead))
-                        Rates[name]["rawxsec"].append(rate/delivered)
-                        Rates[name]["xsec"].append(psrate/((1.0-dead)*delivered))
+                        if live == 0:
+                            Rates[name]["rawxsec"].append(0.0)
+                            Rates[name]["xsec"].append(0.0)
+                        else:
+                            Rates[name]["rawxsec"].append(rate/live)
+                            Rates[name]["xsec"].append(psrate/live)
+                        Rates[name]["physics"].append(physics)
+                        Rates[name]["active"].append(active)
             #except:
                 #print "Failed to parse run "+str(RefRunNum)
 
@@ -181,7 +206,11 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
         Output[print_trigger] = {}
 
         lowlumi = 0
-        meanlumi_init = sum(Rates[print_trigger]["live_lumi"])/len(Rates[print_trigger]["live_lumi"])
+        numzeroes = 0
+        for live_lumi in Rates[print_trigger]["live_lumi"]:
+            if live_lumi < 1:
+                numzeroes+=1
+        meanlumi_init = sum(Rates[print_trigger]["live_lumi"])/(len(Rates[print_trigger]["live_lumi"])-numzeroes)
         meanlumi = 0
         highlumi = 0
         lowxsec = 0
@@ -193,14 +222,14 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
             if not Rates[print_trigger]["run"][iterator] in run_list:
                 continue
             if Rates[print_trigger]["live_lumi"][iterator] <= meanlumi_init:
-                if not data_clean or Rates[print_trigger]["rawrate"][iterator] > 0.04:
+                if not data_clean or ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1):
                     meanxsec+=Rates[print_trigger]["xsec"][iterator]
                     lowxsec+=Rates[print_trigger]["xsec"][iterator]
                     meanlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     lowlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     nlow+=1
             if Rates[print_trigger]["live_lumi"][iterator] > meanlumi_init:
-                if not data_clean or Rates[print_trigger]["rawrate"][iterator] > 0.04:
+                if not data_clean or ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1):
                     meanxsec+=Rates[print_trigger]["xsec"][iterator]
                     highxsec+=Rates[print_trigger]["xsec"][iterator]
                     meanlumi+=Rates[print_trigger]["live_lumi"][iterator]
@@ -254,7 +283,7 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                 continue
             prediction = meanxsec + slopexsec * (Rates[print_trigger]["live_lumi"][iterator] - meanlumi)
             realvalue = Rates[print_trigger]["xsec"][iterator]
-            if not data_clean or (realvalue > 0.4*prediction and realvalue < 2.5*prediction) or (realvalue > 0.4*meanxsec and realvalue < 2.5*meanxsec) or prediction < 0:
+            if not data_clean or ( ((realvalue > 0.4*prediction and realvalue < 2.5*prediction) or (realvalue > 0.4*meanxsec and realvalue < 2.5*meanxsec) or prediction < 0 ) and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 ):
                 run_t.append(Rates[print_trigger]["run"][iterator])
                 ls_t.append(Rates[print_trigger]["ls"][iterator])
                 ps_t.append(Rates[print_trigger]["ps"][iterator])
@@ -273,18 +302,28 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                 e_inst_t.append(14.14)
                 e_live_t.append(14.14)
                 e_delivered_t.append(14.14)
-                e_deadtime_t.append(1.0)
+                e_deadtime_t.append(0.01)
                 e_rawrate_t.append(math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3)))
                 e_rate_t.append(Rates[print_trigger]["ps"][iterator]*math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3)))
-                e_rawxsec_t.append(math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3))/Rates[print_trigger]["delivered_lumi"][iterator])
-                e_xsec_t.append(Rates[print_trigger]["ps"][iterator]*math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3))/Rates[print_trigger]["live_lumi"][iterator])
+                if live_t[-1] == 0:
+                    e_rawxsec_t.append(0)
+                    e_xsec_t.append(0)
+                else:
+                    e_rawxsec_t.append(math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3))/Rates[print_trigger]["live_lumi"][iterator])
+                    e_xsec_t.append(Rates[print_trigger]["ps"][iterator]*math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3))/Rates[print_trigger]["live_lumi"][iterator])
 
                 if overlay_fit:
-                    rate_prediction = X0 + X1*live_t[-1] + X2*live_t[-1]*live_t[-1] 
+                    rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1]
+                    if rate_t[-1] < 0.7 * rate_prediction or rate_t[-1] > 1.4 * rate_prediction:
+                        print str(run_t[-1])+"  "+str(ls_t[-1])+"  "+str(print_trigger)+"  "+str(ps_t[-1])+"  "+str(deadtime_t[-1])+"  "+str(rate_prediction)+"  "+str(rate_t[-1])+"  "+str(rawrate_t[-1])
                     rawrate_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/(ps_t[-1]))
                     rate_fit_t.append(rate_prediction)
-                    rawxsec_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/(ps_t[-1]*delivered_t[-1]))
-                    xsec_fit_t.append(rate_prediction/delivered_t[-1])
+                    if live_t[-1] == 0:
+                        rawxsec_fit_t.append(0)
+                        xsec_fit_t.append(0)
+                    else:
+                        rawxsec_fit_t.append(rate_prediction/(ps_t[-1]*live_t[-1]))
+                        xsec_fit_t.append(rate_prediction/live_t[-1])
                     e_rawrate_fit_t.append(e_rawrate_t[-1]*sqrt(Chi2))
                     e_rate_fit_t.append(e_rate_t[-1]*sqrt(Chi2))
                     e_rawxsec_fit_t.append(e_rawxsec_t[-1]*sqrt(Chi2))
@@ -313,6 +352,10 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
             elif varX == "delivered":
                 VX = delivered_t
                 VXE = e_delivered_t
+            elif varX == "deadtime":
+                VX = deadtime_t
+                VXE = e_deadtime_t
+                print deadtime_t
             elif varX == "rawrate":
                 VX = rawrate_t
                 VXE = e_rawrate_t
@@ -346,6 +389,9 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
             elif varY == "delivered":
                 VY = delivered_t
                 VYE = e_delivered_t
+            elif varY == "deadtime":
+                VY = deadtime_t
+                VYE = e_deadtime_t
             elif varY == "rawrate":
                 VY = rawrate_t
                 VYE = e_rawrate_t
@@ -422,6 +468,18 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                     #gr1.Fit("f1a","B","Q")
                     gr1.Fit("f1a","Q","rob=0.80")
 
+                    if f1a.GetChisquare()/f1a.GetNDF() > 20:
+                        f1b = TF1("f1b","pol3",0,8000)
+                        f1b.SetLineColor(4)
+                        f1b.SetLineWidth(2)
+                        f1b.SetParLimits(0,0,1000)
+                        f1b.SetParLimits(1,0,1000)
+                        f1b.SetParLimits(2,0,1000)
+                        gr1.Fit("f1b","Q","rob=0.80")
+                        if f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
+                            print str(print_trigger)+" f1a Chi2 = "+str(f1a.GetChisquare()/f1a.GetNDF())+", f1b Chi2 = "+str(f1b.GetChisquare()/f1b.GetNDF())
+                        
+
 ##                     f1b = TF1("f1b","pol2",0,8000)
 ##                     f1b.SetParameters(0.0,f2a.GetParameter(0),f2a.GetParameter(1))
 ##                     f1b.SetLineColor(3)
@@ -446,6 +504,9 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                 if overlay_fit:
                     gr3.Draw("P3")
                 if do_fit:
+                    #if f1b and f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
+                        #f1b.Draw("same")
+                    #else:
                     f1a.Draw("same")
 ##                     if "rate" in varY:
 ##                         f1b.Draw("same")
