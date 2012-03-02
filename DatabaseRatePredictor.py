@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from DatabaseParser import *
 import sys
 import os
@@ -28,13 +30,13 @@ def main():
     
 
     ######## TO SEE RATE VS PREDICTION ########
-    run_list = [180241]
+    run_list = [180250]
 
     trig_name = "Mu"
     num_ls = 1
     debug_print = False
 
-    min_rate = 3.0
+    min_rate = 10.0
     print_table = False
     data_clean = False
     ##plot_properties = [varX, varY, do_fit, save_root, save_png, overlay_fit, fit_file]
@@ -277,7 +279,7 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
             X1 = Input[print_trigger][1]
             X2 = Input[print_trigger][2]
             Chi2 = Input[print_trigger][3]
-            
+        
         for iterator in range(len(Rates[print_trigger]["rate"])):
             if not Rates[print_trigger]["run"][iterator] in run_list:
                 continue
@@ -305,17 +307,19 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                 e_deadtime_t.append(0.01)
                 e_rawrate_t.append(math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3)))
                 e_rate_t.append(Rates[print_trigger]["ps"][iterator]*math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3)))
+                
                 if live_t[-1] == 0:
                     e_rawxsec_t.append(0)
                     e_xsec_t.append(0)
                 else:
                     e_rawxsec_t.append(math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3))/Rates[print_trigger]["live_lumi"][iterator])
                     e_xsec_t.append(Rates[print_trigger]["ps"][iterator]*math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3))/Rates[print_trigger]["live_lumi"][iterator])
-
+                
                 if overlay_fit:
                     rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1]
                     if rate_t[-1] < 0.7 * rate_prediction or rate_t[-1] > 1.4 * rate_prediction:
-                        print str(run_t[-1])+"  "+str(ls_t[-1])+"  "+str(print_trigger)+"  "+str(ps_t[-1])+"  "+str(deadtime_t[-1])+"  "+str(rate_prediction)+"  "+str(rate_t[-1])+"  "+str(rawrate_t[-1])
+                        pass
+                        #print str(run_t[-1])+"  "+str(ls_t[-1])+"  "+str(print_trigger)+"  "+str(ps_t[-1])+"  "+str(deadtime_t[-1])+"  "+str(rate_prediction)+"  "+str(rate_t[-1])+"  "+str(rawrate_t[-1])
                     rawrate_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/(ps_t[-1]))
                     rate_fit_t.append(rate_prediction)
                     if live_t[-1] == 0:
@@ -333,6 +337,7 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                 if debug_print:
                     print str(print_trigger)+" has xsec "+str(round(Rates[print_trigger]["xsec"][iterator],6))+" at lumi "+str(round(Rates[print_trigger]["live_lumi"][iterator],2))+" where the expected value is "+str(prediction)
 
+        
         for varX, varY, do_fit, save_root, save_png, overlay_fit, fit_file in plot_properties:
             if varX == "run":
                 VX = run_t
@@ -542,7 +547,7 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
     if print_table:
         print '%60s%10s%10s%10s%10s%10s%10s' % ("Trig", "p0", "p1", "p2", "Chi2", "5e33 pred", "Av raw")
         for print_trigger in Output:
-            _trigger = (print_trigger[:56] + '...') if len(print_trigger) > 59 else print_trigger
+            #_trigger = (print_trigger[:56] + '...') if len(print_trigger) > 59 else print_trigger
             try:
                 print '%60s%10s%10s%10s%10s%10s%10s' % (_trigger, round(Output[print_trigger][0],3), round(Output[print_trigger][1],6)*1000, round(Output[print_trigger][2],9)*1000000, round(Output[print_trigger][3],2), round(Output[print_trigger][4],2) , round(Output[print_trigger][5],3))
             except:
