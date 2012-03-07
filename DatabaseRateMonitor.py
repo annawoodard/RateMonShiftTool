@@ -244,12 +244,28 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     Warn   = []
     IgnoredRates=[]
 
+<<<<<<< DatabaseRateMonitor.py
+    [HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols] = HeadParser.GetAvLumiInfo(HeadLumiRange)
+=======
     [HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols,LastPSCol] = HeadParser.GetAvLumiInfo(HeadLumiRange)
     ##[HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols] = HeadParser.GetAvLumiInfo(HeadLumiRange)
+>>>>>>> 1.8
     ##[HeadUnprescaledRates, HeadTotalPrescales, HeadL1Prescales, HeadTriggerRates] = HeadParser.UpdateRun(HeadLumiRange)
     HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
+<<<<<<< DatabaseRateMonitor.py
+    [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
+
+    pkl_file = open("Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl", 'rb')
+    FitInput = pickle.load(pkl_file)
+    pkl_file.close()
+    
+    pkl_file = open("RefRuns/2011/Rates_HLT_10LS_JPAP.pkl", 'rb')
+    RefRatesInput = pickle.load(pkl_file)
+    pkl_file.close()
+=======
     ##[PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS] = HeadParser.LumiInfo
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
+>>>>>>> 1.8
 
     for HeadName in HeadUnprescaledRates:
 ##  SKIP triggers in the skip list
@@ -257,23 +273,40 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 ##             continue
 ##         if not HeadTotalPrescales[HeadName]: ## prescale is thought to be 0
 ##             continue
+        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+        masked_trig = False
+        for mask in masked_triggers:
+            if str(mask) in HeadName:
+                masked_trig = True
+        if masked_trig:
+            continue
+
         skipTrig=False
         TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
+
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
            
-            PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
-            
-            if PSCorrectedExpectedRate < 0:  ##This means we don't have a prediction for this trigger
+            ##PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
+            PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi)
+
+            if PSCorrectedExpectedRate[0] < 0:  ##This means we don't have a prediction for this trigger
                 continue
 ##             if not HeadTotalPrescales[HeadName]:
 ##                 print HeadName+ " has total prescale 0"
 ##                 continue
-            ExpectedRate = round((PSCorrectedExpectedRate / HeadUnprescaledRates[HeadName][1]),2)
+            ExpectedRate = round((PSCorrectedExpectedRate[0] / HeadUnprescaledRates[HeadName][1]),2)
             PerDiff=0
             if ExpectedRate>0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
+<<<<<<< DatabaseRateMonitor.py
+                if abs(PerDiff) > AllowedRateDiff/max(sqrt(TriggerRate),sqrt(ExpectedRate)):
+                    Warn.append(True)
+                else:
+                    Warn.append(False)
+=======
             if abs(PerDiff) > max(AllowedRateDiff/max(sqrt(TriggerRate),sqrt(ExpectedRate)),AllowedRateDiff/2.):
                 Warn.append(True)
+>>>>>>> 1.8
             else:
                 Warn.append(False)
 
