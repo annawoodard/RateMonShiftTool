@@ -295,7 +295,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             PerDiff=0
             if ExpectedRate>0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
-                if abs(PerDiff) > AllowedRateDiff/max(sqrt(TriggerRate),sqrt(ExpectedRate)):
+                if abs(PerDiff) > max(AllowedRateDiff/max(sqrt(TriggerRate),sqrt(ExpectedRate)),AllowedRateDiff/2.0):
                     Warn.append(True)
                 else:
                     Warn.append(False)

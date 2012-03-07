@@ -68,7 +68,7 @@ def main():
     print_table = False
     data_clean = False
     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-    plot_properties = [["ls", "xsec", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+    plot_properties = [["ls", "xsec", False, True, False, "Fits/2011/Fit_HLT_20LS_Run179497to180252.pkl"]]
     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
     save_fits = False
     
