@@ -11,12 +11,12 @@ def GetLatestRunNumber(minRunNumber):
     orcl = cx_Oracle.connect(connect)
     curs = orcl.cursor()
     RunNoQuery="""
-    SELECT A.RUNNUMBER FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_WBM.RUNSUMMARY B WHERE A.RUNNUMBER=B.RUNNUMBER AND B.TRIGGERS>0 AND B.RUNNUMBER>%d
+    SELECT A.RUNNUMBER FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_WBM.RUNSUMMARY B WHERE A.RUNNUMBER=B.RUNNUMBER AND B.TRIGGERS>0 AND B.RUNNUMBER>=%d
     """ % minRunNumber
     curs.execute(RunNoQuery)
     
     runs=[]
-    for run, in curs.fetchall():       
+    for run, in curs.fetchall():
         TrigModeQuery = """
         SELECT TRIGGERMODE FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
         """ % run
@@ -33,7 +33,6 @@ def GetLatestRunNumber(minRunNumber):
 def usage():
     print sys.argv[0]+" MinRunNumber"
     
-
 if __name__=='__main__':
     if len(sys.argv)<2:
         usage()
