@@ -56,7 +56,7 @@ def main():
         if o=="--ConfigFile":
             Config.CFGfile=a
     Config.ReadCFG()
-     
+
     AllowedRateDiff   = Config.DefAllowRateDiff
     CompareRunNum     = ""
     FindL1Zeros       = False
@@ -213,7 +213,7 @@ def main():
    
     try:
         while True:
-            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
     
             if FindL1Zeros:
                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
@@ -237,7 +237,7 @@ def main():
         print "Quitting. Peace Out."
 
             
-def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config):
+def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths):
 
     Header = ["Trigger Name","Actual","Expected","% Inc","Cur PS","Comments"]
     Data   = []
@@ -263,6 +263,13 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 ##             continue
 ##         if not HeadTotalPrescales[HeadName]: ## prescale is thought to be 0
 ##             continue
+        
+## unless we are Listing Ignored paths only look at triggers in the .list file specifed in defaults.cfg
+        if StripVersion(HeadName) not in Config.MonitorList and not ListIgnoredPaths:
+            continue
+                
+            
+        
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
         masked_trig = False
         for mask in masked_triggers:
