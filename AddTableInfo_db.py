@@ -4,24 +4,30 @@ from DatabaseParser import *
 write = sys.stdout.write
 
 def MoreTableInfo(parser,LumiRange,config):
+<<<<<<< AddTableInfo_db.py
+    [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
+    LastPSCol = PSCols[-1]
+=======
     [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols,LastPSCol] = parser.GetAvLumiInfo(LumiRange)
     ##[AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
 
+>>>>>>> 1.9
     if AvDeadTime==0:  ## For some reason the dead time in the DB is occasionally broken
         try:
             AvDeadTime = AvLiveLumi/AvDeliveredLumi * 100
         except:
             AvDeadTime = 100
     PrescaleColumnString=''
+    PSCols = list(set(PSCols))
     for c in PSCols:
         PrescaleColumnString = PrescaleColumnString + str(c) + ","
 
     write("The average instantaneous lumi of these lumisections is: ")
     write(str(round(AvInstLumi,1))+"e30\n")
     write("The delivered lumi of these lumi sections is:            ")
-    write(str(round(1000*AvDeliveredLumi,1))+"e30"+"\n")
+    write(str(round(len(LumiRange)*AvDeliveredLumi,1))+"e30"+"\n")
     write("The live (recorded) lumi of these lumi sections is:      ")
-    write(str(round(1000*AvLiveLumi,1))+"e30\n\n")
+    write(str(round(len(LumiRange)*AvLiveLumi,1))+"e30\n\n")
     write("The average deadtime of these lumi sections is:          ")
     if AvDeadTime > 5:
         write(bcolors.FAIL)
