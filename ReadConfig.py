@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import os
+import cPickle as pickle
+import math
 
 class RateMonConfig:
     
@@ -102,16 +104,47 @@ class RateMonConfig:
             return False
         return True
 
-    def GetExpectedRate(self,TrigName,lumi):
-        for trig,intercept,slope,quad in zip(self.MonitorList,self.MonitorIntercept,self.MonitorSlope,self.MonitorQuad):
-            if trig==TrigName:
-                #print "mon list",self.MonitorList
-                if lumi:
-                    return intercept + lumi*slope/1000 + lumi*lumi*quad/1000000
-                else:
-                    return intercept + 3000*slope/1000 + 3000*3000*quad/1000000
-        return -1
+##     def GetExpectedRate(self,TrigName,lumi):
+##         for trig,intercept,slope,quad in zip(self.MonitorList,self.MonitorIntercept,self.MonitorSlope,self.MonitorQuad):
+##             if trig==TrigName:
+##                 #print "mon list",self.MonitorList
+##                 if lumi:
+##                     return intercept + lumi*slope/1000 + lumi*lumi*quad/1000000
+##                 else:
+##                     return intercept + 3000*slope/1000 + 3000*3000*quad/1000000
+##         return -1
 
+    def GetExpectedRate(self,TrigName,Input,Rates,live,delivered):
+        RefRun = False
+
+        try:
+            Chi2 = Input[TrigName][5]
+            if Input[TrigName][0] == "poly":
+                return [(live/delivered)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), Chi2]
+            else:
+                return [(live/delivered)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]*delivered)), Chi2]
+        except:
+            RefRun = True
+
+        if RefRun:
+
+            num_compare = 0
+            pred_rate = 0
+            for iterator in range(len(Rates[TrigName]["rate"])):
+                delivered_lumi = Rates[TrigName]["delivered_lumi"][iterator]
+                if delivered_lumi > delivered - 100 and delivered_lumi < delivered + 100:
+                    live_lumi = Rates[TrigName]["live_lumi"][iterator]
+                    rate = Rates[TrigName]["rate"][iterator]
+                    pred_rate += (live/delivered)*rate*(delivered_lumi/live_lumi)
+                    num_compare += 1
+
+            pred_rate = pred_rate/num_compare
+            Chi2 = pred_rate/math.sqrt(num_compare)
+            return [pred_rate, Chi2]
+
+        return -1
+                    
+        
     def GetExpectedL1Rates(self,lumi):
         if not lumi:
             return {}
