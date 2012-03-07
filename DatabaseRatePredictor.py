@@ -34,10 +34,10 @@ def main():
             run_list.append(run)
             NumberOfRuns-=1
 
-    ######## TO CREATE FITS #########
+##     ###### TO CREATE FITS #########
 ##     #run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
-    
-##     trig_name = "HLT"
+##     #run_list = [180241]
+##     trig_name = "IsoMu"
 ##     num_ls = 10
 ##     physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
 ##     #JSON = [] ##To not use a JSON file, just leave the array empty
@@ -49,26 +49,26 @@ def main():
 ##     print_table = False
 ##     data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
 ##     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-##     plot_properties = [["delivered", "rate", True, True, False, ""]]
+##     plot_properties = [["delivered", "rate", True, False, False, ""]]
 
 ##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-##     save_fits = False
+##     save_fits = True
     
 
-##     ######## TO SEE RATE VS PREDICTION ########
-    run_list = [180241]
+    ###### TO SEE RATE VS PREDICTION ########
+    run_list = [180252]
 
-    trig_name = "IsoMu"
+    trig_name = "Mu"
     num_ls = 1
     physics_active_psi = True
     JSON = []
     debug_print = False
 
-    min_rate = 10.0
+    min_rate = 1.0
     print_table = False
     data_clean = False
     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-    plot_properties = [["ls", "xsec", False, True, False, "Fits/2011/Fit_HLT_20LS_Run179497to180252.pkl"]]
+    plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
     save_fits = False
     
@@ -257,6 +257,16 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                 break
 
     for print_trigger in Rates:
+        ##Limits Rates[] to runs in run_list
+        NewTrigger = {}
+        for key in Rates[print_trigger]:
+            NewTrigger[key] = []
+        for iterator in range (len(Rates[print_trigger]["run"])):
+            if Rates[print_trigger]["run"][iterator] in run_list:
+                for key in Rates[print_trigger]:
+                    NewTrigger[key].append(Rates[print_trigger][key][iterator])
+        Rates[print_trigger] = NewTrigger
+        
         meanrawrate = sum(Rates[print_trigger]["rawrate"])/len(Rates[print_trigger]["rawrate"])
         if not trig_name in print_trigger:
             continue
@@ -272,11 +282,7 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
         OutputFit[print_trigger] = {}
 
         lowlumi = 0
-        numzeroes = 0
-        for live_lumi in Rates[print_trigger]["live_lumi"]:
-            if live_lumi < 1:
-                numzeroes+=1
-        meanlumi_init = sum(Rates[print_trigger]["live_lumi"])/(len(Rates[print_trigger]["live_lumi"])-numzeroes)
+        meanlumi_init = median(Rates[print_trigger]["live_lumi"])
         meanlumi = 0
         highlumi = 0
         lowxsec = 0
@@ -285,25 +291,29 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
         nlow = 0
         nhigh = 0
         for iterator in range(len(Rates[print_trigger]["rate"])):
-            if not Rates[print_trigger]["run"][iterator] in run_list:
-                continue
             if Rates[print_trigger]["live_lumi"][iterator] <= meanlumi_init:
-                if not data_clean or ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0):
+                if ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 500):
                     meanxsec+=Rates[print_trigger]["xsec"][iterator]
                     lowxsec+=Rates[print_trigger]["xsec"][iterator]
                     meanlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     lowlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     nlow+=1
             if Rates[print_trigger]["live_lumi"][iterator] > meanlumi_init:
-                if not data_clean or ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0):
+                if ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 500):
                     meanxsec+=Rates[print_trigger]["xsec"][iterator]
                     highxsec+=Rates[print_trigger]["xsec"][iterator]
                     meanlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     highlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     nhigh+=1
-        meanxsec = meanxsec/(nlow+nhigh)
-        meanlumi = meanlumi/(nlow+nhigh)
-        slopexsec = ( (highxsec/nhigh) - (lowxsec/nlow) ) / ( (highlumi/nhigh) - (lowlumi/nlow) )
+        try:
+            meanxsec = meanxsec/(nlow+nhigh)
+            meanlumi = meanlumi/(nlow+nhigh)
+            slopexsec = ( (highxsec/nhigh) - (lowxsec/nlow) ) / ( (highlumi/nhigh) - (lowlumi/nlow) )
+        except:
+            print str(print_trigger)+" has no good datapoints - setting initial xsec slope estimate to 0"
+            meanxsec = median(Rates[print_trigger]["xsec"])
+            meanlumi = median(Rates[print_trigger]["live_lumi"])
+            slopexsec = 0
 
         [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t] = MakePlotArrays()
 
@@ -314,6 +324,7 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
             X2 = InputFit[print_trigger][3]
             X3 = InputFit[print_trigger][4]
             Chi2 = InputFit[print_trigger][5]
+            ##print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
 
         for iterator in range(len(Rates[print_trigger]["rate"])):
             if not Rates[print_trigger]["run"][iterator] in run_list:
@@ -364,15 +375,19 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                         rate_fit_t.append(0)
                         rawxsec_fit_t.append(0)
                         xsec_fit_t.append(0)
+                        e_rawrate_fit_t.append(0)
+                        e_rate_fit_t.append(math.sqrt(Chi2))
+                        e_rawxsec_fit_t.append(0)
+                        e_xsec_fit_t.append(0)
                     else:
                         rawrate_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/(ps_t[-1]))
                         rate_fit_t.append(rate_prediction)
                         rawxsec_fit_t.append(rawrate_fit_t[-1]/live_t[-1])
                         xsec_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/live_t[-1])
-                    e_rawrate_fit_t.append(math.sqrt(Chi2)*rawrate_fit_t[-1]/rate_fit_t[-1])
-                    e_rate_fit_t.append(math.sqrt(Chi2))
-                    e_rawxsec_fit_t.append(math.sqrt(Chi2)*rawxsec_fit_t[-1]/rate_fit_t[-1])
-                    e_xsec_fit_t.append(math.sqrt(Chi2)*xsec_fit_t[-1]/rate_fit_t[-1])
+                        e_rawrate_fit_t.append(math.sqrt(Chi2)*rawrate_fit_t[-1]/rate_fit_t[-1])
+                        e_rate_fit_t.append(math.sqrt(Chi2))
+                        e_rawxsec_fit_t.append(math.sqrt(Chi2)*rawxsec_fit_t[-1]/rate_fit_t[-1])
+                        e_xsec_fit_t.append(math.sqrt(Chi2)*xsec_fit_t[-1]/rate_fit_t[-1])
 
             else: ##If the data point does not pass the data_clean filter
                 if debug_print:
@@ -382,7 +397,6 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
 
         AllPlotArrays = [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t]
         [VX, VXE, VY, VYE, VF, VFE] = GetVXVY(plot_properties, fit_file, AllPlotArrays)
-    
 
         if save_root or save_png:
             c1 = TCanvas(str(varX),str(varY))
@@ -512,6 +526,7 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
         FitOutputFile = open(FitFile, 'wb')
         pickle.dump(OutputFit, FitOutputFile, 2)
         FitOutputFile.close()
+        print "Output fit file is "+str(FitFile)
 
     if print_table:
         print "The expo fit is of the form p0+p1*e^(p2*x), poly is p0+(p1/10^3)*x+(p2/10^6)*x^2+(p3/10^9)*x^3, where x is Deliv. Lumi."
