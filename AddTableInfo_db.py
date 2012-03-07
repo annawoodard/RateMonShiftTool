@@ -4,14 +4,9 @@ from DatabaseParser import *
 write = sys.stdout.write
 
 def MoreTableInfo(parser,LumiRange,config):
-<<<<<<< AddTableInfo_db.py
     [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
     LastPSCol = PSCols[-1]
-=======
-    [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols,LastPSCol] = parser.GetAvLumiInfo(LumiRange)
-    ##[AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
 
->>>>>>> 1.9
     if AvDeadTime==0:  ## For some reason the dead time in the DB is occasionally broken
         try:
             AvDeadTime = AvLiveLumi/AvDeliveredLumi * 100
