@@ -98,30 +98,24 @@ class DatabaseParser:
         pass
 
     def GetHLTRates(self,LSRange):
+
         sqlquery = """SELECT SUM(A.L1PASS),SUM(A.PSPASS),SUM(A.PACCEPT)
         ,SUM(A.PEXCEPT),(SELECT L.NAME FROM CMS_HLT.PATHS L WHERE L.PATHID=A.PATHID) PATHNAME 
-        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER>=%d AND A.LSNUMBER<%d
+        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER IN %s
         GROUP BY A.LSNUMBER,A.PATHID"""
 
-        sqlquery1 = """SELECT A.L1PASS, A.PSPASS, A.PACCEPT
-        ,A.PEXCEPT,(SELECT L.NAME FROM CMS_HLT.PATHS L WHERE L.PATHID=A.PATHID) PATHNAME
-        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER>=%d AND A.LSNUMBER<=%d
-        """
-
-        try:
-            StartLS = LSRange[0]
-            EndLS   = LSRange[-1]
-        except:
-            StartLS = 0
-            EndLS   = 9999
+        LSRangeSTR = str(LSRange)
+        LSRangeSTR = LSRangeSTR.replace("[","(")
+        LSRangeSTR = LSRangeSTR.replace("]",")")
+                           
+        StartLS = LSRange[0]
+        EndLS   = LSRange[-1]
 
         AvgL1Prescales = [0]*self.nAlgoBits
         
         #print "Getting HLT Rates for LS from %d to %d" % (LSRange[0],LSRange[-1],)
-        if StartLS == EndLS:
-            query = sqlquery1 % (self.RunNumber,StartLS,EndLS)
-        else:
-            query = sqlquery % (self.RunNumber,StartLS,EndLS,)
+
+        query = sqlquery % (self.RunNumber,LSRangeSTR)
         self.curs.execute(query)
 
         TriggerRates = {}
@@ -167,7 +161,7 @@ class DatabaseParser:
                     #psi = self.PSColumnByLS[1]
                 #if not psi:
                 except:
-                    print "Cannot figure out PSI for index"+str(on)+" setting to 0"
+                    print "Cannot figure out PSI for index "+str(on)+" setting to 0"
                     print "The value of LSRange[on] is:"
                     print str(LSRange[on])
                     psi = 0
@@ -266,11 +260,11 @@ class DatabaseParser:
                 if AvLiveLumi > 0:
                     print "Live Lumi > 0 but Delivered <= 0: problem"
                 AvDeadTime = 0.0
-            PSCols=Set()
+            PSCols=[]
             for ls in LSRange:
                 try:
                     AvInstLumi+=self.InstLumiByLS[ls]
-                    PSCols.add(self.PSColumnByLS[ls])
+                    PSCols.append(self.PSColumnByLS[ls])
                     nLS+=1
                 except:
                     print "ERROR: Lumi section "+str(ls)+" not in bounds"
@@ -285,6 +279,10 @@ class DatabaseParser:
                 except:
                     AvLiveLumi = self.LiveLumiByLS[StartLS+1]-self.LiveLumiByLS[StartLS]
                     AvDeliveredLumi = self.DeliveredLumiByLS[StartLS+1]-self.DeliveredLumiByLS[StartLS]
+                if self.LiveLumiByLS[StartLS] == 0:
+                    AvLiveLumi = 0
+                if self.DeliveredLumiByLS[StartLS] == 0:
+                    AvDeliveredLumi = 0
                 if AvDeliveredLumi > 0:
                     AvDeadTime = 1 - AvLiveLumi/AvDeliveredLumi
                 else:
