@@ -244,15 +244,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     Warn   = []
     IgnoredRates=[]
 
-<<<<<<< DatabaseRateMonitor.py
     [HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols] = HeadParser.GetAvLumiInfo(HeadLumiRange)
-=======
-    [HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols,LastPSCol] = HeadParser.GetAvLumiInfo(HeadLumiRange)
-    ##[HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols] = HeadParser.GetAvLumiInfo(HeadLumiRange)
->>>>>>> 1.8
     ##[HeadUnprescaledRates, HeadTotalPrescales, HeadL1Prescales, HeadTriggerRates] = HeadParser.UpdateRun(HeadLumiRange)
     HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
-<<<<<<< DatabaseRateMonitor.py
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
 
     pkl_file = open("Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl", 'rb')
@@ -262,10 +256,6 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     pkl_file = open("RefRuns/2011/Rates_HLT_10LS_JPAP.pkl", 'rb')
     RefRatesInput = pickle.load(pkl_file)
     pkl_file.close()
-=======
-    ##[PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS] = HeadParser.LumiInfo
-    [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
->>>>>>> 1.8
 
     for HeadName in HeadUnprescaledRates:
 ##  SKIP triggers in the skip list
@@ -298,15 +288,10 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             PerDiff=0
             if ExpectedRate>0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
-<<<<<<< DatabaseRateMonitor.py
                 if abs(PerDiff) > AllowedRateDiff/max(sqrt(TriggerRate),sqrt(ExpectedRate)):
                     Warn.append(True)
                 else:
                     Warn.append(False)
-=======
-            if abs(PerDiff) > max(AllowedRateDiff/max(sqrt(TriggerRate),sqrt(ExpectedRate)),AllowedRateDiff/2.):
-                Warn.append(True)
->>>>>>> 1.8
             else:
                 Warn.append(False)
 
