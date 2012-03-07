@@ -110,7 +110,7 @@ def GetDBRates(run_list,trig_name,num_ls, debug_print):
                 for nls in LSRange:
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
                 
-                    [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
+                    [inst, live, delivered, dead, pscols,lastpscol] = RefParser.GetAvLumiInfo(LSRange[nls])
                     physics = 1
                     active = 1
                     for iterator in LSRange[nls]:

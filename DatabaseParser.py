@@ -275,7 +275,7 @@ class DatabaseParser:
                 except:
                     print "ERROR: Lumi section "+str(ls)+" not in bounds"
                     return [0.,0.,0.,0.,[]]
-            return [AvInstLumi/nLS,(1000.0/23.3)*AvLiveLumi/(EndLS-StartLS),(1000.0/23.3)*AvDeliveredLumi/(EndLS-StartLS), AvDeadTime,PSCols]
+            return [AvInstLumi/nLS,(1000.0/23.3)*AvLiveLumi/(EndLS-StartLS),(1000.0/23.3)*AvDeliveredLumi/(EndLS-StartLS), AvDeadTime,PSCols,self.PSColumnByLS[max(LSRange)]]
         except:
             if StartLS == EndLS:
                 AvInstLumi = self.InstLumiByLS[StartLS]
@@ -292,9 +292,9 @@ class DatabaseParser:
                         print "Live Lumi > 0 but Delivered <= 0: problem"
                     AvDeadTime = 0.0
                 PSCols = [self.PSColumnByLS[StartLS]]
-                return [AvInstLumi,(1000.0/23.3)*AvLiveLumi,(1000.0/23.3)*AvDeliveredLumi,AvDeadTime,PSCols]
+                return [AvInstLumi,(1000.0/23.3)*AvLiveLumi,(1000.0/23.3)*AvDeliveredLumi,AvDeadTime,PSCols,self.PSColumnByLS[max(LSRange)]]
             else:
-                return [0.,0.,0.,0.,[]]
+                return [0.,0.,0.,0.,[],0.]
 
     def ParsePSColumnPage(self): ## this is now done automatically when we read the db
         pass
