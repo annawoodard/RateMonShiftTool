@@ -249,11 +249,11 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
 
-    pkl_file = open("Fits/2011/Fit_HLT_20LS_Run179497to180252.pkl", 'rb')
+    pkl_file = open("Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl", 'rb')
     FitInput = pickle.load(pkl_file)
     pkl_file.close()
     
-    pkl_file = open("RefRuns/2011/Rates_HLT_20LS.pkl", 'rb')
+    pkl_file = open("RefRuns/2011/Rates_HLT_10LS_JPAP.pkl", 'rb')
     RefRatesInput = pickle.load(pkl_file)
     pkl_file.close()
 

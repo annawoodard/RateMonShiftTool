@@ -12,6 +12,7 @@ from ROOT import TFile, TPaveText
 from ROOT import gBenchmark
 import array
 import math
+from ReadConfig import RateMonConfig
 
 from selectionParser import selectionParser
 
@@ -34,6 +35,13 @@ def main():
             run_list.append(run)
             NumberOfRuns-=1
 
+    ##
+    ## to get list of triggers
+    ##
+    Config = RateMonConfig(os.path.abspath(os.path.dirname(sys.argv[0])))
+    Config.CFGfile="defaults.cfg"
+    Config.ReadCFG()
+
 ##     ###### TO CREATE FITS #########
 ##     #run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
 ##     #run_list = [180241]
@@ -53,12 +61,14 @@ def main():
 
 ##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
 ##     save_fits = True
-    
+##     max_dt=2.0 ## no deadtime cut 
 
     ###### TO SEE RATE VS PREDICTION ########
-    run_list = [180252]
+    run_list = [180250]
 
-    trig_name = "Mu"
+    trig_name = "HLT"
+    ##trig_list = ["HLT_IsoMu24_eta2p1","HLT_HT650"]
+    trig_list=Config.MonitorList
     num_ls = 1
     physics_active_psi = True
     JSON = []
@@ -66,19 +76,20 @@ def main():
 
     min_rate = 1.0
     print_table = False
-    data_clean = False
+    data_clean = True
     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
     plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
     save_fits = False
+    max_dt=2.0 ## no deadtime cut
     
     
     ########  END PARAMETERS - CALL FUNCTIONS ##########
-    Rates = GetDBRates(run_list, trig_name, num_ls, physics_active_psi, JSON, debug_print)
-    MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print)
+    Rates = GetDBRates(run_list, trig_name, num_ls, max_dt, physics_active_psi, JSON, debug_print)
+    MakePlots(Rates, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print)
     
 
-def GetDBRates(run_list,trig_name,num_ls,physics_active_psi,JSON,debug_print):
+def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_print):
     
     Rates = {}
     ## Save in RefRuns with name dependent on trig_name, num_ls, JSON, and physics_active_psi
@@ -165,7 +176,7 @@ def GetDBRates(run_list,trig_name,num_ls,physics_active_psi,JSON,debug_print):
                     nls = LSRange[nls][-1]+1
 
                 print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
-                for nls in LSRange:
+                for nls in sorted(LSRange.iterkeys()):
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
 
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
@@ -235,7 +246,7 @@ def GetDBRates(run_list,trig_name,num_ls,physics_active_psi,JSON,debug_print):
     RateOutput.close()
     return Rates
 
-def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print):
+def MakePlots(Rates, run_list, trig_name, trig_list, num_ls, max_dt, min_rate, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print):
     min_run = min(run_list)
     max_run = max(run_list)
 
@@ -259,6 +270,8 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
     for print_trigger in Rates:
         ##Limits Rates[] to runs in run_list
         NewTrigger = {}
+        if not print_trigger in trig_list:
+            continue
         for key in Rates[print_trigger]:
             NewTrigger[key] = []
         for iterator in range (len(Rates[print_trigger]["run"])):
@@ -325,20 +338,31 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
             X3 = InputFit[print_trigger][4]
             Chi2 = InputFit[print_trigger][5]
             ##print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
-
+        ## we are 2 lumis off when we start! -gets worse when we skip lumis
+        it_offset=2
         for iterator in range(len(Rates[print_trigger]["rate"])):
             if not Rates[print_trigger]["run"][iterator] in run_list:
                 continue
             prediction = meanxsec + slopexsec * (Rates[print_trigger]["live_lumi"][iterator] - meanlumi)
             realvalue = Rates[print_trigger]["xsec"][iterator]
-            if not data_clean or ( ((realvalue > 0.4*prediction and realvalue < 2.5*prediction) or (realvalue > 0.4*meanxsec and realvalue < 2.5*meanxsec) or prediction < 0 ) and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0):
+            
+            #if not data_clean or ( ((realvalue > 0.4*prediction and realvalue < 2.5*prediction) or (realvalue > 0.4*meanxsec and realvalue < 2.5*meanxsec) or prediction < 0 ) and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0):
+            if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls):
+
+                if num_ls==1:
+                ##fit is 2 ls ahead of real rate
+                    fit_iterator=iterator+it_offset
+                    if fit_iterator>(len(Rates[print_trigger]["rate"])-1):
+                    ##don't let fit_iterator go above the length of the array
+                        fit_iterator=iterator
+                    
                 run_t.append(Rates[print_trigger]["run"][iterator])
                 ls_t.append(Rates[print_trigger]["ls"][iterator])
                 ps_t.append(Rates[print_trigger]["ps"][iterator])
                 inst_t.append(Rates[print_trigger]["inst_lumi"][iterator])
-                live_t.append(Rates[print_trigger]["live_lumi"][iterator])
-                delivered_t.append(Rates[print_trigger]["delivered_lumi"][iterator])
-                deadtime_t.append(Rates[print_trigger]["deadtime"][iterator])
+                live_t.append(Rates[print_trigger]["live_lumi"][fit_iterator])
+                delivered_t.append(Rates[print_trigger]["delivered_lumi"][fit_iterator])
+                deadtime_t.append(Rates[print_trigger]["deadtime"][fit_iterator])
                 rawrate_t.append(Rates[print_trigger]["rawrate"][iterator])
                 rate_t.append(Rates[print_trigger]["rate"][iterator])
                 rawxsec_t.append(Rates[print_trigger]["rawxsec"][iterator])
@@ -388,6 +412,10 @@ def MakePlots(Rates, run_list, trig_name, num_ls, min_rate, print_table, data_cl
                         e_rate_fit_t.append(math.sqrt(Chi2))
                         e_rawxsec_fit_t.append(math.sqrt(Chi2)*rawxsec_fit_t[-1]/rate_fit_t[-1])
                         e_xsec_fit_t.append(math.sqrt(Chi2)*xsec_fit_t[-1]/rate_fit_t[-1])
+
+                #print iterator, fit_iterator, "ls=",ls_t[-1], "rate=",round(rawrate_t[-1],2), "deadtime=",round(deadtime_t[-1],2), "rawrate_fit=",round(rawrate_fit_t[-1],2), "max it=",len(Rates[print_trigger]["rate"])
+
+
 
             else: ##If the data point does not pass the data_clean filter
                 if debug_print:
@@ -693,6 +721,42 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
 
     return [VX, VXE, VY, VYE, VF, VFE]
 
+def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls):
+    it_offset=2
+    if num_ls==1:
+        ##fit is 2 ls ahead of real rate
+        fit_iterator=iterator+it_offset
+        if fit_iterator>(len(Rates[print_trigger]["rate"])-1):
+            ##don't let fit_iterator go above the length of the array
+            fit_iterator=iterator
+
+    if not data_clean or (
+        (
+        
+        (
+        realvalue > 0.4*prediction
+        and realvalue < 2.5*prediction
+        )
+        
+        or
+
+        (
+        realvalue > 0.4*meanxsec
+        and realvalue < 2.5*meanxsec
+        )
+
+        or prediction < 0
+        )
+        
+        and Rates[print_trigger]["physics"][iterator] == 1
+        and Rates[print_trigger]["active"][iterator] == 1
+        and Rates[print_trigger]["deadtime"][fit_iterator] < 0.20
+        and Rates[print_trigger]["psi"][iterator] > 0
+        ):
+        return True
+    else:
+        return False
+    
 
 if __name__=='__main__':
     main()

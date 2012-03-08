@@ -238,6 +238,33 @@ class DatabaseParser:
 
         return self.LumiInfo
 
+    def GetMoreLumiInfo(self):
+        sqlquery="""SELECT RUNNUMBER,LUMISECTION,HBHEA_READY,HBHEB_READY,HBHEC_READY
+        
+        FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS A,CMS_GT_MON.LUMI_SECTIONS B WHERE A.RUNNUMBER=%s
+        AND B.RUN_NUMBER(+)=A.RUNNUMBER AND B.LUMI_SECTION(+)=A.LUMISECTION AND A.LUMISECTION > %d
+        ORDER BY A.RUNNUMBER,A.LUMISECTION"""
+
+        ## Get the lumi information for the run, just update the table, don't rebuild it every time
+        query = sqlquery % (self.RunNumber,self.LastLSParsed)
+        self.curs.execute(query)
+
+        pastLSCol=-1
+        for run,ls,hbhea,hbheb,hbhec in self.curs.fetchall():
+            self.HBHEA[ls]=hbhea
+            self.HBHEB[ls]=hbheb
+            self.HBHEC[ls]=hbhec
+            
+            if pastLSCol!=-1 and ls!=pastLSCol:
+                self.PSColumnChanges.append([ls,psi])
+            pastLSCol=ls
+            if ls>self.LastLSParsed:
+                self.LastLSParsed=ls
+        self.MoreLumiInfo = [self.HBHEA, self.HBHEB, self.HBHEC]
+
+        return self.MoreLumiInfo
+        
+
     def GetAvLumiInfo(self,LSRange):
         nLS=0;
         AvInstLumi=0
