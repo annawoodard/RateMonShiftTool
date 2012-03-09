@@ -78,7 +78,7 @@ def main():
     print_table = False
     data_clean = True
     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-    plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+    plot_properties = [["ls", "rawrate", False, False, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
     save_fits = False
     max_dt=2.0 ## no deadtime cut
@@ -86,7 +86,7 @@ def main():
     
     ########  END PARAMETERS - CALL FUNCTIONS ##########
     Rates = GetDBRates(run_list, trig_name, num_ls, max_dt, physics_active_psi, JSON, debug_print)
-    MakePlots(Rates, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print)
+    ##MakePlots(Rates, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print)
     
 
 def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_print):
@@ -150,13 +150,17 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                 RefLumiRangePhysicsActive = RefParser.GetLSRange(1,9999) ##Gets array of all LS with physics and active on
                 RefLumiArray = RefParser.GetLumiInfo() ##Gets array of all existing LS and their lumi info
                 RefLumiRange = []
+                RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit 
+                
 
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
                     if not physics_active_psi or (RefLumiArray[5][iterator] == 1 and RefLumiArray[6][iterator] == 1 and RefLumiArray[0][iterator] > 0):
                         if not JSON or RefRunNum in JSON:
                             if not JSON or iterator in JSON[RefRunNum]:
                                 RefLumiRange.append(iterator)
-
+                    #print iterator, RefLumiArray[0][iterator], "active=",RefLumiArray[5][iterator],"physics=",RefLumiArray[6][iterator], "HBHEA=",RefLumiArray[7][iterator],
+                    #print "hbhea=",RefMoreLumiArray['hbhea'][iterator]
+                    
                 try:
                     nls = RefLumiRange[0]
                     LSRange = {}
@@ -177,6 +181,7 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
 
                 print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
                 for nls in sorted(LSRange.iterkeys()):
+                    
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
 
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
@@ -191,6 +196,10 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                             active = 0
                         if RefLumiArray[0][iterator] < psi:
                             psi = RefLumiArray[0][iterator]
+
+                    MoreLumiMulti=LumiRangeGreens(RefMoreLumiArray,LSRange,nls)
+                    #print MoreLumiMulti
+                    #print "\n\n\n"
 
                     if inst < 0 or live < 0 or delivered < 0:
                         print "Run "+str(RefRunNum)+" LS "+str(nls)+" inst lumi = "+str(inst)+" live lumi = "+str(live)+", delivered = "+str(delivered)+", physics = "+str(physics)+", active = "+str(active)
@@ -218,6 +227,11 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                             Rates[name]["physics"] = []
                             Rates[name]["active"] = []
                             Rates[name]["psi"] = []
+
+                            for keys, values in MoreLumiMulti.iteritems():
+                                Rates[name][keys] = []
+                            
+                            
                         [avps, ps, rate, psrate] = TriggerRates[key]
                         Rates[name]["run"].append(RefRunNum)
                         Rates[name]["ls"].append(nls)
@@ -238,12 +252,18 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                         Rates[name]["physics"].append(physics)
                         Rates[name]["active"].append(active)
                         Rates[name]["psi"].append(psi)
+
+                        
+                        for keys, values in MoreLumiMulti.iteritems():
+                            Rates[name][keys].append(values)
+                            #print nls, name, keys, values
+                #print " "        
             #except: ##If we replace "if True:" with "try:"
                 #print "Failed to parse run "+str(RefRunNum)
 
-    RateOutput = open(RefRunFile, 'wb') ##Save new Rates[] to RefRuns
-    pickle.dump(Rates, RateOutput, 2)
-    RateOutput.close()
+    ## RateOutput = open(RefRunFile, 'wb') ##Save new Rates[] to RefRuns
+##     pickle.dump(Rates, RateOutput, 2)
+##     RateOutput.close()
     return Rates
 
 def MakePlots(Rates, run_list, trig_name, trig_list, num_ls, max_dt, min_rate, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print):
@@ -757,6 +777,35 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
     else:
         return False
     
+
+def LumiRangeGreens(RefMoreLumiArray,LSRange,nls):
+    ###self.MoreLumiInfo =[self.EBP,self.EBM,self.EEP,self.EEM,self.HBHEA,self.HBHEB,self.HBHEC,self.HF,self.RPC,self.DT0,self.DTP,self.DTM,self.CSCP,self.CSCM,self.TOB,self.TIBTID,self.TECP,self.TECM,self.BPIX,self.FPIX,self.ESP,self.ESM]
+    ## #for iterator in LSRange[nls]: ##Gets lowest value of physics, active, and psi in the set of lumisections
+##                         if RefLumiArray[5][iterator] == 0:
+##                             physics = 0
+##                         if RefLumiArray[6][iterator] == 0:
+##                             active = 0
+##                         if RefLumiArray[0][iterator] < psi:
+##                             psi = RefLumiArray[0][iterator]
+    #RefMoreLumiArray
+  
+    RangeMoreLumi={}
+    for keys,values in RefMoreLumiArray.iteritems():
+        #print keys
+        RangeMoreLumi[keys]=1
+        
+    ## print RefMoreLumiArray[0]
+##     print "LSRange=",LSRange[nls]
+    for iterator in LSRange[nls]:
+        for keys, values in RefMoreLumiArray.iteritems():
+            if RefMoreLumiArray[keys][iterator]==0:
+                RangeMoreLumi[keys]=0
+            
+        
+    
+    
+    return RangeMoreLumi
+                        
 
 if __name__=='__main__':
     main()

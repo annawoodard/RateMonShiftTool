@@ -59,6 +59,30 @@ class DatabaseParser:
         self.DeadTime = {}
         self.Physics = {}
         self.Active = {}
+
+        self.EBP = {}
+        self.EBM = {}
+        self.EEP = {}
+        self.EEM = {}
+        self.HBHEA = {}
+        self.HBHEB = {}
+        self.HBHEC = {}
+        self.HF = {}
+        self.RPC = {}
+        self.DT0 = {}
+        self.DTP = {}
+        self.DTM = {}
+        self.CSCP = {}
+        self.CSCM = {}
+        self.TOB = {}
+        self.TIBTID= {}
+        self.TECP = {}
+        self.TECM = {}
+        self.BPIX = {}
+        self.FPIX = {}
+        self.ESP = {}
+        self.ESM = {}
+       
         
         ##-- Defined in ParsePSColumnPage (not currently used) --##
         self.PSColumnChanges=[]  ##Returns
@@ -215,7 +239,7 @@ class DatabaseParser:
 
     def GetLumiInfo(self): 
         sqlquery="""SELECT RUNNUMBER,LUMISECTION,PRESCALE_INDEX,INSTLUMI,LIVELUMI,DELIVLUMI,DEADTIME
-        ,DCSSTATUS,PHYSICS_FLAG,CMS_ACTIVE
+        ,DCSSTATUS,PHYSICS_FLAG,CMS_ACTIVE, HBHEA_READY
         FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS A,CMS_GT_MON.LUMI_SECTIONS B WHERE A.RUNNUMBER=%s
         AND B.RUN_NUMBER(+)=A.RUNNUMBER AND B.LUMI_SECTION(+)=A.LUMISECTION AND A.LUMISECTION > %d
         ORDER BY A.RUNNUMBER,A.LUMISECTION"""
@@ -223,9 +247,9 @@ class DatabaseParser:
         ## Get the lumi information for the run, just update the table, don't rebuild it every time
         query = sqlquery % (self.RunNumber,self.LastLSParsed)
         self.curs.execute(query)
-
+        
         pastLSCol=-1
-        for run,ls,psi,inst,live,dlive,dt,dcs,phys,active in self.curs.fetchall():
+        for run,ls,psi,inst,live,dlive,dt,dcs,phys,active, hbhea in self.curs.fetchall():
             self.PSColumnByLS[ls]=psi
             self.InstLumiByLS[ls]=inst
             self.LiveLumiByLS[ls]=live
@@ -233,18 +257,18 @@ class DatabaseParser:
             self.DeadTime[ls]=dt
             self.Physics[ls]=phys
             self.Active[ls]=active
+            self.HBHEA[ls]=hbhea
             if pastLSCol!=-1 and ls!=pastLSCol:
                 self.PSColumnChanges.append([ls,psi])
             pastLSCol=ls
             if ls>self.LastLSParsed:
                 self.LastLSParsed=ls
-        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime, self.Physics, self.Active]
+        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime, self.Physics, self.Active, self.HBHEA]
 
         return self.LumiInfo
 
     def GetMoreLumiInfo(self):
-        sqlquery="""SELECT RUNNUMBER,LUMISECTION,HBHEA_READY,HBHEB_READY,HBHEC_READY
-        
+        sqlquery="""SELECT RUNNUMBER,LUMISECTION,EBP_READY,EBM_READY,EEP_READY,EEM_READY,HBHEA_READY,HBHEB_READY,HBHEC_READY,HF_READY,RPC_READY,DT0_READY,DTP_READY,DTM_READY,CSCP_READY,CSCM_READY,TOB_READY,TIBTID_READY,TECP_READY,TECM_READY,BPIX_READY,FPIX_READY,ESP_READY,ESM_READY
         FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS A,CMS_GT_MON.LUMI_SECTIONS B WHERE A.RUNNUMBER=%s
         AND B.RUN_NUMBER(+)=A.RUNNUMBER AND B.LUMI_SECTION(+)=A.LUMISECTION AND A.LUMISECTION > %d
         ORDER BY A.RUNNUMBER,A.LUMISECTION"""
@@ -252,20 +276,40 @@ class DatabaseParser:
         ## Get the lumi information for the run, just update the table, don't rebuild it every time
         query = sqlquery % (self.RunNumber,self.LastLSParsed)
         self.curs.execute(query)
-
         pastLSCol=-1
-        for run,ls,hbhea,hbheb,hbhec in self.curs.fetchall():
-            self.HBHEA[ls]=hbhea
-            self.HBHEB[ls]=hbheb
-            self.HBHEC[ls]=hbhec
-            
-            if pastLSCol!=-1 and ls!=pastLSCol:
-                self.PSColumnChanges.append([ls,psi])
+        for run,ls,ebp,ebm,eep,eem,hbhea,hbheb,hbhec,hf,rpc,dt0,dtp,dtm,cscp,cscm,tob,tibtid,tecp,tecm,bpix,fpix,esp,esm in self.curs.fetchall():
+
+            self.EBP[ls]= ebp
+            self.EBM[ls] = ebm
+            self.EEP[ls] = eep
+            self.EEM[ls] = eem
+            self.HBHEA[ls] = hbhea
+            self.HBHEB[ls] = hbheb
+            self.HBHEC[ls] = hbhec
+            self.HF[ls] = hf
+            self.RPC[ls] = rpc
+            self.DT0[ls] = dt0
+            self.DTP[ls] = dtp
+            self.DTM[ls] = dtm
+            self.CSCP[ls] = cscp
+            self.CSCM[ls] = cscm
+            self.TOB[ls] = tob
+            self.TIBTID[ls]= tibtid
+            self.TECP[ls] = tecp
+            self.TECM[ls] = tecm
+            self.BPIX[ls] = bpix
+            self.FPIX[ls] = fpix
+            self.ESP[ls] = esp
+            self.ESM[ls] = esm
+
+                  
             pastLSCol=ls
             if ls>self.LastLSParsed:
                 self.LastLSParsed=ls
-        self.MoreLumiInfo = [self.HBHEA, self.HBHEB, self.HBHEC]
 
+        ##self.MoreLumiInfo =[self.EBP,self.EBM,self.EEP,self.EEM,self.HBHEA,self.HBHEB,self.HBHEC,self.HF,self.RPC,self.DT0,self.DTP,self.DTM,self.CSCP,self.CSCM,self.TOB,self.TIBTID,self.TECP,self.TECM,self.BPIX,self.FPIX,self.ESP,self.ESM]
+        self.MoreLumiInfo ={'ebp':self.EBP,'ebm':self.EBM,'eep':self.EEP,'eem':self.EEM,'hbhea':self.HBHEA,'hbheb':self.HBHEB,'hbhec':self.HBHEC,'hf':self.HF,'rpc':self.RPC,'dt0':self.DT0,'dtp':self.DTP,'dtm':self.DTM,'cscp':self.CSCP,'cscm':self.CSCM,'tob':self.TOB,'tibtid':self.TIBTID,'tecp':self.TECP,'tecm':self.TECM,'bpix':self.BPIX,'fpix':self.FPIX,'esp':self.ESP,'esm':self.ESM}
+                
         return self.MoreLumiInfo
         
 
@@ -520,6 +564,8 @@ class DatabaseParser:
         self.GetL1AlgoPrescales()
         self.GetHLTSeeds()
         self.GetLumiInfo()
+        self.LastLSParsed=-1
+        self.GetMoreLumiInfo()
 
     def UpdateRun(self,LSRange):
         self.GetLumiInfo()
