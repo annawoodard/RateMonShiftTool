@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from AndrewGetRun import GetRun
+#from AndrewGetRun import GetRun
 from DatabaseParser import *
 from ReadConfig import RateMonConfig
 import sys
@@ -225,12 +225,12 @@ def main():
 
             
             print "Sleeping for 1 minute before repeating  "
-            for iSleep in range(6):
-                for iDot in range(iSleep+1):
-                    print ".",
-                print "."
-                time.sleep(10)
-            clear()
+            for iSleep in range(5):
+                write(".")
+                sys.stdout.flush()
+                time.sleep(2)
+            write("  Updating")
+            sys.stdout.flush()
         #end while True
     #end try
     except KeyboardInterrupt:
@@ -345,9 +345,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             else:
                 Warn.append(False)
             VC = ""
-            Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,round((HeadUnprescaledRates[HeadName][1]),1),VC]) 
+            Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,round((HeadUnprescaledRates[HeadName][1]),1),VC])
 
-    
+    clear()    
     PrettyPrintTable(Header,Data,[80,10,10,10,10,20],Warn)
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config)

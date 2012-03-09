@@ -23,6 +23,7 @@ class RateMonConfig:
         self.LSWindow=-1
         self.CompareReference=0
         self.ShifterMode=0
+        self.MaxExpressRate=999
 
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -92,6 +93,8 @@ class RateMonConfig:
                 self.CompareReference=int(arg)
             elif par=="ShifterMode":
                 self.ShifterMode=arg
+            elif par=="MaxExpressRate":
+                self.MaxExpressRate=float(arg)
             
             else:
                 print "Invalid Option : "+strippedLine

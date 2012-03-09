@@ -3,7 +3,11 @@ import cPickle as pickle
 import os, sys
 import time
 import re
-from sets import Set
+
+try:  ## set is builtin in python 2.6.4 and sets is deprecated
+    set
+except NameError:
+    from sets import Set
 
 
 class DatabaseParser:
