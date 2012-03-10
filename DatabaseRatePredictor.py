@@ -78,20 +78,27 @@ def main():
     print_table = False
     data_clean = True
     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-    plot_properties = [["ls", "rawrate", False, False, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+    plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
     save_fits = False
     max_dt=2.0 ## no deadtime cut
+    SubSystemOff={'Any':False,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False}
+    print SubSystemOff.keys()
+    print SubSystemOff.values()
     
     
     ########  END PARAMETERS - CALL FUNCTIONS ##########
-    Rates = GetDBRates(run_list, trig_name, num_ls, max_dt, physics_active_psi, JSON, debug_print)
-    ##MakePlots(Rates, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print)
+    [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, num_ls, max_dt, physics_active_psi, JSON, debug_print)
+    ##if not checkLS(Rates,LumiPageInfo,trig_list):
+    ##    print "Missing LS!"
+    
+    MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff)
     
 
 def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_print):
     
     Rates = {}
+    LumiPageInfo={}
     ## Save in RefRuns with name dependent on trig_name, num_ls, JSON, and physics_active_psi
     if JSON:
         if physics_active_psi:
@@ -103,14 +110,21 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
             RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS_PAP.pkl"
         else:
             RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS.pkl"
-            
+        
+    
     RefRunFile = RefRunNameTemplate % (trig_name,num_ls)
     RefRunFileHLT = RefRunNameTemplate % ("HLT",num_ls)
+
+    print "RefRun=",RefRunFile
+    print "RefRunFileHLT",RefRunFileHLT
     try: ##Open an existing RefRun file with the same parameters and trigger name
         pkl_file = open(RefRunFile, 'rb')
         Rates = pickle.load(pkl_file)
         pkl_file.close()
         os.remove(RefRunFile)
+        print "using",RefRunFile
+
+ 
     except:
         try: ##Open an existing RefRun file with the same parameters and HLT for trigger name
             pkl_file = open(RefRunFileHLT)
@@ -118,30 +132,54 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
             for key in HLTRates:
                 if trig_name in str(key):
                     Rates[key] = HLTRates[key]
-            print str(RefRunFile)+" does not exist. Creating ..."
+            #print str(RefRunFile)+" does not exist. Creating ..."
         except:
             print str(RefRunFile)+" does not exist. Creating ..."
+         
+## try the lumis file
+    RefLumiNameTemplate = "RefRuns/2011/Lumis_%s_%sLS.pkl"        
+    RefLumiFile= RefLumiNameTemplate % ("HLT",num_ls)        
+    try:
+        pkl_lumi_file = open(RefLumiFile, 'rb')
+        LumiPageInfo = pickle.load(pkl_lumi_file)
+        pkl_lumi_file.close()
+        os.remove(RefLumiFile)
+        print "using",RefLumiFile
+    except:
+        print str(RefLumiFile)+" doesn't exist. Make it..."
 
     for RefRunNum in run_list:
 
         if JSON:
             if not RefRunNum in JSON:
                 continue
-
         try:
+            
             ExistsAlready = False
             for key in Rates:
                 if RefRunNum in Rates[key]["run"]:
                     ExistsAlready = True
                     break
-            if ExistsAlready:
+            
+            
+            LumiExistsLAready=False
+            for v in LumiPageInfo.itervalues():
+                #print RefRunNum, v["Run"]
+
+                if RefRunNum == v["Run"]:
+                    LumiExistsAlready=True
+                    break
+            if ExistsAlready and LumiExistsAlready:
                 continue
+                    
+           
         except:
             print "Getting info for run "+str(RefRunNum)
         
         if RefRunNum < 1:
             continue
-
+        print "calculating rates and green lumis"
+       
         if True: ##Placeholder
             if True: #May replace with "try" - for now it's good to know when problems happen
                 RefParser = DatabaseParser()
@@ -152,7 +190,7 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                 RefLumiRange = []
                 RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit 
                 
-
+             
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
                     if not physics_active_psi or (RefLumiArray[5][iterator] == 1 and RefLumiArray[6][iterator] == 1 and RefLumiArray[0][iterator] > 0):
                         if not JSON or RefRunNum in JSON:
@@ -197,12 +235,24 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                         if RefLumiArray[0][iterator] < psi:
                             psi = RefLumiArray[0][iterator]
 
-                    MoreLumiMulti=LumiRangeGreens(RefMoreLumiArray,LSRange,nls)
-                    #print MoreLumiMulti
-                    #print "\n\n\n"
+                    MoreLumiMulti=LumiRangeGreens(RefMoreLumiArray,LSRange,nls,RefRunNum)
+                    
+                    #print MoreLumiMulti.keys()
+#                    print "\n\n\n"
+
+                    
 
                     if inst < 0 or live < 0 or delivered < 0:
                         print "Run "+str(RefRunNum)+" LS "+str(nls)+" inst lumi = "+str(inst)+" live lumi = "+str(live)+", delivered = "+str(delivered)+", physics = "+str(physics)+", active = "+str(active)
+
+
+                    
+                    LumiPageInfo[nls]=MoreLumiMulti
+                    ##print LumiPageInfo[nls]
+##                         try:
+##                             LumiPageInfo[keys].append(values)
+##                         except:
+##                             print "Failed",RefRunNum, nls, keys
 
                     for key in TriggerRates:
                         if not trig_name in key:
@@ -228,9 +278,9 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                             Rates[name]["active"] = []
                             Rates[name]["psi"] = []
 
-                            for keys, values in MoreLumiMulti.iteritems():
-                                Rates[name][keys] = []
-                            
+                            #for keys, values in MoreLumiMulti.iteritems():
+                            #    Rates[name][keys] = []
+                        
                             
                         [avps, ps, rate, psrate] = TriggerRates[key]
                         Rates[name]["run"].append(RefRunNum)
@@ -254,19 +304,24 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                         Rates[name]["psi"].append(psi)
 
                         
-                        for keys, values in MoreLumiMulti.iteritems():
-                            Rates[name][keys].append(values)
+                        #for keys, values in MoreLumiMulti.iteritems():
+                        #    Rates[name][keys].append(values)
                             #print nls, name, keys, values
                 #print " "        
             #except: ##If we replace "if True:" with "try:"
                 #print "Failed to parse run "+str(RefRunNum)
 
-    ## RateOutput = open(RefRunFile, 'wb') ##Save new Rates[] to RefRuns
-##     pickle.dump(Rates, RateOutput, 2)
-##     RateOutput.close()
-    return Rates
+    RateOutput = open(RefRunFile, 'wb') ##Save new Rates[] to RefRuns
+    pickle.dump(Rates, RateOutput, 2)
+    RateOutput.close()
+    LumiOutput = open(RefLumiFile,'wb')
+    pickle.dump(LumiPageInfo,LumiOutput, 2)
+    LumiOutput.close()
+    
+    
+    return [Rates,LumiPageInfo]
 
-def MakePlots(Rates, run_list, trig_name, trig_list, num_ls, max_dt, min_rate, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print):
+def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, max_dt, min_rate, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff):
     min_run = min(run_list)
     max_run = max(run_list)
 
@@ -367,7 +422,7 @@ def MakePlots(Rates, run_list, trig_name, trig_list, num_ls, max_dt, min_rate, p
             realvalue = Rates[print_trigger]["xsec"][iterator]
             
             #if not data_clean or ( ((realvalue > 0.4*prediction and realvalue < 2.5*prediction) or (realvalue > 0.4*meanxsec and realvalue < 2.5*meanxsec) or prediction < 0 ) and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0):
-            if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls):
+            if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff):
 
                 if num_ls==1:
                 ##fit is 2 ls ahead of real rate
@@ -375,7 +430,7 @@ def MakePlots(Rates, run_list, trig_name, trig_list, num_ls, max_dt, min_rate, p
                     if fit_iterator>(len(Rates[print_trigger]["rate"])-1):
                     ##don't let fit_iterator go above the length of the array
                         fit_iterator=iterator
-                    
+                     
                 run_t.append(Rates[print_trigger]["run"][iterator])
                 ls_t.append(Rates[print_trigger]["ls"][iterator])
                 ps_t.append(Rates[print_trigger]["ps"][iterator])
@@ -741,7 +796,7 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
 
     return [VX, VXE, VY, VYE, VF, VFE]
 
-def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls):
+def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff):
     it_offset=2
     if num_ls==1:
         ##fit is 2 ls ahead of real rate
@@ -750,6 +805,50 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
             ##don't let fit_iterator go above the length of the array
             fit_iterator=iterator
 
+        LS=Rates[print_trigger]["ls"][iterator]
+        #print "ls=",LS,
+        LSRange=LumiPageInfo[LS]["LSRange"]
+        #print LSRange,
+        LS2=LSRange[-1]
+        #LS2=LSRange.pop()
+        #print "LS2=",LS2
+
+        #print LumiPageInfo[LS]
+        lumidict={}
+        lumidict=LumiPageInfo[LS]
+        Passed=True
+        if SubSystemOff["Any"]:
+            for keys in LumiPageInfo[LS]:
+                #print LS, keys, LumiPageInfo[LS][keys]
+                if not LumiPageInfo[LS][keys]:
+                    Passed=False
+                    break
+        else:
+            if SubSystemOff["Mu"]:
+                if not (LumiPageInfo[LS]["rpc"] or LumiPageInfo[LS]["dt0"] or LumiPageInfo[LS]["dtp"] or LumiPageInfo[LS]["dtm"] or LumiPageInfo["cscp"] or LumiPageInfo["cscm"]):
+                    Passed=False
+                
+                    
+            elif SubSystemOff["HCal"]:
+                if not (LumiPageInfo[LS]["hbhea"] and LumiPageInfo[LS]["hbheb"] and LumiPageInfo[LS]["hbhec"]):
+                    Passed=False
+                if SubSystemOff["EndCap"] and not (LumiPageInfo[LS]["hf"]):
+                    Passed=False
+            elif SubSystemOff["ECal"]:
+                if not (LumiPageInfo[LS]["ebp"] and LumiPageInfo[LS]["ebm"]):
+                    Passed=False
+                if SubSystemOff["EndCap"] and not (LumiPageInfo[LS]["eep"] and LumiPageInfo[LS]["eem"] and LumiPageInfo["esp"] or LumiPageInfo["esm"]):
+                    Passed=False
+            elif SubSystemOff["Tracker"]:
+                if not (LumiPageInfo[LS]["tob"] and LumiPageInfo[LS]["tibtid"] and LumiPageInfo[LS]["bpix"] and LumiPageInfo[LS]["fpix"]):
+                    Passed=False
+                if SubSystemOff["EndCap"] and not (LumiPageInfo[LS]["tecp"] and LumiPageInfo["tecm"]):
+                    Passed=False
+
+
+            
+        #print "LS",LS, Passed   
+        
     if not data_clean or (
         (
         
@@ -772,40 +871,50 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         and Rates[print_trigger]["active"][iterator] == 1
         and Rates[print_trigger]["deadtime"][fit_iterator] < 0.20
         and Rates[print_trigger]["psi"][iterator] > 0
+        and Passed
         ):
         return True
     else:
         return False
-    
 
-def LumiRangeGreens(RefMoreLumiArray,LSRange,nls):
-    ###self.MoreLumiInfo =[self.EBP,self.EBM,self.EEP,self.EEM,self.HBHEA,self.HBHEB,self.HBHEC,self.HF,self.RPC,self.DT0,self.DTP,self.DTM,self.CSCP,self.CSCM,self.TOB,self.TIBTID,self.TECP,self.TECM,self.BPIX,self.FPIX,self.ESP,self.ESM]
-    ## #for iterator in LSRange[nls]: ##Gets lowest value of physics, active, and psi in the set of lumisections
-##                         if RefLumiArray[5][iterator] == 0:
-##                             physics = 0
-##                         if RefLumiArray[6][iterator] == 0:
-##                             active = 0
-##                         if RefLumiArray[0][iterator] < psi:
-##                             psi = RefLumiArray[0][iterator]
-    #RefMoreLumiArray
+
+#### LumiRangeGreens ####    
+####inputs: RefMoreLumiArray --dict with lumi page info in LS by LS blocks,
+####        LRange           --list range over lumis,
+####        nls              --number of lumisections
+####        RefRunNum        --run number
+####
+####outputs RangeMoreLumi    --lumi page info in dict LSRange blocks with lumi, added items Run and LSRange
+def LumiRangeGreens(RefMoreLumiArray,LSRange,nls,RefRunNum):
   
     RangeMoreLumi={}
     for keys,values in RefMoreLumiArray.iteritems():
-        #print keys
         RangeMoreLumi[keys]=1
-        
-    ## print RefMoreLumiArray[0]
-##     print "LSRange=",LSRange[nls]
+  
     for iterator in LSRange[nls]:
         for keys, values in RefMoreLumiArray.iteritems():
             if RefMoreLumiArray[keys][iterator]==0:
                 RangeMoreLumi[keys]=0
-            
-        
-    
-    
+    RangeMoreLumi['LSRange']=LSRange[nls]
+    RangeMoreLumi['Run']=RefRunNum
+
     return RangeMoreLumi
                         
+#### CheckLumis ####
+####inputs: 
+####        PageLumiInfo      --dict of LS with dict of some lumipage info
+####        Rates            --dict of triggernames with dict of info
+def checkLS(Rates, PageLumiInfo,trig_list):
+    rateslumis=Rates[trig_list[-1]]["ls"]
+    keys=PageLumiInfo.keys()
+    print "lumi run=",PageLumiInfo[keys[-1]]["Run"]
+    ll=0
+    for ls in keys:
+        print ls,rateslumis[ll]
+        ll=ll+1
+    return False
+
+
 
 if __name__=='__main__':
     main()
