@@ -331,15 +331,19 @@ class DatabaseParser:
         try:
             StartLS = LSRange[0]
             EndLS   = LSRange[-1]
-            maxlive = self.LiveLumiByLS[EndLS]
-            maxdelivered = self.DeliveredLumiByLS[EndLS]
-            for iterator in LSRange:
-                if self.LiveLumiByLS[iterator] > maxlive:
-                    maxlive = self.LiveLumiByLS[iterator]
-                if self.DeliveredLumiByLS[iterator] > maxdelivered:
-                    maxdelivered = self.DeliveredLumiByLS[iterator]
-            AvLiveLumi=maxlive-self.LiveLumiByLS[StartLS]
-            AvDeliveredLumi=maxdelivered-self.DeliveredLumiByLS[StartLS]
+            try: ## Cosmics won't have lumi info
+                maxlive = self.LiveLumiByLS[EndLS]
+                maxdelivered = self.DeliveredLumiByLS[EndLS]
+                for iterator in LSRange:
+                    if self.LiveLumiByLS[iterator] > maxlive:
+                        maxlive = self.LiveLumiByLS[iterator]
+                    if self.DeliveredLumiByLS[iterator] > maxdelivered:
+                        maxdelivered = self.DeliveredLumiByLS[iterator]
+                AvLiveLumi=maxlive-self.LiveLumiByLS[StartLS]
+                AvDeliveredLumi=maxdelivered-self.DeliveredLumiByLS[StartLS]
+            except:
+                AvLiveLumi=0
+                AvDeliveredLumi=0
 
             if AvDeliveredLumi > 0:
                 AvDeadTime = 1 - AvLiveLumi/AvDeliveredLumi
@@ -350,7 +354,10 @@ class DatabaseParser:
             PSCols=[]
             for ls in LSRange:
                 try:
-                    AvInstLumi+=self.InstLumiByLS[ls]
+                    try:
+                        AvInstLumi+=self.InstLumiByLS[ls]
+                    except:
+                        pass
                     PSCols.append(self.PSColumnByLS[ls])
                     nLS+=1
                 except:
@@ -589,7 +596,7 @@ class DatabaseParser:
         #return [UnprescaledRates, TotalPrescales, L1Prescales, TriggerRates]
         return TriggerRates
     
-    def GetLSRange(self,StartLS, NLS):
+    def GetLSRange(self,StartLS, NLS,reqPhysics=True):
         """
         returns an array of valid LumiSections
         if NLS < 0, count backwards from StartLS
@@ -603,9 +610,9 @@ class DatabaseParser:
             if (curLS<0 and step<0) or (curLS>=self.LastLSParsed and step>0):
                 break
             if curLS>=0 and curLS<self.LastLSParsed:
-                if not self.Physics.has_key(curLS) or not self.Active.has_key(curLS):
+                if (not self.Physics.has_key(curLS) or not self.Active.has_key(curLS)) and reqPhysics:
                     break
-                if self.Physics[curLS] and self.Active[curLS]:
+                if not reqPhysics or (self.Physics[curLS] and self.Active[curLS]):
                     if step>0:
                         LS.append(curLS)
                     else:
@@ -866,7 +873,7 @@ class DatabaseParser:
 
 
 
-def GetLatestRunNumber():
+def GetLatestRunNumber(runNo=9999999):
     cmd='cat ~centraltspro/secure/cms_trg_r.txt'
     line=os.popen(cmd).readlines()
     magic = line[0].rstrip("\n\r")
@@ -874,11 +881,14 @@ def GetLatestRunNumber():
     # connect to the DB
     orcl = cx_Oracle.connect(connect)
     curs = orcl.cursor()
-    RunNoQuery="""
-    SELECT MAX(A.RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_WBM.RUNSUMMARY B WHERE A.RUNNUMBER=B.RUNNUMBER AND B.TRIGGERS>0
-    """
-    curs.execute(RunNoQuery)
-    r, = curs.fetchone()
+    if runNo==9999999:
+        RunNoQuery="""
+        SELECT MAX(A.RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_WBM.RUNSUMMARY B WHERE A.RUNNUMBER=B.RUNNUMBER AND B.TRIGGERS>0
+        """
+        curs.execute(RunNoQuery)
+        r, = curs.fetchone()
+    else:
+        r = runNo
     TrigModeQuery = """
     SELECT TRIGGERMODE FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
     """ % r

@@ -6,24 +6,42 @@ write = sys.stdout.write
 
 NHighExpress=0
 
-def MoreTableInfo(parser,LumiRange,config):
+def MoreTableInfo(parser,LumiRange,config,isCol=True):
     [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
-    LastPSCol = PSCols[-1]
-
-    expressRates = parser.GetTriggerRatesByLS("ExpressOutput")
+    try:
+        LastPSCol = PSCols[-1]
+    except:
+        LastPSCol = -1
+        
+    aRates = parser.GetTriggerRatesByLS("AOutput")
+    expressRates = {}
+    if isCol:
+        expressRates = parser.GetTriggerRatesByLS("ExpressOutput")
+    else:
+        expressRates = parser.GetTriggerRatesByLS("ExpressCosmicsOutput")
     ExpRate=0
     PeakRate=0
+    AvgExpRate=0
+
+    ARate=0
+    if len(expressRates.values()) > 20:
+        AvgExpRate = sum(expressRates.values())/len(expressRates.values())
+
     for ls in LumiRange:  ## Find the sum and peak express stream rates
         thisR = expressRates.get(ls,0)
         ExpRate+=thisR
         if thisR>PeakRate:
             PeakRate=thisR
+        ARate+=aRates.get(ls,0)
+    ## Print Stream A Rate
+    print "Current Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
 
+    Warn = False
 
     ## Check if the express stream is too high
     global NHighExpress
     badExpress = ExpRate/len(LumiRange) > config.MaxExpressRate ## avg express stream rate too high?
-    baseText = "Express stream rate is: %0.1f Hz" % (ExpRate/len(LumiRange),) ## text to display
+    baseText = "Current Express Stream rate is: %0.1f Hz" % (ExpRate/len(LumiRange),) ## text to display
     if badExpress:
         text = colored(baseText,'red',attrs=['reverse'])  ## bad, make the text white on red
         NHighExpress+=1  ## increment the bad express counter
@@ -36,10 +54,23 @@ def MoreTableInfo(parser,LumiRange,config):
         if (ExpRate-PeakRate)/(len(LumiRange)-1) <=config.MaxExpressRate: ## one lumisection causes this
             write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
         else:
-            if NHighExpress > 3:  # big problem, call HLT DOC
-                write(colored("  <<  WARNING: Express rate is too high!  Call HLT DOC",'red',attrs=['reverse','blink']) )
+            if NHighExpress > 1:  # big problem, call HLT DOC
+                write(colored("  <<  WARNING: Current Express rate is too high!",'red',attrs=['reverse']) )
+                Warn = True
 
+                #    if AvgExpRate > config.MaxExpressRate:
+                #        write( colored("\n\nWARNING: Average Express Stream Rate is too high (%0.1f Hz)  << CALL HLT DOC" % AvgExpRate,'red',attrs=['reverse']) )
+                #        Warn = True
     write("\n\n")
+
+    if Warn:  ## WARNING
+        rows, columns = os.popen('stty size', 'r').read().split()  ## Get the terminal size
+        cols = int(columns)
+        write( colored("*"*cols+"\n",'red',attrs=['reverse','blink']) )
+        line = "*" + " "*int((cols-22)/2)+"CALL HLT DOC (165575)"+" "*int((cols-23)/2)+"*\n"
+
+        write( colored(line,'red',attrs=['reverse','blink']) )
+        write( colored("*"*cols+"\n",'red',attrs=['reverse','blink']) )
     
     if AvDeadTime==0:  ## For some reason the dead time in the DB is occasionally broken
         try:
@@ -51,21 +82,22 @@ def MoreTableInfo(parser,LumiRange,config):
     for c in PSCols:
         PrescaleColumnString = PrescaleColumnString + str(c) + ","
 
-    write("The average instantaneous lumi of these lumisections is: ")
-    write(str(round(AvInstLumi,1))+"e30\n")
-    write("The delivered lumi of these lumi sections is:            ")
-    write(str(round(len(LumiRange)*AvDeliveredLumi,1))+"e30"+"\n")
-    write("The live (recorded) lumi of these lumi sections is:      ")
-    write(str(round(len(LumiRange)*AvLiveLumi,1))+"e30\n\n")
-    write("The average deadtime of these lumi sections is:          ")
-    if AvDeadTime > 5:
-        write(bcolors.FAIL)
-    elif AvDeadTime > 10:
-        write(bcolors.WARNING)
-    else:
-        write(bcolors.OKBLUE)
-    write(str(round(AvDeadTime,2))+"%")
-    write(bcolors.ENDC+"\n")
+    if isCol:
+        write("The average instantaneous lumi of these lumisections is: ")
+        write(str(round(AvInstLumi,1))+"e30\n")
+        write("The delivered lumi of these lumi sections is:            ")
+        write(str(round(len(LumiRange)*AvDeliveredLumi,1))+"e30"+"\n")
+        write("The live (recorded) lumi of these lumi sections is:      ")
+        write(str(round(len(LumiRange)*AvLiveLumi,1))+"e30\n\n")
+        write("The average deadtime of these lumi sections is:          ")
+        if AvDeadTime > 5:
+            write(bcolors.FAIL)
+        elif AvDeadTime > 10:
+            write(bcolors.WARNING)
+        else:
+            write(bcolors.OKBLUE)
+        write(str(round(AvDeadTime,2))+"%")
+        write(bcolors.ENDC+"\n")
 
     print "Used prescale column(s): "+str(PrescaleColumnString)    
     write("Lumisections: ")
@@ -77,14 +109,15 @@ def MoreTableInfo(parser,LumiRange,config):
     write(  "Last Lumisection good for physics is:  "+str(parser.GetLastLS(True)) )
     write("\n\n\n")
 
-    L1RatePredictions = config.GetExpectedL1Rates(AvInstLumi)
-    if len(L1RatePredictions):
-        print "Expected Level 1 Rates:"
-    for key,val in L1RatePredictions.iteritems():
-        write("Prescale Column "+str(key)+":  "+str(round(val/1000,1))+" kHz")
-        if key == LastPSCol:
-            write(' << taking data in this column')
-        write('\n')
+    if isCol:
+        L1RatePredictions = config.GetExpectedL1Rates(AvInstLumi)
+        if len(L1RatePredictions):
+            print "Expected Level 1 Rates:"
+        for key,val in L1RatePredictions.iteritems():
+            write("Prescale Column "+str(key)+":  "+str(round(val/1000,1))+" kHz")
+            if key == LastPSCol:
+                write(' << taking data in this column')
+            write('\n')
         
     
 

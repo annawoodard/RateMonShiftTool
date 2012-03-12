@@ -180,18 +180,21 @@ def main():
 
         if not isCol:
             print "Most Recent run, "+str(CompareRunNum)+", is NOT collisions"
-            if not Force:
-                sys.exit(0) # maybe we should walk back and try to find a collisions run, but for now just exit
+            print "Monitoring only stream A and Express"
+            #if not Force:
+            #    sys.exit(0) # maybe we should walk back and try to find a collisions run, but for now just exit
         print "Most Recent run is "+str(CompareRunNum)
+    else:
+        CompareRunNum,isCol = GetLatestRunNumber(CompareRunNum)
 
     HeadRunFile = RefRunNameTemplate % CompareRunNum
-    if os.path.exists(HeadRunFile):  #check if a run file for the run we want to compare already exists, it probably won't but just in case we don't have to interrogate WBM
+    if os.path.exists(HeadRunFile):  #check if a run file for the run we want to compare already exists
         HeadParser = pickle.load( open( HeadRunFile ) )
     else:
         HeadParser = DatabaseParser()
         HeadParser.RunNumber = CompareRunNum
         HeadParser.ParseRunSetup()
-        HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS)
+        HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
     if PrintLumi:
         for LS in HeadParser.LumiInfo[0]:
             try:
@@ -213,22 +216,26 @@ def main():
    
     try:
         while True:
-            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
-    
-            if FindL1Zeros:
-                CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
-            if int(Config.ShifterMode):
-                print "Shifter Mode. Continuing"
+            if not isCol:
+                clear()
+                MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
             else:
-                print "Expert Mode. Quitting."
-                sys.exit(0)
+                RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
+
+                if FindL1Zeros:
+                    CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+                if int(Config.ShifterMode):
+                    print "Shifter Mode. Continuing"
+                else:
+                    print "Expert Mode. Quitting."
+                    sys.exit(0)
 
             
             print "Sleeping for 1 minute before repeating  "
-            for iSleep in range(5):
+            for iSleep in range(20):
                 write(".")
                 sys.stdout.flush()
-                time.sleep(2)
+                time.sleep(3)
             write("  Updating")
             sys.stdout.flush()
         #end while True
