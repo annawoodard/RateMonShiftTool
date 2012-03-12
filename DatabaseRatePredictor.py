@@ -61,13 +61,17 @@ def main():
 
 ##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
 ##     save_fits = True
-##     max_dt=2.0 ## no deadtime cut 
+##     max_dt=2.0 ## no deadtime cut
+##     force_new=False
+##     SubSystemOff={'All':True,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+##     print_info=True
 
     ###### TO SEE RATE VS PREDICTION ########
-    run_list = [180250]
+    run_list = [179497]
 
     trig_name = "HLT"
     ##trig_list = ["HLT_IsoMu24_eta2p1","HLT_HT650"]
+    ##trig_list = ["HLT_HT650"]
     trig_list=Config.MonitorList
     num_ls = 1
     physics_active_psi = True
@@ -81,21 +85,24 @@ def main():
     plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
     save_fits = False
-    max_dt=2.0 ## no deadtime cut
-    SubSystemOff={'Any':False,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False}
+    max_dt=2.0 ## no deadtime cut=2.0
+    force_new=True
+    print_info=True
+    
+    SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
     print SubSystemOff.keys()
     print SubSystemOff.values()
     
     
     ########  END PARAMETERS - CALL FUNCTIONS ##########
-    [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, num_ls, max_dt, physics_active_psi, JSON, debug_print)
+    [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new)
     ##if not checkLS(Rates,LumiPageInfo,trig_list):
     ##    print "Missing LS!"
     
-    MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff)
+    MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
     
 
-def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_print):
+def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new):
     
     Rates = {}
     LumiPageInfo={}
@@ -117,39 +124,41 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
 
     print "RefRun=",RefRunFile
     print "RefRunFileHLT",RefRunFileHLT
-    try: ##Open an existing RefRun file with the same parameters and trigger name
-        pkl_file = open(RefRunFile, 'rb')
-        Rates = pickle.load(pkl_file)
-        pkl_file.close()
-        os.remove(RefRunFile)
-        print "using",RefRunFile
-
- 
-    except:
-        try: ##Open an existing RefRun file with the same parameters and HLT for trigger name
-            pkl_file = open(RefRunFileHLT)
-            HLTRates = pickle.load(pkl_file)
-            for key in HLTRates:
-                if trig_name in str(key):
-                    Rates[key] = HLTRates[key]
-            #print str(RefRunFile)+" does not exist. Creating ..."
+    if not force_new:
+        try: ##Open an existing RefRun file with the same parameters and trigger name
+            pkl_file = open(RefRunFile, 'rb')
+            Rates = pickle.load(pkl_file)
+            pkl_file.close()
+            os.remove(RefRunFile)
+            print "using",RefRunFile
+            
+            
         except:
-            print str(RefRunFile)+" does not exist. Creating ..."
+            try: ##Open an existing RefRun file with the same parameters and HLT for trigger name
+                pkl_file = open(RefRunFileHLT)
+                HLTRates = pickle.load(pkl_file)
+                for key in HLTRates:
+                    if trig_name in str(key):
+                        Rates[key] = HLTRates[key]
+                #print str(RefRunFile)+" does not exist. Creating ..."
+            except:
+                print str(RefRunFile)+" does not exist. Creating ..."
          
 ## try the lumis file
     RefLumiNameTemplate = "RefRuns/2011/Lumis_%s_%sLS.pkl"        
-    RefLumiFile= RefLumiNameTemplate % ("HLT",num_ls)        
-    try:
-        pkl_lumi_file = open(RefLumiFile, 'rb')
-        LumiPageInfo = pickle.load(pkl_lumi_file)
-        pkl_lumi_file.close()
-        os.remove(RefLumiFile)
-        print "using",RefLumiFile
-    except:
-        print str(RefLumiFile)+" doesn't exist. Make it..."
-
+    RefLumiFile= RefLumiNameTemplate % ("HLT",num_ls)
+    if not force_new:
+        try:
+            pkl_lumi_file = open(RefLumiFile, 'rb')
+            LumiPageInfo = pickle.load(pkl_lumi_file)
+            pkl_lumi_file.close()
+            os.remove(RefLumiFile)
+            print "using",RefLumiFile
+        except:
+            print str(RefLumiFile)+" doesn't exist. Make it..."
+            
     for RefRunNum in run_list:
-
+                
         if JSON:
             if not RefRunNum in JSON:
                 continue
@@ -192,7 +201,11 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                 
              
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
-                    if not physics_active_psi or (RefLumiArray[5][iterator] == 1 and RefLumiArray[6][iterator] == 1 and RefLumiArray[0][iterator] > 0):
+                    ##cheap way of getting PSCol None-->0
+                    if RefLumiArray[0][iterator]!=1 and RefLumiArray[0][iterator]!=2 and RefLumiArray[0]!=3 and RefLumiArray[0]!=4 and RefLumiArray!=5 and RefLumiArray!=6 and RefLumiArray!=7 and RefLumiArray[0][iterator]!=8:
+                        RefLumiArray[0][iterator]=0
+                    
+                    if not physics_active_psi or (RefLumiArray[5][iterator] == 1 and RefLumiArray[6][iterator] == 1):
                         if not JSON or RefRunNum in JSON:
                             if not JSON or iterator in JSON[RefRunNum]:
                                 RefLumiRange.append(iterator)
@@ -283,6 +296,7 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                         
                             
                         [avps, ps, rate, psrate] = TriggerRates[key]
+                        #print "TriggerRates=",TriggerRates[key], "key=",key
                         Rates[name]["run"].append(RefRunNum)
                         Rates[name]["ls"].append(nls)
                         Rates[name]["ps"].append(ps)
@@ -302,7 +316,7 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
                         Rates[name]["physics"].append(physics)
                         Rates[name]["active"].append(active)
                         Rates[name]["psi"].append(psi)
-
+                        #print "LS=", nls, "prescale=",ps, "PSI=",psi
                         
                         #for keys, values in MoreLumiMulti.iteritems():
                         #    Rates[name][keys].append(values)
@@ -321,10 +335,10 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
     
     return [Rates,LumiPageInfo]
 
-def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, max_dt, min_rate, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff):
+def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info):
     min_run = min(run_list)
     max_run = max(run_list)
-
+    
     InputFit = {}
     OutputFit = {}
 
@@ -380,14 +394,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, max_d
         nhigh = 0
         for iterator in range(len(Rates[print_trigger]["rate"])):
             if Rates[print_trigger]["live_lumi"][iterator] <= meanlumi_init:
-                if ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 500):
+                if ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < max_dt and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 500):
                     meanxsec+=Rates[print_trigger]["xsec"][iterator]
                     lowxsec+=Rates[print_trigger]["xsec"][iterator]
                     meanlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     lowlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     nlow+=1
             if Rates[print_trigger]["live_lumi"][iterator] > meanlumi_init:
-                if ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 500):
+                if ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < max_dt and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 500):
                     meanxsec+=Rates[print_trigger]["xsec"][iterator]
                     highxsec+=Rates[print_trigger]["xsec"][iterator]
                     meanlumi+=Rates[print_trigger]["live_lumi"][iterator]
@@ -416,13 +430,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, max_d
         ## we are 2 lumis off when we start! -gets worse when we skip lumis
         it_offset=2
         for iterator in range(len(Rates[print_trigger]["rate"])):
+            #print "Rates=",iterator, round(Rates[print_trigger]["ls"][iterator],2), round(Rates[print_trigger]["rate"][iterator],2)
             if not Rates[print_trigger]["run"][iterator] in run_list:
                 continue
             prediction = meanxsec + slopexsec * (Rates[print_trigger]["live_lumi"][iterator] - meanlumi)
             realvalue = Rates[print_trigger]["xsec"][iterator]
             
-            #if not data_clean or ( ((realvalue > 0.4*prediction and realvalue < 2.5*prediction) or (realvalue > 0.4*meanxsec and realvalue < 2.5*meanxsec) or prediction < 0 ) and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < 0.20 and Rates[print_trigger]["psi"][iterator] > 0):
-            if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff):
+            
+            if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff,max_dt,print_info, trig_list):
 
                 if num_ls==1:
                 ##fit is 2 ls ahead of real rate
@@ -478,8 +493,13 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, max_d
                         e_rate_fit_t.append(math.sqrt(Chi2))
                         e_rawxsec_fit_t.append(0)
                         e_xsec_fit_t.append(0)
+                        #print "live_t=0", ls_t[-1], rawrate_fit_t[-1]
                     else:
-                        rawrate_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/(ps_t[-1]))
+                        if ps_t[-1]>0.0:
+                            rawrate_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/(ps_t[-1]))
+                        else:
+                            rawrate_fit_t.append(0.0)
+                        
                         rate_fit_t.append(rate_prediction)
                         rawxsec_fit_t.append(rawrate_fit_t[-1]/live_t[-1])
                         xsec_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/live_t[-1])
@@ -487,12 +507,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, max_d
                         e_rate_fit_t.append(math.sqrt(Chi2))
                         e_rawxsec_fit_t.append(math.sqrt(Chi2)*rawxsec_fit_t[-1]/rate_fit_t[-1])
                         e_xsec_fit_t.append(math.sqrt(Chi2)*xsec_fit_t[-1]/rate_fit_t[-1])
+                        #print "live_t>0", ls_t[-1], rawrate_fit_t[-1]
 
                 #print iterator, fit_iterator, "ls=",ls_t[-1], "rate=",round(rawrate_t[-1],2), "deadtime=",round(deadtime_t[-1],2), "rawrate_fit=",round(rawrate_fit_t[-1],2), "max it=",len(Rates[print_trigger]["rate"])
 
 
 
             else: ##If the data point does not pass the data_clean filter
+                #print "not passed", iterator, ls_t[-1], rawrate_fit_t[-1]
                 if debug_print:
                     print str(print_trigger)+" has xsec "+str(round(Rates[print_trigger]["xsec"][iterator],6))+" at lumi "+str(round(Rates[print_trigger]["live_lumi"][iterator],2))+" where the expected value is "+str(prediction)
 
@@ -796,8 +818,10 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
 
     return [VX, VXE, VY, VYE, VF, VFE]
 
-def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff):
+def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff, max_dt, print_info, trig_list):
     it_offset=2
+    
+    
     if num_ls==1:
         ##fit is 2 ls ahead of real rate
         fit_iterator=iterator+it_offset
@@ -817,64 +841,88 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         lumidict={}
         lumidict=LumiPageInfo[LS]
         Passed=True
-        if SubSystemOff["Any"]:
-            for keys in LumiPageInfo[LS]:
-                #print LS, keys, LumiPageInfo[LS][keys]
-                if not LumiPageInfo[LS][keys]:
-                    Passed=False
-                    break
-        else:
-            if SubSystemOff["Mu"]:
-                if not (LumiPageInfo[LS]["rpc"] or LumiPageInfo[LS]["dt0"] or LumiPageInfo[LS]["dtp"] or LumiPageInfo[LS]["dtm"] or LumiPageInfo["cscp"] or LumiPageInfo["cscm"]):
-                    Passed=False
-                
-                    
-            elif SubSystemOff["HCal"]:
-                if not (LumiPageInfo[LS]["hbhea"] and LumiPageInfo[LS]["hbheb"] and LumiPageInfo[LS]["hbhec"]):
-                    Passed=False
-                if SubSystemOff["EndCap"] and not (LumiPageInfo[LS]["hf"]):
-                    Passed=False
-            elif SubSystemOff["ECal"]:
-                if not (LumiPageInfo[LS]["ebp"] and LumiPageInfo[LS]["ebm"]):
-                    Passed=False
-                if SubSystemOff["EndCap"] and not (LumiPageInfo[LS]["eep"] and LumiPageInfo[LS]["eem"] and LumiPageInfo["esp"] or LumiPageInfo["esm"]):
-                    Passed=False
-            elif SubSystemOff["Tracker"]:
-                if not (LumiPageInfo[LS]["tob"] and LumiPageInfo[LS]["tibtid"] and LumiPageInfo[LS]["bpix"] and LumiPageInfo[LS]["fpix"]):
-                    Passed=False
-                if SubSystemOff["EndCap"] and not (LumiPageInfo[LS]["tecp"] and LumiPageInfo["tecm"]):
-                    Passed=False
+        subsystemfailed=[]
+
+        
+            
+            
+        if print_info:
+            if (iterator==0 and print_trigger==trig_list[0]):
+                print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Status", "Run", "LS", "Physics", "Active", "Deadtime", " MaxDeadTime", " Passed all subsystems?", " List of Subsystems failed")
+            
+        ## if SubSystemOff["All"]:
+##             for keys in LumiPageInfo[LS]:
+##                 #print LS, keys, LumiPageInfo[LS][keys]
+##                 if not LumiPageInfo[LS][keys]:
+##                     Passed=False
+##                     subsystemfailed.append(keys)
+##                     break
+##         else:
+        if SubSystemOff["Mu"] or SubSystemOff["All"]:
+            if not (LumiPageInfo[LS]["rpc"] or LumiPageInfo[LS]["dt0"] or LumiPageInfo[LS]["dtp"] or LumiPageInfo[LS]["dtm"] or LumiPageInfo["cscp"] or LumiPageInfo["cscm"]):
+                Passed=False
+                subsystemfailed.append("Mu")
+        if SubSystemOff["HCal"] or SubSystemOff["All"]:
+            if not (LumiPageInfo[LS]["hbhea"] and LumiPageInfo[LS]["hbheb"] and LumiPageInfo[LS]["hbhec"]):
+                Passed=False
+                subsystemfailed.append("HCal")
+            if (SubSystemOff["EndCap"]  or SubSystemOff["All"]) and not (LumiPageInfo[LS]["hf"]):
+                Passed=False
+                subsystemfailed.append("HCal-EndCap")
+        if SubSystemOff["ECal"] or SubSystemOff["All"]:
+            if not (LumiPageInfo[LS]["ebp"] and LumiPageInfo[LS]["ebm"]):
+                Passed=False
+                subsystemfailed.append("ECal")
+            if (SubSystemOff["EndCap"] or SubSystemOff["All"]) and not (LumiPageInfo[LS]["eep"] and LumiPageInfo[LS]["eem"] and LumiPageInfo[LS]["esp"] or LumiPageInfo[LS]["esm"]):
+                Passed=False
+                subsystemfailed.append("ECal-EndCap")
+        if SubSystemOff["Tracker"] or SubSystemOff["All"]:
+            if not (LumiPageInfo[LS]["tob"] and LumiPageInfo[LS]["tibtid"] and LumiPageInfo[LS]["bpix"] and LumiPageInfo[LS]["fpix"]):
+                Passed=False
+                subsystemfailed.append("Tracker")
+            if (SubSystemOff["EndCap"] or SubSystemOff["All"]) and not (LumiPageInfo[LS]["tecp"] and LumiPageInfo[LS]["tecm"]):
+                Passed=False
+                subsystemfailed.append("Tracker-EndCap")
+        if SubSystemOff["Beam"] or SubSystemOff["All"]:
+            if not(LumiPageInfo[LS]["b1pres"] and LumiPageInfo[LS]["b2pres"] and LumiPageInfo[LS]["b1stab"] and LumiPageInfo[LS]["b2stab"]):
+                Passed=False
+                subsystemfailed.append("Beam")
 
 
             
-        #print "LS",LS, Passed   
+        #print "LS",LS, Passed, round(Rates[print_trigger]["deadtime"][fit_iterator],2), max_dt
         
     if not data_clean or (
-        (
+ ##        (
         
-        (
-        realvalue > 0.4*prediction
-        and realvalue < 2.5*prediction
-        )
+##         (
+##         realvalue > 0.4*prediction
+##         and realvalue < 2.5*prediction
+##         )
         
-        or
+##         or
 
-        (
-        realvalue > 0.4*meanxsec
-        and realvalue < 2.5*meanxsec
-        )
+##         (
+##         realvalue > 0.4*meanxsec
+##         and realvalue < 2.5*meanxsec
+##         )
 
-        or prediction < 0
-        )
+##         or prediction < 0
+##         )
         
-        and Rates[print_trigger]["physics"][iterator] == 1
+        Rates[print_trigger]["physics"][iterator] == 1
         and Rates[print_trigger]["active"][iterator] == 1
-        and Rates[print_trigger]["deadtime"][fit_iterator] < 0.20
-        and Rates[print_trigger]["psi"][iterator] > 0
+        and Rates[print_trigger]["deadtime"][fit_iterator] < max_dt
+        #and Rates[print_trigger]["psi"][iterator] > 0
         and Passed
         ):
+        #print LS, "True"
         return True
     else:
+        
+        if (print_info and print_trigger==trig_list[0]):
+            
+            print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Failed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][fit_iterator],2), max_dt, Passed, subsystemfailed)
         return False
 
 

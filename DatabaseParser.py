@@ -60,6 +60,11 @@ class DatabaseParser:
         self.Physics = {}
         self.Active = {}
 
+        
+        self.B1Pres = {}
+        self.B2Pres = {}
+        self.B1Stab = {}
+        self.B2Stab = {}
         self.EBP = {}
         self.EBM = {}
         self.EEP = {}
@@ -162,7 +167,7 @@ class DatabaseParser:
                     #psi = self.PSColumnByLS[1]
                 #if not psi:
                 except:
-                    print "Cannot figure out PSI for LS "+str(StartLS)+"  setting to 0"
+                    print "HLT in: Cannot figure out PSI for LS "+str(StartLS)+"  setting to 0"
                     print "The value of LSRange[0] is:"
                     print str(LSRange[0])
                     psi = 0
@@ -176,9 +181,10 @@ class DatabaseParser:
                     #print "L1IndexNameMap has no key for "+str(self.HLTSeed[name])
 
                 ps = l1ps*hltps
-                if ps < 1:
+                
+                ###if ps < 1: ### want PS=0 too! 
                     #print "Oops! somehow ps for "+str(name)+" = "+str(ps)+", where L1 PS = "+str(l1ps)+" and HLT PS = "+str(hltps)
-                    ps = 1
+                #    ps = 1
                 psrate = ps*rate
                 TriggerRates[name]= [ps,rate,psrate,1]
             else:
@@ -189,7 +195,7 @@ class DatabaseParser:
                     #psi = self.PSColumnByLS[1]
                 #if not psi:
                 except:
-                    print "Cannot figure out PSI for index "+str(on)+" setting to 0"
+                    print "HLT out: Cannot figure out PSI for index "+str(on)+" setting to 0"
                     print "The value of LSRange[on] is:"
                     print str(LSRange[on])
                     psi = 0
@@ -203,12 +209,12 @@ class DatabaseParser:
                     #print "L1IndexNameMap has no key for "+str(self.HLTSeed[name])
 
                 ps = l1ps*hltps
-                if ps < 1:
+                #if ps < 1: ###want PS=0 too!
                     ##print "Oops! somehow ps for "+str(name)+" = "+str(ps)+", where L1 PS = "+str(l1ps)+" and HLT PS = "+str(hltps)
-                    ps = 1
+                #    ps = 1
                 psrate = ps*rate
                 TriggerRates[name]= [ops+ps,orate+rate,opsrate+psrate,on+1]                
-
+       
         for name,val in TriggerRates.iteritems():
             [ps,rate,psrate,n] = val
             avps = ps/n
@@ -218,7 +224,9 @@ class DatabaseParser:
                 #print "Rate = 0 for "+str(name)+", setting ps to 1"
                 ps = avps
             TriggerRates[name] = [avps,ps,rate/n,psrate/n]
-
+            
+            
+       
         return TriggerRates
 
     def GetTriggerRatesByLS(self,triggerName):
@@ -239,7 +247,7 @@ class DatabaseParser:
 
     def GetLumiInfo(self): 
         sqlquery="""SELECT RUNNUMBER,LUMISECTION,PRESCALE_INDEX,INSTLUMI,LIVELUMI,DELIVLUMI,DEADTIME
-        ,DCSSTATUS,PHYSICS_FLAG,CMS_ACTIVE, HBHEA_READY
+        ,DCSSTATUS,PHYSICS_FLAG,CMS_ACTIVE
         FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS A,CMS_GT_MON.LUMI_SECTIONS B WHERE A.RUNNUMBER=%s
         AND B.RUN_NUMBER(+)=A.RUNNUMBER AND B.LUMI_SECTION(+)=A.LUMISECTION AND A.LUMISECTION > %d
         ORDER BY A.RUNNUMBER,A.LUMISECTION"""
@@ -249,7 +257,7 @@ class DatabaseParser:
         self.curs.execute(query)
         
         pastLSCol=-1
-        for run,ls,psi,inst,live,dlive,dt,dcs,phys,active, hbhea in self.curs.fetchall():
+        for run,ls,psi,inst,live,dlive,dt,dcs,phys,active in self.curs.fetchall():
             self.PSColumnByLS[ls]=psi
             self.InstLumiByLS[ls]=inst
             self.LiveLumiByLS[ls]=live
@@ -257,18 +265,18 @@ class DatabaseParser:
             self.DeadTime[ls]=dt
             self.Physics[ls]=phys
             self.Active[ls]=active
-            self.HBHEA[ls]=hbhea
+            
             if pastLSCol!=-1 and ls!=pastLSCol:
                 self.PSColumnChanges.append([ls,psi])
             pastLSCol=ls
             if ls>self.LastLSParsed:
                 self.LastLSParsed=ls
-        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime, self.Physics, self.Active, self.HBHEA]
+        self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime, self.Physics, self.Active]
 
         return self.LumiInfo
 
     def GetMoreLumiInfo(self):
-        sqlquery="""SELECT RUNNUMBER,LUMISECTION,EBP_READY,EBM_READY,EEP_READY,EEM_READY,HBHEA_READY,HBHEB_READY,HBHEC_READY,HF_READY,RPC_READY,DT0_READY,DTP_READY,DTM_READY,CSCP_READY,CSCM_READY,TOB_READY,TIBTID_READY,TECP_READY,TECM_READY,BPIX_READY,FPIX_READY,ESP_READY,ESM_READY
+        sqlquery="""SELECT RUNNUMBER,LUMISECTION,BEAM1_PRESENT, BEAM2_PRESENT, BEAM1_STABLE, BEAM2_STABLE, EBP_READY,EBM_READY,EEP_READY,EEM_READY,HBHEA_READY,HBHEB_READY,HBHEC_READY,HF_READY,RPC_READY,DT0_READY,DTP_READY,DTM_READY,CSCP_READY,CSCM_READY,TOB_READY,TIBTID_READY,TECP_READY,TECM_READY,BPIX_READY,FPIX_READY,ESP_READY,ESM_READY
         FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS A,CMS_GT_MON.LUMI_SECTIONS B WHERE A.RUNNUMBER=%s
         AND B.RUN_NUMBER(+)=A.RUNNUMBER AND B.LUMI_SECTION(+)=A.LUMISECTION AND A.LUMISECTION > %d
         ORDER BY A.RUNNUMBER,A.LUMISECTION"""
@@ -277,8 +285,12 @@ class DatabaseParser:
         query = sqlquery % (self.RunNumber,self.LastLSParsed)
         self.curs.execute(query)
         pastLSCol=-1
-        for run,ls,ebp,ebm,eep,eem,hbhea,hbheb,hbhec,hf,rpc,dt0,dtp,dtm,cscp,cscm,tob,tibtid,tecp,tecm,bpix,fpix,esp,esm in self.curs.fetchall():
+        for run,ls,b1pres,b2pres,b1stab,b2stab,ebp,ebm,eep,eem,hbhea,hbheb,hbhec,hf,rpc,dt0,dtp,dtm,cscp,cscm,tob,tibtid,tecp,tecm,bpix,fpix,esp,esm in self.curs.fetchall():
 
+            self.B1Pres[ls]=b1pres
+            self.B2Pres[ls]=b2pres
+            self.B1Stab[ls]=b1stab
+            self.B2Stab[ls]=b2stab
             self.EBP[ls]= ebp
             self.EBM[ls] = ebm
             self.EEP[ls] = eep
@@ -308,7 +320,7 @@ class DatabaseParser:
                 self.LastLSParsed=ls
 
         ##self.MoreLumiInfo =[self.EBP,self.EBM,self.EEP,self.EEM,self.HBHEA,self.HBHEB,self.HBHEC,self.HF,self.RPC,self.DT0,self.DTP,self.DTM,self.CSCP,self.CSCM,self.TOB,self.TIBTID,self.TECP,self.TECM,self.BPIX,self.FPIX,self.ESP,self.ESM]
-        self.MoreLumiInfo ={'ebp':self.EBP,'ebm':self.EBM,'eep':self.EEP,'eem':self.EEM,'hbhea':self.HBHEA,'hbheb':self.HBHEB,'hbhec':self.HBHEC,'hf':self.HF,'rpc':self.RPC,'dt0':self.DT0,'dtp':self.DTP,'dtm':self.DTM,'cscp':self.CSCP,'cscm':self.CSCM,'tob':self.TOB,'tibtid':self.TIBTID,'tecp':self.TECP,'tecm':self.TECM,'bpix':self.BPIX,'fpix':self.FPIX,'esp':self.ESP,'esm':self.ESM}
+        self.MoreLumiInfo ={'b1pres':self.B1Pres,'b2pres':self.B2Pres,'b1stab':self.B1Stab,'b2stab':self.B2Stab,'ebp':self.EBP,'ebm':self.EBM,'eep':self.EEP,'eem':self.EEM,'hbhea':self.HBHEA,'hbheb':self.HBHEB,'hbhec':self.HBHEC,'hf':self.HF,'rpc':self.RPC,'dt0':self.DT0,'dtp':self.DTP,'dtm':self.DTM,'cscp':self.CSCP,'cscm':self.CSCM,'tob':self.TOB,'tibtid':self.TIBTID,'tecp':self.TECP,'tecm':self.TECM,'bpix':self.BPIX,'fpix':self.FPIX,'esp':self.ESP,'esm':self.ESM}
                 
         return self.MoreLumiInfo
         
@@ -623,7 +635,7 @@ class DatabaseParser:
         for index in LSRange:
             psi = self.PSColumnByLS[index]
             if not psi:
-                print "Cannot figure out PSI for LS "+str(index)+"  setting to 0"
+                print "L1: Cannot figure out PSI for LS "+str(index)+"  setting to 0"
                 psi = 0
             for algo in range(self.nAlgoBits):
                 AvgL1Prescales[algo]+=self.L1PrescaleTable[algo][psi]
