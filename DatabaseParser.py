@@ -13,14 +13,7 @@ except NameError:
 class DatabaseParser:
     
     def __init__(self):
-        cmd='cat ~centraltspro/secure/cms_trg_r.txt'
-        line=os.popen(cmd).readlines()
-        magic = line[0].rstrip("\n\r")
-        connect= 'cms_trg_r/' + magic + '@cms_omds_lb'
-        # connect to the DB
-        self.orcl = cx_Oracle.connect(connect)
-        self.curs = self.orcl.cursor()
-
+        self.curs = ConnectDB()
         ##-- Defined in ParsePage1 --##
         self.RunNumber = 0
 
@@ -537,13 +530,7 @@ class DatabaseParser:
         ## Then find the parameter with field name L1SeedsLogicalExpression and look at the value
         ##
         ## NEED TO BE LOGGED IN AS CMS_HLT_R
-        cmd='cat ~hltpro/secure/cms_hlt_r.txt'
-        line=os.popen(cmd).readlines()
-        magic = line[0].rstrip("\n\r")
-        connect= 'cms_hlt_r/' + magic + '@cms_omds_lb'
-        # connect to the DB
-        tmporcl = cx_Oracle.connect(connect)
-        tmpcurs = tmporcl.cursor()
+        tmpcurs = ConnectDB('hlt')
         sqlquery ="""  
         SELECT I.NAME,A.VALUE
         FROM
@@ -871,16 +858,19 @@ class DatabaseParser:
     def Load(self, fileName):
         self = pickle.load( open( fileName ) )
 
-
-
-def GetLatestRunNumber(runNo=9999999):
-    cmd='cat ~centraltspro/secure/cms_trg_r.txt'
+def ConnectDB(user='trg'):
+    if user == 'trg':
+        cmd = 'cat ~centraltspro/secure/cms_trg_r.txt'
+    elif user == 'hlt':
+        cmd='cat ~hltpro/secure/cms_hlt_r.txt'
     line=os.popen(cmd).readlines()
     magic = line[0].rstrip("\n\r")
-    connect= 'cms_trg_r/' + magic + '@cms_omds_lb'
-    # connect to the DB
+    connect = 'cms_%s_r/%s@cms_omds_lb' % (user,magic,)
     orcl = cx_Oracle.connect(connect)
-    curs = orcl.cursor()
+    return orcl.cursor()
+
+def GetLatestRunNumber(runNo=9999999):
+    curs = ConnectDB()
     if runNo==9999999:
         RunNoQuery="""
         SELECT MAX(A.RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_WBM.RUNSUMMARY B WHERE A.RUNNUMBER=B.RUNNUMBER AND B.TRIGGERS>0
