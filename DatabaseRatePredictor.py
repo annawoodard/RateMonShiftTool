@@ -43,66 +43,73 @@ def main():
     Config.ReadCFG()
 
 ##     ###### TO CREATE FITS #########
-##     #run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
-##     #run_list = [180241]
-##     trig_name = "IsoMu"
-##     num_ls = 10
-##     physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
-##     #JSON = [] ##To not use a JSON file, just leave the array empty
-##     JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
-    
-##     debug_print = False
-
-##     min_rate = 0.1
-##     print_table = False
-##     data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
-##     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-##     plot_properties = [["delivered", "rate", True, False, False, ""]]
-
-##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-##     save_fits = True
-##     max_dt=2.0 ## no deadtime cut
-##     force_new=False
-##     SubSystemOff={'All':True,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
-##     print_info=True
-
-    ###### TO SEE RATE VS PREDICTION ########
-    run_list = [179497]
-
+    run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
+    ##run_list = [180250]
     trig_name = "HLT"
-    ##trig_list = ["HLT_IsoMu24_eta2p1","HLT_HT650"]
-    ##trig_list = ["HLT_HT650"]
+    ##trig_list=["HLT_IsoMu30_eta2p1"]
     trig_list=Config.MonitorList
-    num_ls = 1
-    physics_active_psi = True
-    JSON = []
+    num_ls = 10
+    physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
+    JSON = [] ##To not use a JSON file, just leave the array empty
+    #JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
+    
     debug_print = False
 
-    min_rate = 1.0
+    min_rate = 0.1
     print_table = False
-    data_clean = True
+    data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-    plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+    plot_properties = [["delivered", "rate", True, True, False, ""]]
+
     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-    save_fits = False
-    max_dt=2.0 ## no deadtime cut=2.0
+    save_fits = True
+    max_dt=2.0 ## no deadtime cut
     force_new=True
     print_info=True
+    SubSystemOff={'All':True,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
     
-    SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
-    print SubSystemOff.keys()
-    print SubSystemOff.values()
+
+    ###### TO SEE RATE VS PREDICTION ########
+##     run_list = [179497]
+
+##     trig_name = "HLT"
+##     ##trig_list = ["HLT_IsoMu24_eta2p1","HLT_HT650"]
+##     ##trig_list = ["HLT_HT650"]
+##     trig_list=Config.MonitorList
+##     num_ls = 1
+##     physics_active_psi = True
+##     JSON = []
+##     debug_print = False
+
+##     min_rate = 1.0
+##     print_table = False
+##     data_clean = True
+##     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+##     plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+##     save_fits = False
+##     max_dt=2.0 ## no deadtime cut=2.0
+##     force_new=True
+##     print_info=True
+    
+##     SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+##     print SubSystemOff.keys()
+##     print SubSystemOff.values()
     
     
     ########  END PARAMETERS - CALL FUNCTIONS ##########
-    [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new)
+    [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new)
     ##if not checkLS(Rates,LumiPageInfo,trig_list):
     ##    print "Missing LS!"
+    print Rates.keys()
+    ##newdict= Rates["HLT_IsoMu30_eta2p1"]
+    ##print newdict.keys()
+    ##print newdict["ls"]
     
     MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
     
 
-def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new):
+def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new):
     
     Rates = {}
     LumiPageInfo={}
@@ -268,12 +275,19 @@ def GetDBRates(run_list,trig_name,num_ls, max_dt, physics_active_psi,JSON,debug_
 ##                             print "Failed",RefRunNum, nls, keys
 
                     for key in TriggerRates:
-                        if not trig_name in key:
-                            continue
+                        ##if not key in trig_list:
+                        ##    continue
+                        
+                        ##if not trig_name in key:
+                        ##    continue
                         name = key
+                       
                         if re.match('.*_v[0-9]+',name): ##Removes _v#
                             name = name[:name.rfind('_')]
-
+                        if not name in trig_list:
+                            continue
+                        #print "trigger=",name, trig_list
+                        
                         if not Rates.has_key(name):
                             Rates[name] = {}
                             Rates[name]["run"] = []
@@ -445,7 +459,9 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     if fit_iterator>(len(Rates[print_trigger]["rate"])-1):
                     ##don't let fit_iterator go above the length of the array
                         fit_iterator=iterator
-                     
+                else:
+                    fit_iterator=iterator
+                
                 run_t.append(Rates[print_trigger]["run"][iterator])
                 ls_t.append(Rates[print_trigger]["ls"][iterator])
                 ps_t.append(Rates[print_trigger]["ps"][iterator])
@@ -887,8 +903,9 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
             if not(LumiPageInfo[LS]["b1pres"] and LumiPageInfo[LS]["b2pres"] and LumiPageInfo[LS]["b1stab"] and LumiPageInfo[LS]["b2stab"]):
                 Passed=False
                 subsystemfailed.append("Beam")
-
-
+    else:
+        fit_iterator=iterator
+        Passed=True
             
         #print "LS",LS, Passed, round(Rates[print_trigger]["deadtime"][fit_iterator],2), max_dt
         
