@@ -43,56 +43,60 @@ def main():
     Config.ReadCFG()
 
 ##     ###### TO CREATE FITS #########
-    run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
-    ##run_list = [180250]
-    trig_name = "HLT"
-    ##trig_list=["HLT_IsoMu30_eta2p1"]
-    trig_list=Config.MonitorList
-    num_ls = 10
-    physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
-    JSON = [] ##To not use a JSON file, just leave the array empty
-    #JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
+##     run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
+##     ##run_list = [180250]
+##     trig_name = "HLT"
+##     ##trig_list=["HLT_IsoMu30_eta2p1"]
+##     trig_list=Config.MonitorList
+##     num_ls = 10
+##     physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
+##     JSON = [] ##To not use a JSON file, just leave the array empty
+##     #JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
     
-    debug_print = False
+##     debug_print = False
 
-    min_rate = 0.1
-    print_table = False
-    data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
-    ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-    plot_properties = [["delivered", "rate", True, True, False, ""]]
+##     min_rate = 0.1
+##     print_table = False
+##     data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
+##     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+##     plot_properties = [["delivered", "rate", True, True, False, ""]]
 
-    masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-    save_fits = True
-    max_dt=2.0 ## no deadtime cut
-    force_new=True
-    print_info=True
-    SubSystemOff={'All':True,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+##     save_fits = True
+##     max_dt=0.08 ## no deadtime cut
+##     force_new=True
+##     print_info=True
+##     SubSystemOff={'All':True,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
     
 
     ###### TO SEE RATE VS PREDICTION ########
-##     run_list = [179497]
+    run_list = [179497]
 
-##     trig_name = "HLT"
-##     ##trig_list = ["HLT_IsoMu24_eta2p1","HLT_HT650"]
-##     ##trig_list = ["HLT_HT650"]
-##     trig_list=Config.MonitorList
-##     num_ls = 1
-##     physics_active_psi = True
-##     JSON = []
-##     debug_print = False
+    trig_name = "HLT"
+    ##trig_list = ["HLT_IsoMu24_eta2p1","HLT_HT650"]
+    ##trig_list = ["HLT_HT650"]
+    trig_list=Config.MonitorList
+    num_ls = 1
+    physics_active_psi = True
+    JSON = []
+    debug_print = False
 
-##     min_rate = 1.0
-##     print_table = False
-##     data_clean = True
-##     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-##     plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
-##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-##     save_fits = False
-##     max_dt=2.0 ## no deadtime cut=2.0
-##     force_new=True
-##     print_info=True
+    min_rate = 1.0
+    print_table = False
+    data_clean = True
+    ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+    ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+    plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
     
-##     SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+    masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+    save_fits = False
+    max_dt=2.0 ## no deadtime cut=2.0
+    force_new=True
+    print_info=True
+    
+    SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+
+    
 ##     print SubSystemOff.keys()
 ##     print SubSystemOff.values()
     
@@ -101,10 +105,10 @@ def main():
     [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new)
     ##if not checkLS(Rates,LumiPageInfo,trig_list):
     ##    print "Missing LS!"
-    print Rates.keys()
-    ##newdict= Rates["HLT_IsoMu30_eta2p1"]
-    ##print newdict.keys()
-    ##print newdict["ls"]
+    
+    
+    ##for iterator in range(len(Rates["HLT_IsoMu30_eta2p1"]["rawrate"])):
+    ##    print iterator, "ls=",Rates["HLT_IsoMu30_eta2p1"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu30_eta2p1"]["rawrate"][iterator],2) 
     
     MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
     
@@ -330,7 +334,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         Rates[name]["physics"].append(physics)
                         Rates[name]["active"].append(active)
                         Rates[name]["psi"].append(psi)
-                        #print "LS=", nls, "prescale=",ps, "PSI=",psi
+                        ###print iterator, "LS=", nls
                         
                         #for keys, values in MoreLumiMulti.iteritems():
                         #    Rates[name][keys].append(values)
@@ -937,7 +941,7 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         return True
     else:
         
-        if (print_info and print_trigger==trig_list[0]):
+        if (print_info and print_trigger==trig_list[0] and num_ls==1):
             
             print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Failed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][fit_iterator],2), max_dt, Passed, subsystemfailed)
         return False
