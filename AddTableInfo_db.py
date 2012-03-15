@@ -7,6 +7,7 @@ write = sys.stdout.write
 NHighExpress=0
 
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
+    print "Monitoring Run %d" % (parser.RunNumber,)
     [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
     try:
         LastPSCol = PSCols[-1]
