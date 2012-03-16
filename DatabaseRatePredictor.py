@@ -43,58 +43,57 @@ def main():
     Config.ReadCFG()
 
 ##     ###### TO CREATE FITS #########
-    ## run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
-##     ##run_list = [180250]
-##     trig_name = "HLT"
-##     trig_list=["HLT_Ele65_CaloIdVT_TrkIdT_v6", "HLT_HT650_v4", "HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6", "HLT_IsoMu30_eta2p1_v7", "HLT_Jet370_v10", "HLT_MET200_v7", "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8", "HLT_PFMHT150_v17", "HLT_Photon135_v2", "HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4"]
-##     ##trig_list=Config.MonitorList
-##     num_ls = 10
-##     physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
-##     #JSON = [] ##To not use a JSON file, just leave the array empty
-##     JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
+    ##run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
+    run_list = [180241]
+    trig_name = "HLT"
+    ##trig_list=["HLT_Ele65_CaloIdVT_TrkIdT_v6", "HLT_HT650_v4", "HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6", "HLT_IsoMu30_eta2p1_v7", "HLT_Jet370_v10", "HLT_MET200_v7", "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8", "HLT_PFMHT150_v17", "HLT_Photon135_v2", "HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4"]
+    ##trig_list=Config.MonitorList
+    trig_list=["HLT_HT650_v4"]
+    num_ls = 1
+    physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
+    JSON = [] ##To not use a JSON file, just leave the array empty
+    ##JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
     
-##     debug_print = False
-##     no_versions=False
-##     min_rate = 0.1
-##     print_table = False
-##     data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
-##     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-##     plot_properties = [["delivered", "rate", True, True, False, ""]]
+    debug_print = False
+    no_versions=False
+    min_rate = 0.1
+    print_table = False
+    data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
+    ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+    plot_properties = [["delivered", "rate", True, False, False, ""]]
 
-##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-##     save_fits = True
-##     max_dt=0.08 ## no deadtime cut
-##     force_new=True
-##     print_info=True
-##     SubSystemOff={'All':True,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+    masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+    save_fits = True
+    max_dt=0.08 ## no deadtime cut
+    force_new=True
+    print_info=True
+    SubSystemOff={'All':True,'Mu':False,'HCal':True,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
     
 
     ###### TO SEE RATE VS PREDICTION ########
-    run_list = [180250]
-
-    trig_name = "HLT"
-    trig_list = ["HLT_IsoMu30_eta2p1_v7"]
-    ##trig_list=["HLT_Ele65_CaloIdVT_TrkIdT_v6", "HLT_HT650_v4", "HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6", "HLT_IsoMu30_eta2p1_v7", "HLT_Jet370_v10", "HLT_MET200_v7", "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8", "HLT_PFMHT150_v17", "HLT_Photon135_v2", "HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4"]
-    ##trig_list=Config.MonitorList
-    num_ls = 1
-    physics_active_psi = True
-    JSON = []
-    debug_print = False
-    no_versions=False
-    min_rate = 1.0
-    print_table = False
-    data_clean = True
-    ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-    ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
-    plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
+##     run_list = [180250]
+##     trig_name = "HLT"
+##     trig_list = ["HLT_IsoMu30_eta2p1_v7"]
+##     ##trig_list=["HLT_Ele65_CaloIdVT_TrkIdT_v6", "HLT_HT650_v4", "HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6", "HLT_IsoMu30_eta2p1_v7", "HLT_Jet370_v10", "HLT_MET200_v7", "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8", "HLT_PFMHT150_v17", "HLT_Photon135_v2", "HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4"]
+##     ##trig_list=Config.MonitorList
+##     num_ls = 1
+##     physics_active_psi = True
+##     JSON = []
+##     debug_print = False
+##     no_versions=False
+##     min_rate = 1.0
+##     print_table = False
+##     data_clean = True
+##     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+##     ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+##     plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
     
-    masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-    save_fits = False
-    max_dt=2.0 ## no deadtime cut=2.0
-    force_new=True
-    print_info=True
-    
-    SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+##     save_fits = False
+##     max_dt=2.0 ## no deadtime cut=2.0
+##     force_new=True
+##     print_info=True
+##     SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
 
     
 ##     print SubSystemOff.keys()
@@ -212,17 +211,18 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 RefLumiRange = []
                 RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit 
                 
-             
+                
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
                     ##cheap way of getting PSCol None-->0
-                    if RefLumiArray[0][iterator]!=1 and RefLumiArray[0][iterator]!=2 and RefLumiArray[0]!=3 and RefLumiArray[0]!=4 and RefLumiArray!=5 and RefLumiArray!=6 and RefLumiArray!=7 and RefLumiArray[0][iterator]!=8:
+                    if RefLumiArray[0][iterator]!=1 and RefLumiArray[0][iterator]!=2 and RefLumiArray[0][iterator]!=3 and RefLumiArray[0][iterator]!=4 and RefLumiArray[0][iterator]!=5 and RefLumiArray[0][iterator]!=6 and RefLumiArray[0][iterator]!=7 and RefLumiArray[0][iterator]!=8:
                         RefLumiArray[0][iterator]=0
+                        
                     
                     if not physics_active_psi or (RefLumiArray[5][iterator] == 1 and RefLumiArray[6][iterator] == 1):
                         if not JSON or RefRunNum in JSON:
                             if not JSON or iterator in JSON[RefRunNum]:
                                 RefLumiRange.append(iterator)
-                    #print iterator, RefLumiArray[0][iterator], "active=",RefLumiArray[5][iterator],"physics=",RefLumiArray[6][iterator], "HBHEA=",RefLumiArray[7][iterator],
+                    #print iterator, RefLumiArray[0][iterator], "active=",RefLumiArray[5][iterator],"physics=",RefLumiArray[6][iterator]
                     #print "hbhea=",RefMoreLumiArray['hbhea'][iterator]
                     
                 try:
@@ -247,6 +247,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 for nls in sorted(LSRange.iterkeys()):
                     
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
+                    
 
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
 
@@ -376,7 +377,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 os.remove(RootFile)
             except:
                 break
-
+    
     for print_trigger in Rates:
         ##Limits Rates[] to runs in run_list
         NewTrigger = {}
@@ -413,6 +414,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         highxsec = 0
         nlow = 0
         nhigh = 0
+        
         for iterator in range(len(Rates[print_trigger]["rate"])):
             if Rates[print_trigger]["live_lumi"][iterator] <= meanlumi_init:
                 if ( Rates[print_trigger]["rawrate"][iterator] > 0.04 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < max_dt and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 500):
@@ -601,9 +603,16 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX)))
                     gr1.Fit("f1b","Q","rob=0.90")
                     #if f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
-                    print "X0 = "+str(f1a.GetParameter(0))+" X1 = "+str(f1a.GetParameter(1))+" X2 = "+str(f1a.GetParameter(2))
-                    print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1b Chi2 = "+str(10*f1b.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1b.GetNDF()))
-                    print "X0 = "+str(f1b.GetParameter(0))+" X1 = "+str(f1b.GetParameter(1))+" X2 = "+str(f1b.GetParameter(2))+" X3 = "+str(f1b.GetParameter(3)) 
+                    #print "X0 = "+str(f1a.GetParameter(0))+" X1 = "+str(f1a.GetParameter(1))+" X2 = "+str(f1a.GetParameter(2))
+                    #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1b Chi2 = "+str(10*f1b.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1b.GetNDF()))
+                    #print "X0 = "+str(f1b.GetParameter(0))+" X1 = "+str(f1b.GetParameter(1))+" X2 = "+str(f1b.GetParameter(2))+" X3 = "+str(f1b.GetParameter(3))
+                    if (first_trigger):
+                        print "len(VX)=",len(VX), "len(VY)=",len(VY)
+                        print '%-60s %4s  x0      x1          x2          x3          chi2     ndf chi2/ndf' % ('trigger', 'type')
+                        
+                        first_trigger=False
+                    
+                    
                     
                     f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
                     f1c.SetLineColor(3)
@@ -612,12 +621,25 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     f1c.SetParLimits(1,max(VY)/math.exp(10.0),max(VY)/math.exp(2.0))
                     f1c.SetParLimits(2,0.0,0.0000000001)
                     f1c.SetParLimits(3,2.0/max(VX),10.0/max(VX))
-                    print str(max(VY)/math.exp(2.0))+"  "+str(10.0/max(VX))
+                    #print str(max(VY)/math.exp(2.0))+"  "+str(10.0/max(VX))
                     gr1.Fit("f1c","Q","rob=0.90")
                     #if f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
-                    print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1c Chi2 = "+str(10*f1c.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1c.GetNDF()))
-                    print "X0 = "+str(f1c.GetParameter(0))+" X1 = "+str(f1c.GetParameter(1))+" X2 = "+str(f1c.GetParameter(2))+" X3 = "+str(f1c.GetParameter(3))
+                    #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1c Chi2 = "+str(10*f1c.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1c.GetNDF()))
+                    #print "X0 = "+str(f1c.GetParameter(0))+" X1 = "+str(f1c.GetParameter(1))+" X2 = "+str(f1c.GetParameter(2))+" X3 = "+str(f1c.GetParameter(3))
+                    
+                    
+                    
+                    
+
+                    if (f1c.GetChisquare()/f1c.GetNDF() < f1b.GetChisquare()/f1b.GetNDF() and f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
+                        print '%-60s expo % .2f   % .2e   % .2e   % .2e   %6.2f   %3.0f   % .3f ' % (print_trigger, f1c.GetParameter(0), f1c.GetParameter(1), 0                  , 0                  , f1c.GetChisquare(), f1c.GetNDF(), f1c.GetChisquare()/f1c.GetNDF())
+                    elif (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
+                        print '%-60s cube % .2f   % .2e   % .2e   % .2e   %6.2f   %3.0f   % .3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParameter(1), f1b.GetParameter(2), f1b.GetParameter(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
+                    else:
+                        print '%-60s quad % .2f   % .2e   % .2e   % .2e   %6.2f   %3.0f   % .3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParameter(1), f1a.GetParameter(2), 0                  , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
                         
+
+                    
             else: ##If this is not a rate plot
                 f1a = TF1("f1a","pol1",0,8000)
                 f1a.SetLineColor(4)
@@ -848,7 +870,8 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
 
 def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff, max_dt, print_info, trig_list):
     it_offset=2
-    
+    Passed=True
+    subsystemfailed=[]
     
     if num_ls==1:
         ##fit is 2 ls ahead of real rate
@@ -868,8 +891,7 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         #print LumiPageInfo[LS]
         lumidict={}
         lumidict=LumiPageInfo[LS]
-        Passed=True
-        subsystemfailed=[]
+        
 
         
             
@@ -952,6 +974,8 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         if (print_info and print_trigger==trig_list[0] and num_ls==1):
             
             print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Failed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][fit_iterator],2), max_dt, Passed, subsystemfailed)
+        ##elif(print_info and print_trigger==trig_list[0]):
+        ##    print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Failed", Rates[print_trigger]["run"][iterator], LumiPageInfo[Rates[print_trigger]["ls"][iterator]]["LSRange"], Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][fit_iterator],2), max_dt, Passed, subsystemfailed)
         return False
 
 

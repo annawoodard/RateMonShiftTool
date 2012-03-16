@@ -156,6 +156,7 @@ class DatabaseParser:
             if not TriggerRates.has_key(name):
                 try:
                     psi = self.PSColumnByLS[LSRange[0]]
+                    ##print "psi=",psi
                 #except:
                     #psi = self.PSColumnByLS[1]
                 #if not psi:
@@ -168,6 +169,7 @@ class DatabaseParser:
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
+                    ##print "zero ",LSRange[0], self.PSColumnByLS[LSRange[0]]
                     AvL1Prescales = self.CalculateAvL1Prescales([LSRange[0]])
                     l1ps = self.UnwindORSeed(self.HLTSeed[name],AvL1Prescales)
                     #l1ps = 1
@@ -196,6 +198,7 @@ class DatabaseParser:
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
+                    ##print "on ",
                     AvL1Prescales = self.CalculateAvL1Prescales([LSRange[on]])
                     l1ps = self.UnwindORSeed(self.HLTSeed[name],AvL1Prescales)
                     #l1ps = 1
@@ -629,7 +632,7 @@ class DatabaseParser:
         for index in LSRange:
             psi = self.PSColumnByLS[index]
             if not psi:
-                print "L1: Cannot figure out PSI for LS "+str(index)+"  setting to 0"
+                #print "L1: Cannot figure out PSI for LS "+str(index)+"  setting to 0"
                 psi = 0
             for algo in range(self.nAlgoBits):
                 AvgL1Prescales[algo]+=self.L1PrescaleTable[algo][psi]
