@@ -43,18 +43,18 @@ def main():
     Config.ReadCFG()
 
 ##     ###### TO CREATE FITS #########
-##     run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
+    ## run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
 ##     ##run_list = [180250]
 ##     trig_name = "HLT"
-##     ##trig_list=["HLT_IsoMu30_eta2p1"]
-##     trig_list=Config.MonitorList
+##     trig_list=["HLT_Ele65_CaloIdVT_TrkIdT_v6", "HLT_HT650_v4", "HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6", "HLT_IsoMu30_eta2p1_v7", "HLT_Jet370_v10", "HLT_MET200_v7", "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8", "HLT_PFMHT150_v17", "HLT_Photon135_v2", "HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4"]
+##     ##trig_list=Config.MonitorList
 ##     num_ls = 10
 ##     physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
-##     JSON = [] ##To not use a JSON file, just leave the array empty
-##     #JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
+##     #JSON = [] ##To not use a JSON file, just leave the array empty
+##     JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
     
 ##     debug_print = False
-
+##     no_versions=False
 ##     min_rate = 0.1
 ##     print_table = False
 ##     data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
@@ -70,17 +70,17 @@ def main():
     
 
     ###### TO SEE RATE VS PREDICTION ########
-    run_list = [179497]
+    run_list = [180250]
 
     trig_name = "HLT"
-    ##trig_list = ["HLT_IsoMu24_eta2p1","HLT_HT650"]
-    ##trig_list = ["HLT_HT650"]
-    trig_list=Config.MonitorList
+    trig_list = ["HLT_IsoMu30_eta2p1_v7"]
+    ##trig_list=["HLT_Ele65_CaloIdVT_TrkIdT_v6", "HLT_HT650_v4", "HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6", "HLT_IsoMu30_eta2p1_v7", "HLT_Jet370_v10", "HLT_MET200_v7", "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8", "HLT_PFMHT150_v17", "HLT_Photon135_v2", "HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4"]
+    ##trig_list=Config.MonitorList
     num_ls = 1
     physics_active_psi = True
     JSON = []
     debug_print = False
-
+    no_versions=False
     min_rate = 1.0
     print_table = False
     data_clean = True
@@ -119,11 +119,13 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
     LumiPageInfo={}
     ## Save in RefRuns with name dependent on trig_name, num_ls, JSON, and physics_active_psi
     if JSON:
+        print "Using JSON file"
         if physics_active_psi:
             RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS_JPAP.pkl"
         else:
             RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS_JSON.pkl"
     else:
+        print "Using Physics and Active ==1"
         if physics_active_psi:
             RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS_PAP.pkl"
         else:
@@ -286,8 +288,8 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         ##    continue
                         name = key
                        
-                        if re.match('.*_v[0-9]+',name): ##Removes _v#
-                            name = name[:name.rfind('_')]
+                        ##if re.match('.*_v[0-9]+',name): ##Removes _v#
+                        ##    name = name[:name.rfind('_')]
                         if not name in trig_list:
                             continue
                         #print "trigger=",name, trig_list
@@ -359,6 +361,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
     
     InputFit = {}
     OutputFit = {}
+    first_trigger=True
 
     RootNameTemplate = "%s_%sLS_Run%sto%s.root"
     RootFile = RootNameTemplate % (trig_name, num_ls, min_run, max_run)
@@ -444,7 +447,12 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             X2 = InputFit[print_trigger][3]
             X3 = InputFit[print_trigger][4]
             Chi2 = InputFit[print_trigger][5]
-            ##print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
+            #print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
+            if (first_trigger):
+                print '%20s % 10s % 6s % 5s % 5s % 3s % 4s' % ('trigger', 'fit type ', 'cubic', 'quad', '  linear', ' c ', 'Chi2')
+                first_trigger=False
+            print '%20s % 10s % 2.2g % 2.2g % 2.2g % 2.2g % 2.2g' % (print_trigger, FitType, X3, X2, X1, X0, Chi2)
+            #print '{}, {}, {:02.2g}, {:02.2g}, {:02.2g}, {:02.2g} '.format(print_trigger, FitType, X0, X1, X2, X3)
         ## we are 2 lumis off when we start! -gets worse when we skip lumis
         it_offset=2
         for iterator in range(len(Rates[print_trigger]["rate"])):
