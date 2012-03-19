@@ -80,6 +80,8 @@ class DatabaseParser:
         self.FPIX = {}
         self.ESP = {}
         self.ESM = {}
+
+        self.DeadTimeBeamActive = {}
        
         
         ##-- Defined in ParsePSColumnPage (not currently used) --##
@@ -320,6 +322,23 @@ class DatabaseParser:
                 
         return self.MoreLumiInfo
         
+    def GetDeadTimeBeamActive(self,LSRange):
+        sqlquery=""" select FRACTION
+        from
+        CMS_GT_MON.V_SCALERS_TCS_DEADTIME
+        where
+        RUN_NUMBER=188202 and
+        LUMI_SECTION=10 and
+        SCALER_NAME='DeadtimeBeamActive';"""
+        
+
+        ## Get the lumi information for the run, just update the table, don't rebuild it every time
+        ##query = sqlquery % (self.RunNumber,self.LastLSParsed)
+        self.curs.execute(query)
+        pastLSCol=-1
+        for deadtimebeamactive in self.curs.fetchall():
+            self.DeadTimeBeamActive[ls]
+
 
     def GetAvLumiInfo(self,LSRange):
         nLS=0;
@@ -327,6 +346,8 @@ class DatabaseParser:
         try:
             StartLS = LSRange[0]
             EndLS   = LSRange[-1]
+            
+            #print "startls=",StartLS, "endls=",EndLS
             try: ## Cosmics won't have lumi info
                 maxlive = self.LiveLumiByLS[EndLS]
                 maxdelivered = self.DeliveredLumiByLS[EndLS]
@@ -361,20 +382,22 @@ class DatabaseParser:
                     return [0.,0.,0.,0.,[]]
             return [AvInstLumi/nLS,(1000.0/23.3)*AvLiveLumi/(EndLS-StartLS),(1000.0/23.3)*AvDeliveredLumi/(EndLS-StartLS), AvDeadTime,PSCols]
         except:
-            if StartLS == EndLS:
+            if LSRange[0] == LSRange[-1]:
                 AvInstLumi = self.InstLumiByLS[StartLS]
                 try:
                     AvLiveLumi = self.LiveLumiByLS[StartLS]-self.LiveLumiByLS[StartLS-1]
                     AvDeliveredLumi = self.DeliveredLumiByLS[StartLS]-self.DeliveredLumiByLS[StartLS-1]
+                    
                 except:
                     AvLiveLumi = self.LiveLumiByLS[StartLS+1]-self.LiveLumiByLS[StartLS]
                     AvDeliveredLumi = self.DeliveredLumiByLS[StartLS+1]-self.DeliveredLumiByLS[StartLS]
-                if self.LiveLumiByLS[StartLS] == 0:
+                if self.LiveLumiByLS[StartLS+1] == 0:
                     AvLiveLumi = 0
-                if self.DeliveredLumiByLS[StartLS] == 0:
+                if self.DeliveredLumiByLS[StartLS+1] == 0:
                     AvDeliveredLumi = 0
                 if AvDeliveredLumi > 0:
                     AvDeadTime = 1 - AvLiveLumi/AvDeliveredLumi
+                  
                 else:
                     if AvLiveLumi > 0:
                         print "Live Lumi > 0 but Delivered <= 0: problem"

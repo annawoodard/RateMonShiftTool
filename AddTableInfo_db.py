@@ -23,8 +23,11 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     ExpRate=0
     PeakRate=0
     AvgExpRate=0
-
+    
     ARate=0
+    PeakRateA=0
+    AvgRateA=0
+    
     if len(expressRates.values()) > 20:
         AvgExpRate = sum(expressRates.values())/len(expressRates.values())
 
@@ -33,13 +36,21 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         ExpRate+=thisR
         if thisR>PeakRate:
             PeakRate=thisR
-        ARate+=aRates.get(ls,0)
-    ## Print Stream A Rate
-    print "Current Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
+
+        thisRateA=aRates.get(ls,0)
+        ARate+=thisRateA
+        if thisRateA>PeakRateA:
+            PeakRateA=thisRateA
+        
+        #ARate+=aRates.get(ls,0)
+    ## Print Stream A Rate --moved see below
+    ##print "Current Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
 
     Warn = False
 
+    ##########################################
     ## Check if the express stream is too high
+    ##########################################
     global NHighExpress
     badExpress = ExpRate/len(LumiRange) > config.MaxExpressRate ## avg express stream rate too high?
     baseText = "Current Express Stream rate is: %0.1f Hz" % (ExpRate/len(LumiRange),) ## text to display
@@ -62,8 +73,35 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
                 #    if AvgExpRate > config.MaxExpressRate:
                 #        write( colored("\n\nWARNING: Average Express Stream Rate is too high (%0.1f Hz)  << CALL HLT DOC" % AvgExpRate,'red',attrs=['reverse']) )
                 #        Warn = True
-    write("\n\n")
+    
 
+
+    #########################################
+    ##Check if Stream A is too high
+    #########################################
+    global NHighStreamA
+    badStreamA =ARate/len(LumiRange) > config.MaxStreamARate ##Cosmics Express Rate 300 Hz max
+    baseTextA= "\nCurrent Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
+    if badStreamA:
+        textA=colored(baseText,'red',attrs=['reverse'])  ## bad, make the text white on red
+        NHighStreamA+=1
+    else:
+        textA=baseTextA
+        NHighStreamA=0
+
+    write(textA)
+    if badStreamA:
+        if (ARate-PeakRateA)/(len(LumiRange)-1) <=config.MaxStreamARate: ## one lumisection causes this
+            write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
+        else:
+            if NHighStreamA >1: ##Call HLT doc!
+                write(colored("  <<  WARNING: Current Express rate is too high!",'red',attrs=['reverse']) )
+                Warn = True
+    write("\n\n")
+            
+    ######################################
+    ##Warning for HLT doc
+    ######################################
     if Warn:  ## WARNING
         rows, columns = os.popen('stty size', 'r').read().split()  ## Get the terminal size
         cols = int(columns)

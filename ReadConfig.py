@@ -95,7 +95,8 @@ class RateMonConfig:
                 self.ShifterMode=arg
             elif par=="MaxExpressRate":
                 self.MaxExpressRate=float(arg)
-            
+            elif par=="MaxStreamARate":
+                self.MaxStreamARate=float(arg)
             else:
                 print "Invalid Option : "+strippedLine
         f.close()
