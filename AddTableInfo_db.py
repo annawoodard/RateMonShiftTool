@@ -5,6 +5,7 @@ from termcolor import colored, cprint
 write = sys.stdout.write
 
 NHighExpress=0
+NHighStreamA=0
 
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
@@ -53,7 +54,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     ##########################################
     global NHighExpress
     badExpress = ExpRate/len(LumiRange) > config.MaxExpressRate ## avg express stream rate too high?
-    baseText = "Current Express Stream rate is: %0.1f Hz" % (ExpRate/len(LumiRange),) ## text to display
+    baseText = "\nCurrent Express Stream rate is: %0.1f Hz" % (ExpRate/len(LumiRange),) ## text to display
     if badExpress:
         text = colored(baseText,'red',attrs=['reverse'])  ## bad, make the text white on red
         NHighExpress+=1  ## increment the bad express counter
@@ -83,7 +84,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     badStreamA =ARate/len(LumiRange) > config.MaxStreamARate ##Cosmics Express Rate 300 Hz max
     baseTextA= "\nCurrent Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
     if badStreamA:
-        textA=colored(baseText,'red',attrs=['reverse'])  ## bad, make the text white on red
+        textA=colored(baseTextA,'red',attrs=['reverse'])  ## bad, make the text white on red
         NHighStreamA+=1
     else:
         textA=baseTextA
@@ -95,7 +96,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
             write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
         else:
             if NHighStreamA >1: ##Call HLT doc!
-                write(colored("  <<  WARNING: Current Express rate is too high!",'red',attrs=['reverse']) )
+                write(colored("  <<  WARNING: Current Stream A rate is too high!",'red',attrs=['reverse']) )
                 Warn = True
     write("\n\n")
             
