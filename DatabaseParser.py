@@ -317,7 +317,7 @@ class DatabaseParser:
             if ls>self.LastLSParsed:
                 self.LastLSParsed=ls
 
-        ##self.MoreLumiInfo =[self.EBP,self.EBM,self.EEP,self.EEM,self.HBHEA,self.HBHEB,self.HBHEC,self.HF,self.RPC,self.DT0,self.DTP,self.DTM,self.CSCP,self.CSCM,self.TOB,self.TIBTID,self.TECP,self.TECM,self.BPIX,self.FPIX,self.ESP,self.ESM]
+        
         self.MoreLumiInfo ={'b1pres':self.B1Pres,'b2pres':self.B2Pres,'b1stab':self.B1Stab,'b2stab':self.B2Stab,'ebp':self.EBP,'ebm':self.EBM,'eep':self.EEP,'eem':self.EEM,'hbhea':self.HBHEA,'hbheb':self.HBHEB,'hbhec':self.HBHEC,'hf':self.HF,'rpc':self.RPC,'dt0':self.DT0,'dtp':self.DTP,'dtm':self.DTM,'cscp':self.CSCP,'cscm':self.CSCM,'tob':self.TOB,'tibtid':self.TIBTID,'tecp':self.TECP,'tecm':self.TECM,'bpix':self.BPIX,'fpix':self.FPIX,'esp':self.ESP,'esm':self.ESM}
                 
         return self.MoreLumiInfo
@@ -327,18 +327,57 @@ class DatabaseParser:
         from
         CMS_GT_MON.V_SCALERS_TCS_DEADTIME
         where
-        RUN_NUMBER=188202 and
-        LUMI_SECTION=10 and
-        SCALER_NAME='DeadtimeBeamActive';"""
+        RUN_NUMBER=%s and
+        LUMI_SECTION in %s and
+        SCALER_NAME='DeadtimeBeamActive'"""
+
         
-
-        ## Get the lumi information for the run, just update the table, don't rebuild it every time
-        ##query = sqlquery % (self.RunNumber,self.LastLSParsed)
+        LSRangeSTR = str(LSRange)
+        LSRangeSTR = LSRangeSTR.replace("[","(")
+        LSRangeSTR = LSRangeSTR.replace("]",")")
+                           
+        query=sqlquery %(self.RunNumber,LSRangeSTR)
+        #print query
         self.curs.execute(query)
-        pastLSCol=-1
-        for deadtimebeamactive in self.curs.fetchall():
-            self.DeadTimeBeamActive[ls]
 
+        deadtimeba_sum=0
+        ii=0
+        for deadtimebeamactive in self.curs.fetchall():
+            try:
+                deadtimeba_sum=deadtimeba_sum+deadtimebeamactive[0]
+            except:
+                print "no dtba for run ",self.RunNumber, ", ls ",LSRange[ii], "using dt"
+                deadtimeba_sum=deadtimeba_sum+self.GetDeadTime(LSRange[ii])
+            ii=ii+1
+        deadtimeba_av=deadtimeba_sum/len(LSRange)
+        
+        return deadtimeba_av
+
+
+            
+    def GetDeadTime(self,LS):
+        sqlquery=""" select FRACTION
+        from
+        CMS_GT_MON.V_SCALERS_TCS_DEADTIME
+        where
+        RUN_NUMBER=%s and
+        LUMI_SECTION=%s and
+        SCALER_NAME='Deadtime'"""
+                           
+        query=sqlquery %(self.RunNumber,LS)
+        #print query
+        self.curs.execute(query)
+
+        for deadtime in self.curs.fetchall():
+            try:
+                dt=deadtime[0]
+                print "dt=",dt
+            except:
+                print "no dt for run ",self.RunNumber, ", ls ",LS
+                dt=1.0
+        
+        
+        return dt
 
     def GetAvLumiInfo(self,LSRange):
         nLS=0;
@@ -389,19 +428,21 @@ class DatabaseParser:
                     AvDeliveredLumi = self.DeliveredLumiByLS[StartLS]-self.DeliveredLumiByLS[StartLS-1]
                     
                 except:
-                    AvLiveLumi = self.LiveLumiByLS[StartLS+1]-self.LiveLumiByLS[StartLS]
-                    AvDeliveredLumi = self.DeliveredLumiByLS[StartLS+1]-self.DeliveredLumiByLS[StartLS]
-                if self.LiveLumiByLS[StartLS+1] == 0:
-                    AvLiveLumi = 0
-                if self.DeliveredLumiByLS[StartLS+1] == 0:
-                    AvDeliveredLumi = 0
+                    try:
+                        AvLiveLumi = self.LiveLumiByLS[StartLS+1]-self.LiveLumiByLS[StartLS]
+                        AvDeliveredLumi = self.DeliveredLumiByLS[StartLS+1]-self.DeliveredLumiByLS[StartLS]
+                    except:
+                        print "missing live/delivered run ",self.RunNumber, "ls ",LSRange
+                        AvLiveLumi = 0
+                        AvDeliveredLumi = 0
                 if AvDeliveredLumi > 0:
                     AvDeadTime = 1 - AvLiveLumi/AvDeliveredLumi
                   
+                elif AvLiveLumi > 0:
+                    print "Live Lumi > 0 but Delivered <= 0: problem run ",self.RunNumber, " ls ",LSRange 
+                    AvDeadTime = 1.0
                 else:
-                    if AvLiveLumi > 0:
-                        print "Live Lumi > 0 but Delivered <= 0: problem"
-                    AvDeadTime = 0.0
+                    AvDeadTime=1.0
                 PSCols = [self.PSColumnByLS[StartLS]]
                 return [AvInstLumi,(1000.0/23.3)*AvLiveLumi,(1000.0/23.3)*AvDeliveredLumi,AvDeadTime,PSCols]
             else:
@@ -598,6 +639,8 @@ class DatabaseParser:
         self.GetLumiInfo()
         self.LastLSParsed=-1
         self.GetMoreLumiInfo()
+        self.LastLsParsed=-1
+        #self.GetDeadTimeBeamActive()
 
     def UpdateRun(self,LSRange):
         self.GetLumiInfo()
