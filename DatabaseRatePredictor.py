@@ -46,7 +46,6 @@ def main():
         usage()
         sys.exit(0)
 
-
     run_list = []
     for r in args:
         if r.find('-')!=-1:  # r is a run range
@@ -128,8 +127,6 @@ def main():
 
     if jsonfile=="":
         JSON=[]
-        if frun!=lrun:
-            print ""
     else:
         print "Using JSON: %s" % (jsonfile,)
         JSON = GetJSON(jsonfile) ##Returns array JSON[runs][ls_list]
