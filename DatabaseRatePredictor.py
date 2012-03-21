@@ -6,9 +6,10 @@ import sys
 import os
 from numpy import *
 import pickle
+import getopt
 
 from ROOT import gROOT, TCanvas, TF1, TGraph, TGraphErrors, TPaveStats, gPad, gStyle
-from ROOT import TFile, TPaveText
+from ROOT import TFile, TPaveText, TBrowser
 from ROOT import gBenchmark
 import array
 import math
@@ -16,88 +17,172 @@ from ReadConfig import RateMonConfig
 
 from selectionParser import selectionParser
 
-def main():
+def usage():
+    print sys.argv[0]+" [options] <list of runs>"
+    print "This script is used to generate fits and do secondary shifter validation"
+    print "<list of runs>                       this is a list of the form: a b c-d e f-g, specifying individual runs and/or run ranges"
+    print "                                     be careful with using ranges (c-d), it is highly recommended to use a JSON in this case"
+    print "options: "
+    print "--makeFits                           run in fit making mode"
+    print "--secondary                          run in secondary shifter mode"
+    print "--fitFile=<path>                     path to the fit file"
+    print "--json=<path>                        path to the JSON file"
+    print "--TriggerList=<path>                 path to the trigger list (without versions!)"
 
+class Modes:
+    none,fits,secondary = range(3)
+
+def main():
+    try:
+        opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList="])
+        
+    except getopt.GetoptError, err:
+        print str(err)
+        usage()
+        sys.exit(2)
+
+    if len(args)<1:
+        print "\nPlease specify at least 1 run to look at\n"
+        usage()
+        sys.exit(0)
+
+
+    run_list = []
+    for r in args:
+        if r.find('-')!=-1:  # r is a run range
+            rrange = r.split('-')
+            if len(rrange)!=2:
+                print "Invalid run range %s" % (r,)
+                sys.exit(0)
+            try:
+                for rr in range(int(rrange[0]),int(rrange[1])+1):
+                    run_list.append(rr)
+            except:
+                print "Invalid run range %s" % (r,)
+                sys.exit(0)
+        else: # r is not a run range
+            try:
+                run_list.append(int(r))
+            except:
+                print "Invalid run %s" % (r,)
+
+
+    mode = Modes.none
+    fitFile = ""
+    jsonfile = ""
+    trig_list = []
+    
+    for o,a in opt:
+        if o == "--makeFits":
+            mode = Modes.fits
+        elif o == "--secondary":
+            mode = Modes.secondary
+        elif o == "--fitFile":
+            fitFile = str(a)
+        elif o == "--json":
+            jsonfile = a
+        elif o == "--TriggerList":
+            try:
+                f = open(a)
+                for entry in f:
+                    if entry.startswith('#'):
+                        continue
+                    if entry.find(':')!=-1:
+                        entry = entry[:entry.find(':')]   ## We can point this to the existing monitor list, just remove everything after ':'!
+                    if entry.find('#')!=-1:
+                        entry = entry[:entry.find('#')]   ## We can point this to the existing monitor list, just remove everything after ':'!                    
+                    trig_list.append( entry.rstrip('\n'))
+            except:
+                print "\nInvalid Trigger List\n"
+                sys.exit(0)
+        else:
+            print "\nInvalid Option %s\n" % (str(o),)
+            usage()
+            sys.exit(2)
+
+    print "\n\n"
+    if mode == Modes.none: ## no mode specified
+        print "\nNo operation mode specified!\n"
+        usage()
+        sys.exit(0)
+    elif mode == Modes.fits:
+        print "Running in Fit Making mode\n\n"
+    elif mode == Modes.secondary:
+        print "Running in Secondary Shifter mode\n\n"
+    else:  ## should never get here, but exit if we do
+        print "FATAL ERROR: No Mode specified"
+        sys.exit(0)
+
+    if fitFile=="":
+        print "\nPlease specify fit file\n"
+        usage()
+        sys.exit(0)
+
+    if trig_list == []:
+        print "\nPlease specify list of triggers\n"
+        usage()
+        sys.exit(0)
+    
     ## Can use any combination of LowestRunNumber, HighestRunNumber, and NumberOfRuns -
     ## just modify "ExistingRuns.sort" and for "run in ExistingRuns" accordingly
 
-    LowestRunNumber = 176000
-    HighestRunNumber = 180252
-    NumberOfRuns = 1
+    if jsonfile=="":
+        JSON=[]
+        if frun!=lrun:
+            print ""
+    else:
+        print "Using JSON: %s" % (jsonfile,)
+        JSON = GetJSON(jsonfile) ##Returns array JSON[runs][ls_list]
+        
 
-    run_list = []
-    ExistingRuns = GetLatestRunNumber(LowestRunNumber)
-    #ExistingRuns.sort(reverse = True) ##Allows you to count down from last run
 
-    for run in ExistingRuns:
-        #if NumberOfRuns > 0:
-        if run <= HighestRunNumber:
-            run_list.append(run)
-            NumberOfRuns-=1
-
-    ##
-    ## to get list of triggers
-    ##
-    Config = RateMonConfig(os.path.abspath(os.path.dirname(sys.argv[0])))
-    Config.CFGfile="defaults.cfg"
-    Config.ReadCFG()
-
-##     ###### TO CREATE FITS #########
-##     run_list = [179497,179547,179558,179563,179889,179959,179977,180072,180076,180093,180241,180250,180252]
-##     #run_list = [180250]
-##     trig_name = "HLT"
-##     trig_list=["HLT_Ele65_CaloIdVT_TrkIdT_v6", "HLT_HT650_v4", "HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6", "HLT_IsoMu30_eta2p1_v7", "HLT_Jet370_v10", "HLT_MET200_v7", "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8", "HLT_PFMHT150_v17", "HLT_Photon135_v2", "HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4"]
-##     ##trig_list=Config.MonitorList
-##     ##trig_list=["HLT_IsoMu30_eta2p1_v7"]
-##     num_ls = 10
-##     physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
-##     #JSON = [] ##To not use a JSON file, just leave the array empty
-##     JSON = GetJSON("Cert_160404-180252_7TeV_PromptReco_Collisions11_JSON.txt") ##Returns array JSON[runs][ls_list]
-    
-##     debug_print = False
-##     no_versions=False
-##     min_rate = 0.1
-##     print_table = False
-##     data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
-##     ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-##     plot_properties = [["delivered", "rate", True, True, False, ""]]
-
-##     masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-##     save_fits = True
-##     max_dt=0.08 ## no deadtime cutuse 2.0
-##     force_new=True
-##     print_info=True
-##     SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+    ###### TO CREATE FITS #########
+    if mode == Modes.fits:
+        trig_name = "HLT"
+        num_ls = 10
+        physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
+        #JSON = [] ##To not use a JSON file, just leave the array empty
+        debug_print = False
+        no_versions=False
+        min_rate = 0.1
+        print_table = False
+        data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
+        ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+        plot_properties = [["delivered", "rate", True, True, False, ""]]
+        
+        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+        save_fits = True
+        max_dt=0.08 ## no deadtime cutuse 2.0
+        force_new=True
+        print_info=True
+        SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
     
 
     ###### TO SEE RATE VS PREDICTION ########
-    run_list = [180250]
-    trig_name = "HLT"
-    ##trig_list = ["HLT_IsoMu30_eta2p1_v7"]
-    trig_list=["HLT_Ele65_CaloIdVT_TrkIdT_v6", "HLT_HT650_v4", "HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6", "HLT_IsoMu30_eta2p1_v7", "HLT_Jet370_v10", "HLT_MET200_v7", "HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8", "HLT_PFMHT150_v17", "HLT_Photon135_v2", "HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4"]
-    ##trig_list=Config.MonitorList
-    num_ls = 1
-    physics_active_psi = True
-    JSON = []
-    debug_print = False
-    no_versions=False
-    min_rate = 1.0
-    print_table = False
-    data_clean = True
-    ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-    ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
-    plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
-    
-    masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-    save_fits = False
-    max_dt=2.0 ## no deadtime cut=2.0
-    force_new=True
-    print_info=True
-    SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+    if mode == Modes.secondary:
+        trig_name = "HLT"
+        num_ls = 1
+        physics_active_psi = True
+        debug_print = False
+        no_versions=False
+        min_rate = 1.0
+        print_table = False
+        data_clean = True
+        ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+        ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+        ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
+        plot_properties = [["ls", "rawrate", False, True, False,fitFile]]
+
+        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+        save_fits = False
+        max_dt=2.0 ## no deadtime cut=2.0
+        force_new=True
+        print_info=True
+        SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
 
     
-##     print SubSystemOff.keys()
-##     print SubSystemOff.values()
+    #print SubSystemOff.keys()  ## what do these do?
+    #print SubSystemOff.values()
     
     
     ########  END PARAMETERS - CALL FUNCTIONS ##########
@@ -109,16 +194,15 @@ def main():
     ##for iterator in range(len(Rates["HLT_IsoMu30_eta2p1"]["rawrate"])):
     ##    print iterator, "ls=",Rates["HLT_IsoMu30_eta2p1"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu30_eta2p1"]["rawrate"][iterator],2) 
     
-    MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
-    
+    rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
 
-def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff):
+def GetDBRates(run_list,trig_name,trig_list_noV, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff):
     
     Rates = {}
     LumiPageInfo={}
     ## Save in RefRuns with name dependent on trig_name, num_ls, JSON, and physics_active_psi
     if JSON:
-        print "Using JSON file"
+        #print "Using JSON file"
         if physics_active_psi:
             RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS_JPAP.pkl"
         else:
@@ -210,11 +294,23 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 RefLumiArray = RefParser.GetLumiInfo() ##Gets array of all existing LS and their lumi info
                 RefLumiRange = []
                 RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit
+
+
+                ## We have specified the trig list without version numbers, we add them specific to this run
+                print "Processing Triggers: "
+                trig_list=[]
+                for entry in trig_list_noV:
+                    trig_list.append(RefParser.GetTriggerVersion(entry))
+                    if trig_list[-1]=="":
+                        print ">> WARNING: could not find version for trigger %s, SKIPPING" % (entry,)
+                    else:
+                        print ">> %s " % (trig_list[-1],)
+                
                 #DeadTimeBeamActive=RefParser.GetDeadTimeBeamActive()
                 #print "deadtime ls run 180250=",DeadTimeBeamActive
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
                     ##cheap way of getting PSCol None-->0
-                    if RefLumiArray[0][iterator]!=1 and RefLumiArray[0][iterator]!=2 and RefLumiArray[0][iterator]!=3 and RefLumiArray[0][iterator]!=4 and RefLumiArray[0][iterator]!=5 and RefLumiArray[0][iterator]!=6 and RefLumiArray[0][iterator]!=7 and RefLumiArray[0][iterator]!=8:
+                    if RefLumiArray[0][iterator] not in range(1,9):
                         RefLumiArray[0][iterator]=0
                         
                     
@@ -288,11 +384,11 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         
                         ##if not trig_name in key:
                         ##    continue
-                        name = key
+                        name = StripVersion(key)
                        
                         ##if re.match('.*_v[0-9]+',name): ##Removes _v#
                         ##    name = name[:name.rfind('_')]
-                        if not name in trig_list:
+                        if not name in trig_list_noV:
                             continue
                         #print "trigger=",name, trig_list
                         
@@ -378,7 +474,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 os.remove(RootFile)
             except:
                 break
-    
+
     for print_trigger in Rates:
         ##Limits Rates[] to runs in run_list
         NewTrigger = {}
@@ -649,6 +745,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 gr1.Fit("f1a","Q","rob=0.80")
 
         if save_root or save_png:
+            print "Drawing"
             gr1.Draw("APZ")
 ##                 ##Option to draw stats box
 ##                 p1 = TPaveStats()                                                                                                                           
@@ -666,6 +763,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     True
             c1.Update()
             if save_root:
+                print RootFile
                 myfile = TFile( RootFile, 'UPDATE' )
                 c1.Write()
                 myfile.Close()
@@ -709,7 +807,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     print '%60s%10s%10s%10s%10s%10s%10s' % (_trigger, OutputFit[print_trigger][0], OutputFit[print_trigger][1], OutputFit[print_trigger][2], OutputFit[print_trigger][3], OutputFit[print_trigger][4], round(OutputFit[print_trigger][5],2), round(OutputFit[print_trigger][6],3))
             except:
                 print str(print_trigger)+" is somehow broken"
-
+    return RootFile
 
   ############# SUPPORTING FUNCTIONS ################
 
