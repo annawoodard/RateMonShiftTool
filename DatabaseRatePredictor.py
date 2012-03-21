@@ -145,7 +145,7 @@ def main():
         print_table = False
         data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
         ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-        plot_properties = [["delivered", "rate", True, True, False, ""]]
+        plot_properties = [["delivered", "rate", True, True, False, fitFile]]
         
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
         save_fits = True
@@ -461,16 +461,28 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
     RootNameTemplate = "%s_%sLS_Run%sto%s.root"
     RootFile = RootNameTemplate % (trig_name, num_ls, min_run, max_run)
 
-    for varX, varY, do_fit, save_root, save_png, fit_file in plot_properties:
-        if fit_file:
+    [[varX, varY, do_fit, save_root, save_png, fit_file]] = plot_properties
+    if not do_fit:
+        try:
             pkl_file = open(fit_file, 'rb')
             InputFit = pickle.load(pkl_file)
-            pkl_file.close()
-        if save_root:
-            try:
-                os.remove(RootFile)
-            except:
-                break
+        except:
+            print "ERROR: could not open fit file: %s" % (fit_file,)
+    if save_root:
+        try:
+            os.remove(RootFile)
+        except:
+            pass
+
+    ## check that all the triggers we ask to plot are in the input fit
+    if not save_fits:
+        goodtrig_list = []
+        for trig in trig_list:
+            if not InputFit.has_key(trig):
+                print "WARNING:  No Fit Prediction for Trigger %s, SKIPPING" % (trig,)
+            else:
+                goodtrig_list.append(trig)
+        trig_list = goodtrig_list
 
     for print_trigger in Rates:
         ##Limits Rates[] to runs in run_list
@@ -536,7 +548,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 
         [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t] = MakePlotArrays()
 
-        if fit_file:
+        if not do_fit:
             FitType = InputFit[print_trigger][0]
             X0 = InputFit[print_trigger][1]
             X1 = InputFit[print_trigger][2]
@@ -544,10 +556,10 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             X3 = InputFit[print_trigger][4]
             Chi2 = InputFit[print_trigger][5]
             #print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
-            if (first_trigger):
-                print '%20s % 10s % 6s % 5s % 5s % 3s % 4s' % ('trigger', 'fit type ', 'cubic', 'quad', '  linear', ' c ', 'Chi2')
-                first_trigger=False
-            print '%20s % 10s % 2.2g % 2.2g % 2.2g % 2.2g % 2.2g' % (print_trigger, FitType, X3, X2, X1, X0, Chi2)
+            #if (first_trigger):
+            #    print '%20s % 10s % 6s % 5s % 5s % 3s % 4s' % ('trigger', 'fit type ', 'cubic', 'quad', '  linear', ' c ', 'Chi2')
+            #    first_trigger=False
+            #print '%20s % 10s % 2.2g % 2.2g % 2.2g % 2.2g % 2.2g' % (print_trigger, FitType, X3, X2, X1, X0, Chi2)
             #print '{}, {}, {:02.2g}, {:02.2g}, {:02.2g}, {:02.2g} '.format(print_trigger, FitType, X0, X1, X2, X3)
         ## we are 2 lumis off when we start! -gets worse when we skip lumis
         it_offset=0
@@ -593,7 +605,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     except:
                         e_rawxsec_t.append(0.)
                         e_xsec_t.append(0.)
-                if fit_file:
+                if not do_fit:
                     if FitType == "expo":
                         rate_prediction = X0 + X1*math.exp(X2*delivered_t[-1])
                     else:
@@ -660,7 +672,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             gr1.SetMarkerSize(0.5)
         gr1.SetMarkerColor(2)
 
-        if fit_file:
+        if not do_fit:
             gr3 = TGraphErrors(len(VX), VX, VF, VXE, VFE)
             gr3.SetMarkerStyle(8)
             gr3.SetMarkerSize(0.4)
@@ -742,14 +754,13 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 gr1.Fit("f1a","Q","rob=0.80")
 
         if save_root or save_png:
-            print "Drawing"
             gr1.Draw("APZ")
 ##                 ##Option to draw stats box
 ##                 p1 = TPaveStats()                                                                                                                           
 ##                 p1 = gr1.GetListOfFunctions().FindObject("stats")                                                                                           
 ##                 print p1                                                                                                                                    
 ##                 gr1.PaintStats(f1b).Draw("same")                                                                                                               
-            if fit_file:
+            if not do_fit:
                 gr3.Draw("P3")
             if do_fit:
                 f1a.Draw("same")
@@ -760,7 +771,6 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     True
             c1.Update()
             if save_root:
-                print RootFile
                 myfile = TFile( RootFile, 'UPDATE' )
                 c1.Write()
                 myfile.Close()
@@ -783,14 +793,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         print "Output root file is "+str(RootFile)
 
     if save_fits:
-        FitNameTemplate = "Fits/2011/Fit_%s_%sLS_Run%sto%s.pkl"
-        FitFile = FitNameTemplate % (trig_name, num_ls, min_run, max_run)
-        if os.path.exists(FitFile):
-            os.remove(FitFile)
-        FitOutputFile = open(FitFile, 'wb')
+        #FitNameTemplate = "Fits/2011/Fit_%s_%sLS_Run%sto%s.pkl"
+        #FitFile = FitNameTemplate % (trig_name, num_ls, min_run, max_run)
+        if os.path.exists(fit_file):
+            os.remove(fit_file)
+        FitOutputFile = open(fit_file, 'wb')
         pickle.dump(OutputFit, FitOutputFile, 2)
         FitOutputFile.close()
-        print "Output fit file is "+str(FitFile)
+        print "Output fit file is "+str(fit_file)
 
     if print_table:
         print "The expo fit is of the form p0+p1*e^(p2*x), poly is p0+(p1/10^3)*x+(p2/10^6)*x^2+(p3/10^9)*x^3, where x is Deliv. Lumi."
