@@ -5,17 +5,24 @@ import os
 from DatabaseParser import ConnectDB
 
 def usage():
-    print sys.argv[0] + " HLTKey GTKey GTRS Key"
+    print sys.argv[0] + " HLTKey GTKey GTRS Key [PSColsToIgnore]"
 
 def main():
 
-    if not len(sys.argv) == 4:
+    if len(sys.argv) < 4 or len(sys.argv)>5:
         usage()
         sys.exit(0)
 
     HLT_Key  = sys.argv[1]
     GT_Key   = sys.argv[2]
-    GTRS_Key = sys.argv[3] 
+    GTRS_Key = sys.argv[3]
+    PSColsToIgnore = []
+    if len(sys.argv)==5:
+        for c in sys.argv[4].split(','):
+            try:
+                PSColsToIgnore.append(int(c))
+            except:
+                print "ERROR: %s is not a valid prescale column" % c
     
     curs = ConnectDB('hlt')
 
@@ -100,7 +107,7 @@ def main():
         for hlt,l1 in zip(thisHLTPS,thisL1PS):
             prescales.append(hlt*l1)
         #print HLTName+" HLT: "+str(thisHLTPS)+" L1: "+str(thisL1PS)+" Total: "+str(prescales)
-        if not isSequential(prescales):
+        if not isSequential(prescales,PSColsToIgnore):
             print formatString % (HLTName,L1Seeds,prescales,thisHLTPS,thisL1PS,)
         FullPrescales[HLTName] = prescales
             
@@ -227,10 +234,12 @@ def GetL1AlgoPrescales(curs, GTRS_Key):
             L1PrescaleTable[index].append(ps)
     return L1PrescaleTable
 
-def isSequential(row):
+def isSequential(row,ignore):
     seq = True
-    lastEntry=row[0]
-    for entry in row:
+    lastEntry=999999999999
+    for i,entry in enumerate(row):
+        if i in ignore:
+            continue
         if entry > lastEntry and lastEntry!=0:
             seq = False
             break
