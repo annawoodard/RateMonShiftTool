@@ -187,14 +187,11 @@ def main():
     else:
         CompareRunNum,isCol = GetLatestRunNumber(CompareRunNum)
 
-    HeadRunFile = RefRunNameTemplate % CompareRunNum
-    if os.path.exists(HeadRunFile):  #check if a run file for the run we want to compare already exists
-        HeadParser = pickle.load( open( HeadRunFile ) )
-    else:
-        HeadParser = DatabaseParser()
-        HeadParser.RunNumber = CompareRunNum
-        HeadParser.ParseRunSetup()
-        HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
+
+    HeadParser = DatabaseParser()
+    HeadParser.RunNumber = CompareRunNum
+    HeadParser.ParseRunSetup()
+    HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
     if PrintLumi:
         for LS in HeadParser.LumiInfo[0]:
             try:
@@ -238,6 +235,11 @@ def main():
                 time.sleep(3)
             write("  Updating")
             sys.stdout.flush()
+            CurrRun,isCol = GetLatestRunNumber()  ## update to the latest run and lumi range
+            if not CurrRun == CompareRunNum:
+                HeadParser.RunNumber = CompareRunNum
+                HeadParser.ParseRunSetup()
+            HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
         #end while True
     #end try
     except KeyboardInterrupt:
