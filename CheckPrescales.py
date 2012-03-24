@@ -23,7 +23,9 @@ def main():
                 PSColsToIgnore.append(int(c))
             except:
                 print "ERROR: %s is not a valid prescale column" % c
-    
+    GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,True)
+
+def GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,doPrint):
     curs = ConnectDB('hlt')
 
     ## Get the HLT seeds
@@ -74,8 +76,9 @@ def main():
 
     FullPrescales = {}
     formatString = "%60s%30s%50s%50s%50s"
-    print "List of triggers with non-sequential prescales:"
-    print formatString % ("HLT Name","L1 Name","Total","HLT","L1",)
+    if doPrint:
+        print "List of triggers with non-sequential prescales:"
+        print formatString % ("HLT Name","L1 Name","Total","HLT","L1",)
     for HLTName,L1Seeds in HLTSeed.iteritems():
         if HLTName.startswith('AlCa'): ## the results don't make sense for AlCa paths
             continue
@@ -107,9 +110,10 @@ def main():
         for hlt,l1 in zip(thisHLTPS,thisL1PS):
             prescales.append(hlt*l1)
         #print HLTName+" HLT: "+str(thisHLTPS)+" L1: "+str(thisL1PS)+" Total: "+str(prescales)
-        if not isSequential(prescales,PSColsToIgnore):
+        if not isSequential(prescales,PSColsToIgnore) and doPrint:
             print formatString % (HLTName,L1Seeds,prescales,thisHLTPS,thisL1PS,)
         FullPrescales[HLTName] = prescales
+    return FullPrescales
             
 def GetHLTPrescaleMatrix(cursor,HLT_Key):
     ## Get the config ID
