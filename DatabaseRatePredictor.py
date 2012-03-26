@@ -41,12 +41,13 @@ def main():
         usage()
         sys.exit(2)
 
-    if len(args)<1:
-        print "\nPlease specify at least 1 run to look at\n"
-        usage()
-        sys.exit(0)
+##     if len(args)<1:
+##         print "\nPlease specify at least 1 run to look at\n"
+##         usage()
+##         sys.exit(0)
 
-    run_list = []
+    run_list=[]
+    
     for r in args:
         if r.find('-')!=-1:  # r is a run range
             rrange = r.split('-')
@@ -64,7 +65,8 @@ def main():
                 run_list.append(int(r))
             except:
                 print "Invalid run %s" % (r,)
-
+    print "modified run list=",run_list
+    
 
     mode = Modes.none
     fitFile = ""
@@ -102,9 +104,21 @@ def main():
     print "\n\n"
     if mode == Modes.none: ## no mode specified
         print "\nNo operation mode specified!\n"
-        usage()
-        sys.exit(0)
-    elif mode == Modes.fits:
+        modeinput=raw_input("Enter mode, --makeFits or --secondary:")
+        print "modeinput=",modeinput
+        if not (modeinput=="--makeFits" or modeinput=="--secondary"):
+            print "not either"
+            usage()
+            sys.exit(0)
+        elif modeinput == "--makeFits":
+            mode=Modes.fits
+        elif modeinput =="--secondary":
+            mode=Modes.secondary
+        else:
+            print "FATAL ERROR: No Mode specified"
+            sys.exit(0)
+        
+    if mode == Modes.fits:
         print "Running in Fit Making mode\n\n"
     elif mode == Modes.secondary:
         print "Running in Secondary Shifter mode\n\n"
@@ -112,15 +126,63 @@ def main():
         print "FATAL ERROR: No Mode specified"
         sys.exit(0)
 
-    if fitFile=="":
-        print "\nPlease specify fit file\n"
-        usage()
-        sys.exit(0)
+    if fitFile=="" and not mode==Modes.fits:
+        print "\nPlease specify fit file. These are available:\n"
+        path="Fits/2011/"  # insert the path to the directory of interest
+        dirList=os.listdir(path)
+        for fname in dirList:
+            print fname
+        fitFile = raw_input("Enter fit file in format Fit_HLT_10LS_Run176023to180252.pkl: ")
+        ##usage()
+        ##sys.exit(0)
+    elif fitFile=="":
+        fitFile="Fits/2011/Fit_HLT_10LS_Run%sto%s.pkl" % (min(run_list),max(run_list))
+        print "fit file=",fitFile
 
     if trig_list == []:
+        
         print "\nPlease specify list of triggers\n"
-        usage()
-        sys.exit(0)
+        print "Available lists are:"
+        dirList=os.listdir(".")
+        for fname in dirList:
+            entry=fname
+            if entry.find('.')!=-1:
+                extension = entry[entry.find('.'):]   ## We can point this to the existing monitor list, just remove everything after ':'!
+                if extension==".list":
+                    print fname
+        trig_input=raw_input("\nEnter triggers in format HLT_IsoMu24_eta2p1 or a .list file: ")
+        
+        if trig_input.find('.')!=-1:
+            extension = trig_input[trig_input.find('.'):]
+            if extension==".list":
+                try:
+                    fl=open(trig_input)
+                except:
+                    print "Cannot open file"
+                    usage()
+                    sys.exit(0)
+                    
+                for line in fl:
+                    if line.startswith('#'):
+                        continue
+                    if len(line)<1:
+                        continue
+                                        
+                    if len(line)>=2:
+                        arg=line.rstrip('\n').rstrip(' ').lstrip(' ')
+                        trig_list.append(arg)
+                    else:
+                        arg=''
+            else:
+                trig_list.append(trig_input)
+        
+                    
+            
+            
+        ##usage()
+        ##sys.exit(0)
+
+    
     
     ## Can use any combination of LowestRunNumber, HighestRunNumber, and NumberOfRuns -
     ## just modify "ExistingRuns.sort" and for "run in ExistingRuns" accordingly
@@ -130,8 +192,8 @@ def main():
     else:
         print "Using JSON: %s" % (jsonfile,)
         JSON = GetJSON(jsonfile) ##Returns array JSON[runs][ls_list]
-        
 
+   
 
     ###### TO CREATE FITS #########
     if mode == Modes.fits:
@@ -191,7 +253,7 @@ def main():
     ##for iterator in range(len(Rates["HLT_IsoMu30_eta2p1"]["rawrate"])):
     ##    print iterator, "ls=",Rates["HLT_IsoMu30_eta2p1"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu30_eta2p1"]["rawrate"][iterator],2) 
     
-    rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
+    ##rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
 
 def GetDBRates(run_list,trig_name,trig_list_noV, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff):
     
