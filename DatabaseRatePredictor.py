@@ -34,147 +34,165 @@ class Modes:
 
 def main():
     try:
-        opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList="])
-        
-    except getopt.GetoptError, err:
-        print str(err)
-        usage()
-        sys.exit(2)
-
+        try:
+            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList="])
+            
+        except getopt.GetoptError, err:
+            print str(err)
+            usage()
+            sys.exit(2)
+            
 ##     if len(args)<1:
 ##         print "\nPlease specify at least 1 run to look at\n"
 ##         usage()
 ##         sys.exit(0)
 
-    run_list=[]
-    
-    for r in args:
-        if r.find('-')!=-1:  # r is a run range
-            rrange = r.split('-')
-            if len(rrange)!=2:
-                print "Invalid run range %s" % (r,)
-                sys.exit(0)
-            try:
-                for rr in range(int(rrange[0]),int(rrange[1])+1):
-                    run_list.append(rr)
-            except:
-                print "Invalid run range %s" % (r,)
-                sys.exit(0)
-        else: # r is not a run range
-            try:
-                run_list.append(int(r))
-            except:
-                print "Invalid run %s" % (r,)
-    print "modified run list=",run_list
+        run_list=[]
+        
+        print "args=",args
+        if len(args)<1:
+            inputrunlist=[]
+            print "No runs specified"
+            runinput=raw_input("Enter run range in form <run1> <run2> <run3> or <run1>-<run2>:")
+            print "runinput=",runinput
+            inputrunlist.append(runinput)
+
+            
+            if runinput.find(' ')!=-1:
+                args=runinput.split(' ')
+            else:
+                args.append(runinput)    
+            
+            print "inputrunlist=",inputrunlist
+            print "args=",args
+        print "args again=",args
+        for r in args:
+            if r.find('-')!=-1:  # r is a run range
+                rrange = r.split('-')
+                if len(rrange)!=2:
+                    print "Invalid run range %s" % (r,)
+                    sys.exit(0)
+                try:
+                    for rr in range(int(rrange[0]),int(rrange[1])+1):
+                        run_list.append(rr)
+                except:
+                    print "Invalid run range %s" % (r,)
+                    sys.exit(0)
+            else: # r is not a run range
+                try:
+                    run_list.append(int(r))
+                except:
+                    print "Invalid run %s" % (r,)
+        print "modified run list=",run_list
     
 
-    mode = Modes.none
-    fitFile = ""
-    jsonfile = ""
-    trig_list = []
+        mode = Modes.none
+        fitFile = ""
+        jsonfile = ""
+        trig_list = []
     
-    for o,a in opt:
-        if o == "--makeFits":
-            mode = Modes.fits
-        elif o == "--secondary":
-            mode = Modes.secondary
-        elif o == "--fitFile":
-            fitFile = str(a)
-        elif o == "--json":
-            jsonfile = a
-        elif o == "--TriggerList":
-            try:
-                f = open(a)
-                for entry in f:
-                    if entry.startswith('#'):
-                        continue
-                    if entry.find(':')!=-1:
-                        entry = entry[:entry.find(':')]   ## We can point this to the existing monitor list, just remove everything after ':'!
-                    if entry.find('#')!=-1:
-                        entry = entry[:entry.find('#')]   ## We can point this to the existing monitor list, just remove everything after ':'!                    
-                    trig_list.append( entry.rstrip('\n'))
-            except:
-                print "\nInvalid Trigger List\n"
-                sys.exit(0)
-        else:
-            print "\nInvalid Option %s\n" % (str(o),)
-            usage()
-            sys.exit(2)
+        for o,a in opt:
+            if o == "--makeFits":
+                mode = Modes.fits
+            elif o == "--secondary":
+                mode = Modes.secondary
+            elif o == "--fitFile":
+                fitFile = str(a)
+            elif o == "--json":
+                jsonfile = a
+            elif o == "--TriggerList":
+                try:
+                    f = open(a)
+                    for entry in f:
+                        if entry.startswith('#'):
+                            continue
+                        if entry.find(':')!=-1:
+                            entry = entry[:entry.find(':')]   ## We can point this to the existing monitor list, just remove everything after ':'!
+                            if entry.find('#')!=-1:
+                                entry = entry[:entry.find('#')]   ## We can point this to the existing monitor list, just remove everything after ':'!                    
+                        trig_list.append( entry.rstrip('\n'))
+                except:
+                    print "\nInvalid Trigger List\n"
+                    sys.exit(0)
+            else:
+                print "\nInvalid Option %s\n" % (str(o),)
+                usage()
+                sys.exit(2)
 
-    print "\n\n"
-    if mode == Modes.none: ## no mode specified
-        print "\nNo operation mode specified!\n"
-        modeinput=raw_input("Enter mode, --makeFits or --secondary:")
-        print "modeinput=",modeinput
-        if not (modeinput=="--makeFits" or modeinput=="--secondary"):
-            print "not either"
-            usage()
-            sys.exit(0)
-        elif modeinput == "--makeFits":
-            mode=Modes.fits
-        elif modeinput =="--secondary":
-            mode=Modes.secondary
-        else:
+        print "\n\n"
+        if mode == Modes.none: ## no mode specified
+            print "\nNo operation mode specified!\n"
+            modeinput=raw_input("Enter mode, --makeFits or --secondary:")
+            print "modeinput=",modeinput
+            if not (modeinput=="--makeFits" or modeinput=="--secondary"):
+                print "not either"
+                usage()
+                sys.exit(0)
+            elif modeinput == "--makeFits":
+                mode=Modes.fits
+            elif modeinput =="--secondary":
+                mode=Modes.secondary
+            else:
+                print "FATAL ERROR: No Mode specified"
+                sys.exit(0)
+        
+        if mode == Modes.fits:
+            print "Running in Fit Making mode\n\n"
+        elif mode == Modes.secondary:
+            print "Running in Secondary Shifter mode\n\n"
+        else:  ## should never get here, but exit if we do
             print "FATAL ERROR: No Mode specified"
             sys.exit(0)
-        
-    if mode == Modes.fits:
-        print "Running in Fit Making mode\n\n"
-    elif mode == Modes.secondary:
-        print "Running in Secondary Shifter mode\n\n"
-    else:  ## should never get here, but exit if we do
-        print "FATAL ERROR: No Mode specified"
-        sys.exit(0)
 
-    if fitFile=="" and not mode==Modes.fits:
-        print "\nPlease specify fit file. These are available:\n"
-        path="Fits/2011/"  # insert the path to the directory of interest
-        dirList=os.listdir(path)
-        for fname in dirList:
-            print fname
-        fitFile = raw_input("Enter fit file in format Fit_HLT_10LS_Run176023to180252.pkl: ")
+        if fitFile=="" and not mode==Modes.fits:
+            print "\nPlease specify fit file. These are available:\n"
+            path="Fits/2011/"  # insert the path to the directory of interest
+            dirList=os.listdir(path)
+            for fname in dirList:
+                print fname
+            fitFile = raw_input("Enter fit file in format Fit_HLT_10LS_Run176023to180252.pkl: ")
         ##usage()
         ##sys.exit(0)
-    elif fitFile=="":
-        fitFile="Fits/2011/Fit_HLT_10LS_Run%sto%s.pkl" % (min(run_list),max(run_list))
-        print "fit file=",fitFile
+        elif fitFile=="":
+            fitFile="Fits/2011/Fit_HLT_10LS_Run%sto%s.pkl" % (min(run_list),max(run_list))
+            print "fit file=",fitFile
 
-    if trig_list == []:
+        if trig_list == []:
         
-        print "\nPlease specify list of triggers\n"
-        print "Available lists are:"
-        dirList=os.listdir(".")
-        for fname in dirList:
-            entry=fname
-            if entry.find('.')!=-1:
-                extension = entry[entry.find('.'):]   ## We can point this to the existing monitor list, just remove everything after ':'!
+            print "\nPlease specify list of triggers\n"
+            print "Available lists are:"
+            dirList=os.listdir(".")
+            for fname in dirList:
+                entry=fname
+                if entry.find('.')!=-1:
+                    extension = entry[entry.find('.'):]   ## We can point this to the existing monitor list, just remove everything after ':'!
+                    if extension==".list":
+                        print fname
+            trig_input=raw_input("\nEnter triggers in format HLT_IsoMu24_eta2p1 or a .list file: ")
+        
+            if trig_input.find('.')!=-1:
+                extension = trig_input[trig_input.find('.'):]
                 if extension==".list":
-                    print fname
-        trig_input=raw_input("\nEnter triggers in format HLT_IsoMu24_eta2p1 or a .list file: ")
-        
-        if trig_input.find('.')!=-1:
-            extension = trig_input[trig_input.find('.'):]
-            if extension==".list":
-                try:
-                    fl=open(trig_input)
-                except:
-                    print "Cannot open file"
-                    usage()
-                    sys.exit(0)
+                    try:
+                        fl=open(trig_input)
+                    except:
+                        print "Cannot open file"
+                        usage()
+                        sys.exit(0)
                     
-                for line in fl:
-                    if line.startswith('#'):
-                        continue
-                    if len(line)<1:
-                        continue
+                    for line in fl:
+                        if line.startswith('#'):
+                            continue
+                        if len(line)<1:
+                            continue
                                         
-                    if len(line)>=2:
-                        arg=line.rstrip('\n').rstrip(' ').lstrip(' ')
-                        trig_list.append(arg)
-                    else:
-                        arg=''
-            else:
-                trig_list.append(trig_input)
+                        if len(line)>=2:
+                            arg=line.rstrip('\n').rstrip(' ').lstrip(' ')
+                            trig_list.append(arg)
+                        else:
+                            arg=''
+                else:
+                    trig_list.append(trig_input)
         
                     
             
@@ -187,73 +205,74 @@ def main():
     ## Can use any combination of LowestRunNumber, HighestRunNumber, and NumberOfRuns -
     ## just modify "ExistingRuns.sort" and for "run in ExistingRuns" accordingly
 
-    if jsonfile=="":
-        JSON=[]
-    else:
-        print "Using JSON: %s" % (jsonfile,)
-        JSON = GetJSON(jsonfile) ##Returns array JSON[runs][ls_list]
+        if jsonfile=="":
+            JSON=[]
+        else:
+            print "Using JSON: %s" % (jsonfile,)
+            JSON = GetJSON(jsonfile) ##Returns array JSON[runs][ls_list]
 
    
 
-    ###### TO CREATE FITS #########
-    if mode == Modes.fits:
-        trig_name = "HLT"
-        num_ls = 10
-        physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
-        #JSON = [] ##To not use a JSON file, just leave the array empty
-        debug_print = False
-        no_versions=False
-        min_rate = 0.1
-        print_table = False
-        data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
-        ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-        plot_properties = [["delivered", "rate", True, True, False, fitFile]]
+        ###### TO CREATE FITS #########
+        if mode == Modes.fits:
+            trig_name = "HLT"
+            num_ls = 10
+            physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
+            #JSON = [] ##To not use a JSON file, just leave the array empty
+            debug_print = False
+            no_versions=False
+            min_rate = 0.1
+            print_table = False
+            data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
+            ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+            plot_properties = [["delivered", "rate", True, True, False, fitFile]]
         
-        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-        save_fits = True
-        max_dt=0.08 ## no deadtime cutuse 2.0
-        force_new=True
-        print_info=True
-        SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+            save_fits = True
+            max_dt=0.08 ## no deadtime cutuse 2.0
+            force_new=True
+            print_info=True
+            SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
     
 
-    ###### TO SEE RATE VS PREDICTION ########
-    if mode == Modes.secondary:
-        trig_name = "HLT"
-        num_ls = 1
-        physics_active_psi = True
-        debug_print = False
-        no_versions=False
-        min_rate = 1.0
-        print_table = False
-        data_clean = True
-        ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-        ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
-        ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
-        plot_properties = [["ls", "rawrate", False, True, False,fitFile]]
+        ###### TO SEE RATE VS PREDICTION ########
+        if mode == Modes.secondary:
+            trig_name = "HLT"
+            num_ls = 1
+            physics_active_psi = True
+            debug_print = False
+            no_versions=False
+            min_rate = 1.0
+            print_table = False
+            data_clean = True
+            ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
+            ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
+            ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
+            plot_properties = [["ls", "rawrate", False, True, False,fitFile]]
 
-        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-        save_fits = False
-        max_dt=2.0 ## no deadtime cut=2.0
-        force_new=True
-        print_info=True
-        SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+            save_fits = False
+            max_dt=2.0 ## no deadtime cut=2.0
+            force_new=True
+            print_info=True
+            SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
 
     
-    #print SubSystemOff.keys()  ## what do these do?
-    #print SubSystemOff.values()
     
     
-    ########  END PARAMETERS - CALL FUNCTIONS ##########
-    [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff)
-    ##if not checkLS(Rates,LumiPageInfo,trig_list):
-    ##    print "Missing LS!"
+    
+        ########  END PARAMETERS - CALL FUNCTIONS ##########
+        [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff)
+        ##if not checkLS(Rates,LumiPageInfo,trig_list):
+        ##    print "Missing LS!"
     
     
-    ##for iterator in range(len(Rates["HLT_IsoMu30_eta2p1"]["rawrate"])):
-    ##    print iterator, "ls=",Rates["HLT_IsoMu30_eta2p1"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu30_eta2p1"]["rawrate"][iterator],2) 
+        ##for iterator in range(len(Rates["HLT_IsoMu30_eta2p1"]["rawrate"])):
+        ##    print iterator, "ls=",Rates["HLT_IsoMu30_eta2p1"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu30_eta2p1"]["rawrate"][iterator],2) 
     
-    ##rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
+        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
+    except KeyboardInterrupt:
+        print "Wait... come back..."
 
 def GetDBRates(run_list,trig_name,trig_list_noV, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff):
     
@@ -356,15 +375,15 @@ def GetDBRates(run_list,trig_name,trig_list_noV, num_ls, max_dt, physics_active_
 
 
                 ## We have specified the trig list without version numbers, we add them specific to this run
-                print "Processing Triggers: "
+                ##print "Processing Triggers: "
                 trig_list=[]
                 for entry in trig_list_noV:
                     trig_list.append(RefParser.GetTriggerVersion(entry))
                     if trig_list[-1]=="":
                         print ">> WARNING: could not find version for trigger %s, SKIPPING" % (entry,)
                     else:
-                        print ">> %s " % (trig_list[-1],)
-                
+                        ##print ">> %s " % (trig_list[-1],)
+                        pass
                 #DeadTimeBeamActive=RefParser.GetDeadTimeBeamActive()
                 #print "deadtime ls run 180250=",DeadTimeBeamActive
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
