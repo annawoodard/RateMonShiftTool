@@ -2,29 +2,66 @@
 
 import sys
 import os
+import getopt
+
 from DatabaseParser import ConnectDB
 
 def usage():
-    print sys.argv[0] + " HLTKey GTKey GTRS Key [PSColsToIgnore]"
+    print sys.argv[0] + " [options] HLTKey GTKey GTRS Key"
+    print "options:"
+    print "-v                 Verbose Mode"
+    print "--ignore=<cols>    list (comma-separated) of prescale columns to ignore"
 
 def main():
+    try:
+        opt, args = getopt.getopt(sys.argv[1:],"v",["ignore="])
+        
+    except getopt.GetoptError, err:
+        print str(err)
+        usage()
+        sys.exit(2)
 
-    if len(sys.argv) < 4 or len(sys.argv)>5:
+    if len(args)!=3:
         usage()
         sys.exit(0)
 
-    HLT_Key  = sys.argv[1]
-    GT_Key   = sys.argv[2]
-    GTRS_Key = sys.argv[3]
+    HLT_Key  = args[0]
+    GT_Key   = args[1]
+    GTRS_Key = args[2]
+    Verbose = False
     PSColsToIgnore = []
-    if len(sys.argv)==5:
-        for c in sys.argv[4].split(','):
-            try:
-                PSColsToIgnore.append(int(c))
-            except:
-                print "ERROR: %s is not a valid prescale column" % c
-    GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,True)
 
+    for o,a in opt:
+        if o=="-v":
+            Verbose = True
+        elif o=="--ignore":            
+            for c in a.split(','):
+                try:
+                    PSColsToIgnore.append(int(c))
+                except:
+                    print "\nERROR: %s is not a valid prescale column\n" % c
+                    usage()
+                    sys.exit(0)
+    psTable = GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,True)
+
+    if Verbose:
+        firstPS = {}
+        for trigger,prescales in psTable.iteritems():
+            firstPed = firstPrescaled(prescales,PSColsToIgnore)
+            if not firstPS.has_key(firstPed):
+                firstPS[firstPed] = []
+            firstPS[firstPed].append(trigger)
+
+           
+        for col,triggers in firstPS.iteritems():
+            if col == -1:
+                print "The following triggers are never prescaled:"
+            else:
+                print "The following triggers are first prescaled in col %d" % (col,)
+            for trig in triggers: print "\t%s" % (trig,)
+               
+            
+            
 def GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,doPrint):
     curs = ConnectDB('hlt')
 
@@ -75,7 +112,7 @@ def GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,doPrint):
     L1Prescales = GetL1AlgoPrescales(curs,GTRS_Key)
 
     FullPrescales = {}
-    formatString = "%60s%30s%50s%50s%50s"
+    formatString = "%55s%30s%45s%45s%45s"
     if doPrint:
         print "List of triggers with non-sequential prescales:"
         print formatString % ("HLT Name","L1 Name","Total","HLT","L1",)
@@ -249,6 +286,16 @@ def isSequential(row,ignore):
             break
         lastEntry = entry
     return seq
-    
+
+
+def firstPrescaled(row,ignore):
+    row.reverse()
+    for i,val in enumerate(row):
+        if len(row)-1-i in ignore:
+            continue
+        if val!=1: # prescaled
+            return len(row)-1-i
+    return -1
+
 if __name__=='__main__':
     main()
