@@ -97,6 +97,9 @@ class RateMonConfig:
                 self.MaxExpressRate=float(arg)
             elif par=="MaxStreamARate":
                 self.MaxStreamARate=float(arg)
+            elif par=="FitFileName":
+                self.FitFileName=arg
+            
             else:
                 print "Invalid Option : "+strippedLine
         f.close()

@@ -258,9 +258,16 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
 
-    pkl_file = open("Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl", 'rb')
-    FitInput = pickle.load(pkl_file)
-    pkl_file.close()
+    try:
+        
+        pkl_file = open(Config.FitFileName, 'rb')
+        FitInput = pickle.load(pkl_file)
+        pkl_file.close()
+    except:
+        "No fit file specified, opening default"
+        pkl_file = open("Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl", 'rb')
+        FitInput = pickle.load(pkl_file)
+        pkl_file.close()
     
     pkl_file = open("RefRuns/2011/Rates_HLT_10LS_JPAP.pkl", 'rb')
     RefRatesInput = pickle.load(pkl_file)
@@ -356,7 +363,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             VC = ""
             Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,round((HeadUnprescaledRates[HeadName][1]),1),VC])
 
-    clear()    
+    
     PrettyPrintTable(Header,Data,[80,10,10,10,10,20],Warn)
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config)

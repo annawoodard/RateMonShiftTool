@@ -10,6 +10,7 @@ NHighStreamA=0
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
     [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
+    deadtimebeamactive=parser.GetDeadTimeBeamActive(LumiRange)
     try:
         LastPSCol = PSCols[-1]
     except:
@@ -112,11 +113,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         write( colored(line,'red',attrs=['reverse','blink']) )
         write( colored("*"*cols+"\n",'red',attrs=['reverse','blink']) )
     
-    if AvDeadTime==0:  ## For some reason the dead time in the DB is occasionally broken
-        try:
-            AvDeadTime = AvLiveLumi/AvDeliveredLumi * 100
-        except:
-            AvDeadTime = 100
+    
     PrescaleColumnString=''
     PSCols = list(set(PSCols))
     for c in PSCols:
@@ -130,13 +127,13 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         write("The live (recorded) lumi of these lumi sections is:      ")
         write(str(round(len(LumiRange)*AvLiveLumi,1))+"e30\n\n")
         write("The average deadtime of these lumi sections is:          ")
-        if AvDeadTime > 5:
+        if deadtimebeamactive > 5:
             write(bcolors.FAIL)
-        elif AvDeadTime > 10:
+        elif deadtimebeamactive > 10:
             write(bcolors.WARNING)
         else:
             write(bcolors.OKBLUE)
-        write(str(round(AvDeadTime,2))+"%")
+        write(str(round(deadtimebeamactive,2))+"%")
         write(bcolors.ENDC+"\n")
 
     print "Used prescale column(s): "+str(PrescaleColumnString)    
