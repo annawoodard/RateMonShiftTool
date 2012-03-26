@@ -48,13 +48,11 @@ def main():
 ##         sys.exit(0)
 
         run_list=[]
-        
-        print "args=",args
+    
         if len(args)<1:
             inputrunlist=[]
             print "No runs specified"
             runinput=raw_input("Enter run range in form <run1> <run2> <run3> or <run1>-<run2>:")
-            print "runinput=",runinput
             inputrunlist.append(runinput)
 
             
@@ -63,9 +61,8 @@ def main():
             else:
                 args.append(runinput)    
             
-            print "inputrunlist=",inputrunlist
-            print "args=",args
-        print "args again=",args
+            
+        
         for r in args:
             if r.find('-')!=-1:  # r is a run range
                 rrange = r.split('-')
@@ -83,7 +80,7 @@ def main():
                     run_list.append(int(r))
                 except:
                     print "Invalid run %s" % (r,)
-        print "modified run list=",run_list
+        print "run list=",run_list
     
 
         mode = Modes.none
@@ -787,7 +784,6 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1b Chi2 = "+str(10*f1b.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1b.GetNDF()))
                     #print "X0 = "+str(f1b.GetParameter(0))+" X1 = "+str(f1b.GetParameter(1))+" X2 = "+str(f1b.GetParameter(2))+" X3 = "+str(f1b.GetParameter(3))
                     if (first_trigger):
-                        print "len(VX)=",len(VX), "len(VY)=",len(VY)
                         print '%-60s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
                         
                         first_trigger=False
