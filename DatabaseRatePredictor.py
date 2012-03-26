@@ -47,6 +47,8 @@ def main():
 ##         usage()
 ##         sys.exit(0)
 
+
+##### RUN LIST ########
         run_list=[]
     
         if len(args)<1:
@@ -82,12 +84,14 @@ def main():
                     print "Invalid run %s" % (r,)
         print "run list=",run_list
     
-
+##### READ CMD LINE ARGS #########
         mode = Modes.none
         fitFile = ""
         jsonfile = ""
         trig_list = []
-    
+        max_dt=-1.0
+        subsys=-1.0
+        SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
             if o == "--makeFits":
                 mode = Modes.fits
@@ -97,6 +101,27 @@ def main():
                 fitFile = str(a)
             elif o == "--json":
                 jsonfile = a
+            elif o== "--maxdt":
+                max_dt = a
+                
+            elif o=="--All":
+                subsys=1
+                SubSystemOff["All"]=True
+            elif o=="--Mu":
+                subsys=1
+                SubSystemOff["Mu"]=True
+            elif o=="--HCal":
+                SubSystemOff["HCal"]=True
+                subsys=1
+            elif o=="--Tracker":
+                SubSystemOff["Tracker"]=True
+                subsys=1
+            elif o=="--EndCap":
+                SubSystemOff["EndCap"]=True
+                subsys=1
+            elif o=="--Beam":
+                SubSystemOff["Beam"]=True
+                subsys=1
             elif o == "--TriggerList":
                 try:
                     f = open(a)
@@ -117,6 +142,8 @@ def main():
                 sys.exit(2)
 
         print "\n\n"
+###### MODES #########
+        
         if mode == Modes.none: ## no mode specified
             print "\nNo operation mode specified!\n"
             modeinput=raw_input("Enter mode, --makeFits or --secondary:")
@@ -156,6 +183,8 @@ def main():
             print "fit file=",fitFile
 
         print "fitFile=",fitFile
+
+###### TRIGGER LIST #######
         
         if trig_list == []:
         
@@ -229,10 +258,12 @@ def main():
         
             masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
             save_fits = True
-            max_dt=0.08 ## no deadtime cutuse 2.0
+            if max_dt==-1.0:
+                max_dt=0.08 ## no deadtime cutuse 2.0
             force_new=True
             print_info=True
-            SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+            if subsys==-1.0: 
+                SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
     
 
         ###### TO SEE RATE VS PREDICTION ########
@@ -252,10 +283,12 @@ def main():
 
             masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
             save_fits = False
-            max_dt=2.0 ## no deadtime cut=2.0
+            if max_dt==-1.0:
+                max_dt=2.0 ## no deadtime cut=2.0
             force_new=True
             print_info=True
-            SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
+            if subsys==-1.0:
+                SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
 
     
     
