@@ -147,13 +147,16 @@ def main():
             dirList=os.listdir(path)
             for fname in dirList:
                 print fname
-            fitFile = raw_input("Enter fit file in format Fit_HLT_10LS_Run176023to180252.pkl: ")
+            fitFile = path+raw_input("Enter fit file in format Fit_HLT_10LS_Run176023to180252.pkl: ")
+            
         ##usage()
         ##sys.exit(0)
         elif fitFile=="":
             fitFile="Fits/2011/Fit_HLT_10LS_Run%sto%s.pkl" % (min(run_list),max(run_list))
             print "fit file=",fitFile
 
+        print "fitFile=",fitFile
+        
         if trig_list == []:
         
             print "\nPlease specify list of triggers\n"
