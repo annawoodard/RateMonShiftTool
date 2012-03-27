@@ -28,14 +28,21 @@ def usage():
     print "--fitFile=<path>                     path to the fit file"
     print "--json=<path>                        path to the JSON file"
     print "--TriggerList=<path>                 path to the trigger list (without versions!)"
-
+    print "--maxdt=<max deadtime>               Mask LS above max deadtime threshold"
+    print "--All                                Mask LS with any red LS on WBM LS page (not inc castor zdc etc)"
+    print "--Mu                                 Mask LS with Mu off"
+    print "--HCal                               Mask LS with HCal barrel off"
+    print "--Tracker                            Mask LS with Tracker barrel off"
+    print "--ECal                               Mask LS with ECal barrel off"
+    print "--EndCap                             Mask LS with EndCap sys off, used in combination with other subsys"
+    print "--Beam                               Mask LS with Beam off"
 class Modes:
     none,fits,secondary = range(3)
 
 def main():
     try:
         try:
-            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList="])
+            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam"])
             
         except getopt.GetoptError, err:
             print str(err)
@@ -82,7 +89,7 @@ def main():
                     run_list.append(int(r))
                 except:
                     print "Invalid run %s" % (r,)
-        print "run list=",run_list
+        
     
 ##### READ CMD LINE ARGS #########
         mode = Modes.none
@@ -101,9 +108,8 @@ def main():
                 fitFile = str(a)
             elif o == "--json":
                 jsonfile = a
-            elif o== "--maxdt":
-                max_dt = a
-                
+            elif o=="--maxdt":
+                max_dt = float(a)               
             elif o=="--All":
                 subsys=1
                 SubSystemOff["All"]=True
@@ -115,6 +121,9 @@ def main():
                 subsys=1
             elif o=="--Tracker":
                 SubSystemOff["Tracker"]=True
+                subsys=1
+            elif o=="--ECal":
+                SubSystemOff["ECal"]=True
                 subsys=1
             elif o=="--EndCap":
                 SubSystemOff["EndCap"]=True
@@ -180,7 +189,7 @@ def main():
         ##sys.exit(0)
         elif fitFile=="":
             fitFile="Fits/2011/Fit_HLT_10LS_Run%sto%s.pkl" % (min(run_list),max(run_list))
-            print "fit file=",fitFile
+            
 
         print "fitFile=",fitFile
 
@@ -197,7 +206,7 @@ def main():
                     extension = entry[entry.find('.'):]   ## We can point this to the existing monitor list, just remove everything after ':'!
                     if extension==".list":
                         print fname
-            trig_input=raw_input("\nEnter triggers in format HLT_IsoMu24_eta2p1 or a .list file: ")
+            trig_input=raw_input("\nEnter triggers in format HLT_IsoMu30_eta2p1 or a .list file: ")
         
             if trig_input.find('.')!=-1:
                 extension = trig_input[trig_input.find('.'):]
@@ -293,21 +302,23 @@ def main():
     
     
     
-    
+        for k in SubSystemOff.iterkeys():
+            print k,"=",SubSystemOff[k],"   ",
+        print " "
         ########  END PARAMETERS - CALL FUNCTIONS ##########
         [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff)
         ##if not checkLS(Rates,LumiPageInfo,trig_list):
         ##    print "Missing LS!"
     
     
-        ##for iterator in range(len(Rates["HLT_IsoMu30_eta2p1"]["rawrate"])):
-        ##    print iterator, "ls=",Rates["HLT_IsoMu30_eta2p1"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu30_eta2p1"]["rawrate"][iterator],2) 
+        ## for iterator in range(len(Rates["HLT_IsoMu30_eta2p1_v7"]["rawrate"])):
+##             print iterator, "ls=",Rates["HLT_IsoMu30_eta2p1_v7"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu30_eta2p1_v7"]["rawrate"][iterator],2) 
     
         rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
     except KeyboardInterrupt:
         print "Wait... come back..."
 
-def GetDBRates(run_list,trig_name,trig_list_noV, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff):
+def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff):
     
     Rates = {}
     LumiPageInfo={}
@@ -394,6 +405,13 @@ def GetDBRates(run_list,trig_name,trig_list_noV, num_ls, max_dt, physics_active_
         
         if RefRunNum < 1:
             continue
+
+        ColRunNum,isCol = GetLatestRunNumber(RefRunNum)
+        if not isCol:
+            print "Run ",RefRunNum, " is not Collisions"
+            
+            continue
+        
         print "calculating rates and green lumis for run ",RefRunNum
        
         if True: ##Placeholder
@@ -409,14 +427,14 @@ def GetDBRates(run_list,trig_name,trig_list_noV, num_ls, max_dt, physics_active_
 
                 ## We have specified the trig list without version numbers, we add them specific to this run
                 ##print "Processing Triggers: "
-                trig_list=[]
-                for entry in trig_list_noV:
-                    trig_list.append(RefParser.GetTriggerVersion(entry))
-                    if trig_list[-1]=="":
-                        print ">> WARNING: could not find version for trigger %s, SKIPPING" % (entry,)
-                    else:
-                        ##print ">> %s " % (trig_list[-1],)
-                        pass
+                ## trig_list=[]
+                ## for entry in trig_list_noV:
+##                     trig_list.append(RefParser.GetTriggerVersion(entry))
+##                     if trig_list[-1]=="":
+##                         print ">> WARNING: could not find version for trigger %s, SKIPPING" % (entry,)
+##                     else:
+##                         ##print ">> %s " % (trig_list[-1],)
+##                         pass
                 #DeadTimeBeamActive=RefParser.GetDeadTimeBeamActive()
                 #print "deadtime ls run 180250=",DeadTimeBeamActive
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
@@ -495,11 +513,11 @@ def GetDBRates(run_list,trig_name,trig_list_noV, num_ls, max_dt, physics_active_
                         
                         ##if not trig_name in key:
                         ##    continue
-                        name = StripVersion(key)
-                       
+                        ##name = StripVersion(key)
+                        name=key
                         ##if re.match('.*_v[0-9]+',name): ##Removes _v#
                         ##    name = name[:name.rfind('_')]
-                        if not name in trig_list_noV:
+                        if not name in trig_list:
                             continue
                         #print "trigger=",name, trig_list
                         
@@ -598,7 +616,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 goodtrig_list.append(trig)
         trig_list = goodtrig_list
 
-    for print_trigger in Rates:
+    for print_trigger in sorted(Rates):
         ##Limits Rates[] to runs in run_list
         NewTrigger = {}
         if not print_trigger in trig_list:
@@ -754,7 +772,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 
                 ##print iterator, iterator, "ls=",ls_t[-1],"rate=",round(rawrate_t[-1],2), "deadtime=",round(deadtime_t[-1],2),"rawrate_fit=",round(rawrate_fit_t[-1],2),"max it=",len(Rates[print_trigger]["rate"])
                 
-
+                if (print_info and num_ls==1 and (fabs(rawrate_fit_t[-1]-rawrate_t[-1])>2.5*sqrt(rawrate_t[-1]))):
+                    print '%-60s has a bad prediction, run=%-10s LS=%-4s' % (print_trigger, Rates[print_trigger]["run"][iterator], Rates[print_trigger]["ls"][iterator])
 
             else: ##If the data point does not pass the data_clean filter
                 #print "not passed", iterator, ls_t[-1], rawrate_fit_t[-1]
@@ -1150,7 +1169,6 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         
         Passed=True
             
-        #print "LS",LS, Passed, round(Rates[print_trigger]["deadtime"][iterator],2), max_dt
         
     if not data_clean or (
  ##        (
@@ -1177,14 +1195,17 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         and Passed
         ):
         #print LS, "True"
+        if (print_info and num_ls==1 and (realvalue <0.4*prediction or realvalue>2.5*prediction)):
+            pass
+            ##print '%-60s%10s%10s%10s%10s%10s%10s%10s%15s%20s' % (print_trigger,"Passed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed)
+        
         return True
     else:
         
         if (print_info and print_trigger==trig_list[0] and num_ls==1):
             
             print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Failed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed)
-        ##elif(print_info and print_trigger==trig_list[0]):
-        ##    print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Failed", Rates[print_trigger]["run"][iterator], LumiPageInfo[Rates[print_trigger]["ls"][iterator]]["LSRange"], Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed)
+        
         return False
 
 

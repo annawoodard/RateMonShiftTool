@@ -2,7 +2,7 @@ import cx_Oracle
 import sys
 import os
 
-def GetLatestRunNumber(minRunNumber):
+def GetLatestRunNumberList(minRunNumber):
     cmd='cat ~centraltspro/secure/cms_trg_r.txt'
     line=os.popen(cmd).readlines()
     magic = line[0].rstrip("\n\r")

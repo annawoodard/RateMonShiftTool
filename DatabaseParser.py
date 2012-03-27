@@ -957,15 +957,23 @@ def GetLatestRunNumber(runNo=9999999):
         r, = curs.fetchone()
     else:
         r = runNo
+
     isCol=0
     TrigModeQuery = """
     SELECT TRIGGERMODE FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
     """ % r
     curs.execute(TrigModeQuery)
-    trigm, = curs.fetchone()
+    try:
+        trigm, = curs.fetchone()
+    except:
+        pass
     isCol=0
-    if trigm.find('l1_hlt_collisions')!=-1:
-        isCol=1
+    
+    try:
+        if trigm.find('l1_hlt_collisions')!=-1:
+            isCol=1
+    except:
+        pass
     return (r,isCol,)
 
 def ClosestIndex(value,table):
