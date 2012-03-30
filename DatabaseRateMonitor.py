@@ -281,11 +281,12 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 ##             continue
         
 ## unless we are Listing Ignored paths only look at triggers in the .list file specifed in defaults.cfg
-        if StripVersion(HeadName) not in Config.MonitorList and not ListIgnoredPaths:
+
+        #if StripVersion(HeadName) not in Config.MonitorList and not ListIgnoredPaths:
+        
+        if HeadName not in Config.MonitorList and not ListIgnoredPaths:
             continue
                 
-            
-        
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
         masked_trig = False
         for mask in masked_triggers:
@@ -300,7 +301,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
            
             ##PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
-            PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi)
+            PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi)
 
             if PSCorrectedExpectedRate[0] < 0:  ##This means we don't have a prediction for this trigger
                 continue
@@ -343,8 +344,8 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             [RefAvInstLumi,RefAvLiveLumi,RefAvDeliveredLumi,RefAvDeadTime,RefPSCols] = RefParser.GetAvLumiInfo(RefParser.GetLSRange(RefStartIndex,RefLen))
             RefRate = -1
             for k,v in RefUnprescaledRates.iteritems():
-                if StripVersion(HeadName) == StripVersion(k): # versions may not match
-                    RefRate = v
+                #if StripVersion(HeadName) == StripVersion(k): # versions may not match
+                RefRate = v
 
             ScaledRefRate = round( RefRate*HeadAvLiveLumi/RefAvLiveLumi/(HeadUnprescaledRates[HeadName][1]), 2  )
 

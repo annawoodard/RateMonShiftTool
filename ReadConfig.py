@@ -2,6 +2,7 @@
 import os
 import cPickle as pickle
 import math
+from DatabaseParser import *
 
 class RateMonConfig:
     
@@ -75,10 +76,10 @@ class RateMonConfig:
             elif par=="TriggerToMonitorList":
                 tmp=self.ReadList(arg)
                 for line in tmp:
-                    self.MonitorList.append(line[0])
-                    self.MonitorIntercept.append(float(line[1]))
-                    self.MonitorSlope.append(float(line[2]))
-                    self.MonitorQuad.append(float(line[3]))
+                    self.MonitorList.append(line)
+                    #self.MonitorIntercept.append(float(line[1]))
+                    #self.MonitorSlope.append(float(line[2]))
+                    #self.MonitorQuad.append(float(line[3]))
             elif par=="L1CrossSection":
                 self.L1Predictions = self.ReadList(arg)
             elif par == "MonitorOnlyListed":
@@ -123,7 +124,7 @@ class RateMonConfig:
 
     def GetExpectedRate(self,TrigName,Input,Rates,live,delivered):
         RefRun = False
-
+                    
         try:
             Chi2 = Input[TrigName][5]
             if Input[TrigName][0] == "poly":
