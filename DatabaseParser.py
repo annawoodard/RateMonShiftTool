@@ -665,7 +665,7 @@ class DatabaseParser:
         while len(LS)<NLS:
             if (curLS<0 and step<0) or (curLS>=self.LastLSParsed and step>0):
                 break
-            if curLS>=0 and curLS<self.LastLSParsed:
+            if curLS>=0 and curLS<self.LastLSParsed-1:
                 if (not self.Physics.has_key(curLS) or not self.Active.has_key(curLS)) and reqPhysics:
                     break
                 if not reqPhysics or (self.Physics[curLS] and self.Active[curLS]):
@@ -928,11 +928,24 @@ class DatabaseParser:
         self = pickle.load( open( fileName ) )
 
 def ConnectDB(user='trg'):
+    host = os.uname()[1]
+    offline = 1 if host.startswith('lxplus') else 0
+    print offline
+    trg = ['~centraltspro/secure/cms_trg_r.txt','~/secure/cms_trg_r.txt']
+    hlt = ['~hltpro/secure/cms_hlt_r.txt','~/secure/cms_hlt_r.txt']
+
     if user == 'trg':
-        cmd = 'cat ~centraltspro/secure/cms_trg_r.txt'
+        cmd = 'cat %s' % (trg[offline],)
     elif user == 'hlt':
-        cmd='cat ~hltpro/secure/cms_hlt_r.txt'
-    line=os.popen(cmd).readlines()
+        cmd='cat %s' % (hlt[offline],)
+
+    try:
+        line=os.popen(cmd).readlines()
+    except:
+        print "ERROR Getting the database password!"
+        print "They should be in %s and %s" % (trg[offline],hlt[offline],)
+        print "You may need to copy them from the online machines"
+        sys.exit(0)
     magic = line[0].rstrip("\n\r")
     connect = 'cms_%s_r/%s@cms_omds_lb' % (user,magic,)
     orcl = cx_Oracle.connect(connect)
