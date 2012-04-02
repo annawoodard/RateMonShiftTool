@@ -16,12 +16,12 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     except:
         LastPSCol = -1
         
-    aRates = parser.GetTriggerRatesByLS("AOutput")
+    aRates = parser.GetTriggerRatesByLS("AForPPOutput")
     expressRates = {}
     if isCol:
         expressRates = parser.GetTriggerRatesByLS("ExpressOutput")
     else:
-        expressRates = parser.GetTriggerRatesByLS("ExpressCosmicsOutput")
+        expressRates = parser.GetTriggerRatesByLS("ExpressForCosmicsOutput")
     ExpRate=0
     PeakRate=0
     AvgExpRate=0
