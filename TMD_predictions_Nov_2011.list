@@ -1,0 +1,12 @@
+## List of triggers to monitor and their expected rates
+##format is TriggerName:Intercept:Slope:Quadratic
+HLT_Ele65_CaloIdVT_TrkIdT_v6:3.25:1.27e-6:3.06e-7
+HLT_HT650_v4:1.37:1.35e-6:5.19e-7
+HLT_IsoMu15_eta2p1_LooseIsoPFTau20_v6:4.03:1.47e-6:8.18e-8
+HLT_IsoMu30_eta2p1_v7:4.16:5.96e-6:2.66e-6
+HLT_Jet370_v10:0.89:3.99e-7:1.22e-7
+HLT_MET200_v7:0.59:2.12e-7:5.7e-8
+HLT_Mu8_Ele17_CaloIdT_CaloIsoVL_v8:2.82:1.90e-6:7.19e-7
+HLT_PFMHT150_v17:0.64:3.66e-7:1.19e-7
+HLT_Photon135_v2:1.28:5.40e-7:1.51e-7
+HLT_Photon26_R9IdT_Photon18_CaloIdXL_IsoXL_Mass60_v4:2.11:5.57e-7:9.22e-8

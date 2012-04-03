@@ -25,6 +25,7 @@ def usage():
     print "options: "
     print "--makeFits                           run in fit making mode"
     print "--secondary                          run in secondary shifter mode"
+    print "--TMD                                put in TMD predictions"
     print "--fitFile=<path>                     path to the fit file"
     print "--json=<path>                        path to the JSON file"
     print "--TriggerList=<path>                 path to the trigger list (without versions!)"
@@ -37,7 +38,7 @@ def usage():
     print "--EndCap                             Mask LS with EndCap sys off, used in combination with other subsys"
     print "--Beam                               Mask LS with Beam off"
 class Modes:
-    none,fits,secondary = range(3)
+    none,fits,secondary, TMD = range(4)
 
 def main():
     try:
@@ -920,7 +921,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 OutputFit[print_trigger] = ["poly", f1b.GetParameter(0), f1b.GetParameter(1), f1b.GetParameter(2), f1b.GetParameter(3), f1b.GetChisquare()/f1b.GetNDF(), meanrawrate,f1b.GetParError(0), f1b.GetParError(1), f1b.GetParError(2), f1b.GetParError(3)]
             else:
                 OutputFit[print_trigger] = ["poly", f1a.GetParameter(0), f1a.GetParameter(1), f1a.GetParameter(2), 0.0, f1a.GetChisquare()/f1a.GetNDF(), meanrawrate, f1a.GetParError(0), f1a.GetParError(1), f1a.GetParError(2), 0.0]
-
+            ##print print_trigger, OutputFit[print_trigger]
     if save_root:
         print "Output root file is "+str(RootFile)
 
