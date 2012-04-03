@@ -40,7 +40,12 @@ def usage():
     print "--ShowPSTriggers                     Show prescaled triggers in rate comparison"
     print "--force                              Override the check for collisions run"
     print "--help                               Print this help"
-    
+
+def pickYear():
+    global thisyear
+    thisyear="2011"
+    print "Year set to ",thisyear
+
 def main():
     try:
         opt, args = getopt.getopt(sys.argv[1:],"",["AllowedDiff=","CompareRun=","FindL1Zeros",\
@@ -264,12 +269,12 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         FitInput = pickle.load(pkl_file)
         pkl_file.close()
     except:
-        "No fit file specified, opening default"
-        pkl_file = open("Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl", 'rb')
-        FitInput = pickle.load(pkl_file)
-        pkl_file.close()
-    
-    pkl_file = open("RefRuns/2011/Rates_HLT_10LS_JPAP.pkl", 'rb')
+        "No fit file specified"
+        sys.exit(2)
+        
+        
+    refrunfile="RefRuns/%s/Rates_HLT_10LS_JPAP.pkl" % (thisyear)
+    pkl_file = open(refrunfile, 'rb')
     RefRatesInput = pickle.load(pkl_file)
     pkl_file.close()
 
@@ -401,4 +406,5 @@ def CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,S
             print Seed
         
 if __name__=='__main__':
+    global thisyear
     main()

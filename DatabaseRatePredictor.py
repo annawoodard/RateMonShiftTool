@@ -8,6 +8,7 @@ from numpy import *
 import pickle
 import getopt
 
+
 from ROOT import gROOT, TCanvas, TF1, TGraph, TGraphErrors, TPaveStats, gPad, gStyle
 from ROOT import TFile, TPaveText, TBrowser
 from ROOT import gBenchmark
@@ -38,10 +39,19 @@ def usage():
     print "--EndCap                             Mask LS with EndCap sys off, used in combination with other subsys"
     print "--Beam                               Mask LS with Beam off"
 class Modes:
-    none,fits,secondary, TMD = range(4)
+    none,fits,secondary = range(3)
+
+def pickYear():
+    global thisyear
+    thisyear="2011"
+    print "Year set to ",thisyear
+
 
 def main():
     try:
+        
+        ##set year to 2011
+        pickYear()
         try:
             opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam"])
             
@@ -180,7 +190,7 @@ def main():
 
         if fitFile=="" and not mode==Modes.fits:
             print "\nPlease specify fit file. These are available:\n"
-            path="Fits/2011/"  # insert the path to the directory of interest
+            path="Fits/%s/" % (thisyear)  # insert the path to the directory of interest
             dirList=os.listdir(path)
             for fname in dirList:
                 print fname
@@ -189,7 +199,7 @@ def main():
         ##usage()
         ##sys.exit(0)
         elif fitFile=="":
-            fitFile="Fits/2011/Fit_HLT_10LS_Run%sto%s.pkl" % (min(run_list),max(run_list))
+            fitFile="Fits/%s/Fit_HLT_10LS_Run%sto%s.pkl" % (thisyear,min(run_list),max(run_list))
             
 
         print "fitFile=",fitFile
@@ -327,19 +337,19 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
     if JSON:
         #print "Using JSON file"
         if physics_active_psi:
-            RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS_JPAP.pkl"
+            RefRunNameTemplate = "RefRuns/%s/Rates_%s_%sLS_JPAP.pkl" 
         else:
-            RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS_JSON.pkl"
+            RefRunNameTemplate = "RefRuns/%s/Rates_%s_%sLS_JSON.pkl" 
     else:
         print "Using Physics and Active ==1"
         if physics_active_psi:
-            RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS_PAP.pkl"
+            RefRunNameTemplate = "RefRuns/%s/Rates_%s_%sLS_PAP.pkl"
         else:
-            RefRunNameTemplate = "RefRuns/2011/Rates_%s_%sLS.pkl"
+            RefRunNameTemplate = "RefRuns/%s/Rates_%s_%sLS.pkl"
         
     
-    RefRunFile = RefRunNameTemplate % (trig_name,num_ls)
-    RefRunFileHLT = RefRunNameTemplate % ("HLT",num_ls)
+    RefRunFile = RefRunNameTemplate % (thisyear,trig_name,num_ls)
+    RefRunFileHLT = RefRunNameTemplate % (thisyear,"HLT",num_ls)
 
     print "RefRun=",RefRunFile
     print "RefRunFileHLT",RefRunFileHLT
@@ -364,8 +374,8 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 print str(RefRunFile)+" does not exist. Creating ..."
          
 ## try the lumis file
-    RefLumiNameTemplate = "RefRuns/2011/Lumis_%s_%sLS.pkl"        
-    RefLumiFile= RefLumiNameTemplate % ("HLT",num_ls)
+    RefLumiNameTemplate = "RefRuns/%s/Lumis_%s_%sLS.pkl"      
+    RefLumiFile= RefLumiNameTemplate % (thisyear,"HLT",num_ls)
     if not force_new:
         try:
             pkl_lumi_file = open(RefLumiFile, 'rb')
@@ -926,7 +936,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         print "Output root file is "+str(RootFile)
 
     if save_fits:
-        #FitNameTemplate = "Fits/2011/Fit_%s_%sLS_Run%sto%s.pkl"
+        #FitNameTemplate = "Fits/%/Fit_%s_%sLS_Run%sto%s.pkl" % (thisyear)
         #FitFile = FitNameTemplate % (trig_name, num_ls, min_run, max_run)
         if os.path.exists(fit_file):
             os.remove(fit_file)
@@ -1248,5 +1258,7 @@ def checkLS(Rates, PageLumiInfo,trig_list):
 
 
 
+
 if __name__=='__main__':
+    global thisyear
     main()
