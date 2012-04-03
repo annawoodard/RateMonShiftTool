@@ -47,6 +47,7 @@ def pickYear():
     print "Year set to ",thisyear
 
 def main():
+    pickYear()
     try:
         opt, args = getopt.getopt(sys.argv[1:],"",["AllowedDiff=","CompareRun=","FindL1Zeros",\
                                                    "FirstLS=","NumberLS=","IgnoreLowRate=","ListIgnoredPaths",\
