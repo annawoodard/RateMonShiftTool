@@ -182,7 +182,11 @@ def main():
 
     SaveRun = False
     if CompareRunNum=="":  # if no run # specified on the CL, get the most recent run
-        CompareRunNum,isCol = GetLatestRunNumber()
+        CompareRunNum,isCol,isGood = GetLatestRunNumber()
+        if not isGood:
+            print "NO TRIGGERMODE FOUND: exiting\nWait for next run before restarting."
+
+            sys.exit(0)
 
         if not isCol:
             print "Most Recent run, "+str(CompareRunNum)+", is NOT collisions"
@@ -191,8 +195,11 @@ def main():
             #    sys.exit(0) # maybe we should walk back and try to find a collisions run, but for now just exit
         print "Most Recent run is "+str(CompareRunNum)
     else:
-        CompareRunNum,isCol = GetLatestRunNumber(CompareRunNum)
+        CompareRunNum,isCol,isGood = GetLatestRunNumber(CompareRunNum)
+        if not isGood:
+            print "NO TRIGGERMODE FOUND: exiting\nWait for next run before restarting."
 
+            sys.exit(0)
 
     HeadParser = DatabaseParser()
     HeadParser.RunNumber = CompareRunNum
@@ -220,7 +227,7 @@ def main():
     try:
         while True:
             if not isCol:
-                clear()
+                ##clear()
                 MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
             else:
                 RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
@@ -241,7 +248,11 @@ def main():
                 time.sleep(3)
             write("  Updating")
             sys.stdout.flush()
-            CurrRun,isCol = GetLatestRunNumber()  ## update to the latest run and lumi range
+            CurrRun,isCol,isGood = GetLatestRunNumber()  ## update to the latest run and lumi range
+            if not isGood:
+                print "NO TRIGGERMODE FOUND: exiting\nWait for next run before restarting."
+
+                sys.exit(0)
             if not CurrRun == CompareRunNum:
                 HeadParser.RunNumber = CompareRunNum
                 HeadParser.ParseRunSetup()

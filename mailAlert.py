@@ -13,7 +13,7 @@ try:  ## so that we don't publish the list of on-calls in CVS
 except:
     eList=False
 def getLastRuns(h=24):
-    lastRun,isCol = DatabaseParser.GetLatestRunNumber()
+    lastRun,isCol,isGood = DatabaseParser.GetLatestRunNumber()
     
     curs = DatabaseParser.ConnectDB()
     query ="""SELECT A.RUNNUMBER,B.STARTTIME, B.STOPTIME,B.TRIGGERS
@@ -33,7 +33,7 @@ def digest(hours,maxRate=35,printAll=False):
     text=""
     runs = getLastRuns(hours)
     for run,nTrig,time in runs:
-        run,isCol = DatabaseParser.GetLatestRunNumber(run)
+        run,isCol,isGood = DatabaseParser.GetLatestRunNumber(run)
         runParser = DatabaseParser.DatabaseParser()
         runParser.RunNumber = run
         runParser.ParseRunSetup()

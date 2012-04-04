@@ -119,8 +119,12 @@ class DatabaseParser:
         CMS_WBM.RUNSUMMARY A, CMS_L1_HLT.L1_HLT_CONF B, CMS_HLT.CONFIGURATIONS C, CMS_TRG_L1_CONF.TRIGGERSUP_CONF D WHERE
         B.ID = A.TRIGGERMODE AND C.CONFIGDESCRIPTOR = B.HLT_KEY AND D.TS_Key = B.TSC_Key AND A.RUNNUMBER=%d
         """ % (self.RunNumber,)
-        self.curs.execute(KeyQuery)
-        self.L1_HLT_Key,self.HLT_Key,self.GTRS_Key,self.TSC_Key,self.ConfigId,self.GT_Key = self.curs.fetchone()        
+        try:
+            self.curs.execute(KeyQuery)
+            self.L1_HLT_Key,self.HLT_Key,self.GTRS_Key,self.TSC_Key,self.ConfigId,self.GT_Key = self.curs.fetchone()        
+        except:
+            print "Unable to get L1 and HLT keys for this run"
+        
         
     def UpdateRateTable(self):  # lets not rebuild the rate table every time, rather just append new LSs
         pass
@@ -965,9 +969,38 @@ def GetLatestRunNumber(runNo=9999999):
         RunNoQuery="""SELECT MAX(A.RUNNUMBER) 
         FROM CMS_RUNINFO.RUNNUMBERTBL A, CMS_RUNTIME_LOGGER.LUMI_SECTIONS B WHERE B.RUNNUMBER=A.RUNNUMBER AND B.LUMISECTION > 0
         """
+        try:
+            curs.execute(RunNoQuery)
+            r, = curs.fetchone()
+            print "r=",r
+        except:
+            print "not able to get run"
 
-        curs.execute(RunNoQuery)
-        r, = curs.fetchone()
+        ## RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL"""
+##         try:
+##             curs.execute(RunNoQuery)
+##             ra, = curs.fetchone()
+##             print "ra=",ra
+##         except:
+##             print "not able to get ra"
+
+
+##         RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_WBM.RUNSUMMARY WHERE TRIGGERS>0"""
+##         try:
+##             curs.execute(RunNoQuery)
+##             rb, = curs.fetchone()
+##             print "rb=",rb
+##         except:
+##             print "not able to get rb"
+
+##         RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS WHERE LUMISECTION > 0 """
+##         try:
+##             curs.execute(RunNoQuery)
+##             rc, = curs.fetchone()
+##             print "rc=",rc
+##         except:
+##             print "not able to get rc"
+        
     else:
         r = runNo
 
@@ -981,13 +1014,21 @@ def GetLatestRunNumber(runNo=9999999):
     except:
         pass
     isCol=0
+    isGood=1
+    
     
     try:
-        if trigm.find('l1_hlt_collisions')!=-1:
+        if trigm is None:
+            isGood=0
+            
+        elif trigm.find('l1_hlt_collisions')!=-1:
             isCol=1
+        
     except:
-        pass
-    return (r,isCol,)
+        print "trigm exception. This should not happen! Post to HLT on-call elog\nwith run number."
+        isGood=0
+    
+    return (r,isCol,isGood,)
 
 def ClosestIndex(value,table):
     diff = 999999999;

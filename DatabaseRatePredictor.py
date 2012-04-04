@@ -417,7 +417,11 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
         if RefRunNum < 1:
             continue
 
-        ColRunNum,isCol = GetLatestRunNumber(RefRunNum)
+        ColRunNum,isCol,isGood = GetLatestRunNumber(RefRunNum)
+        if not isGood:
+            print "Run ",RefRunNum, " is not Collisions"
+            
+            continue
         if not isCol:
             print "Run ",RefRunNum, " is not Collisions"
             
