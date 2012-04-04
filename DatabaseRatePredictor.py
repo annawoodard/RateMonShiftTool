@@ -387,7 +387,6 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
             print str(RefLumiFile)+" doesn't exist. Make it..."
             
     for RefRunNum in run_list:
-                
         if JSON:
             if not RefRunNum in JSON:
                 continue
@@ -416,7 +415,6 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
         
         if RefRunNum < 1:
             continue
-
         ColRunNum,isCol,isGood = GetLatestRunNumber(RefRunNum)
         if not isGood:
             print "Run ",RefRunNum, " is not Collisions"

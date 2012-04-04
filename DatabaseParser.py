@@ -978,30 +978,30 @@ def GetLatestRunNumber(runNo=9999999):
         except:
             print "not able to get run"
 
-        RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL"""
-        try:
-            curs.execute(RunNoQuery)
-            ra, = curs.fetchone()
-            print "ra=",ra
-        except:
-            print "not able to get ra"
+       ##  RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL"""
+##         try:
+##             curs.execute(RunNoQuery)
+##             ra, = curs.fetchone()
+##             print "ra=",ra
+##         except:
+##             print "not able to get ra"
 
 
-        RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_WBM.RUNSUMMARY WHERE TRIGGERS>0"""
-        try:
-            curs.execute(RunNoQuery)
-            rb, = curs.fetchone()
-            print "rb=",rb
-        except:
-            print "not able to get rb"
+##         RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_WBM.RUNSUMMARY WHERE TRIGGERS>0"""
+##         try:
+##             curs.execute(RunNoQuery)
+##             rb, = curs.fetchone()
+##             print "rb=",rb
+##         except:
+##             print "not able to get rb"
 
-        RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS WHERE LUMISECTION > 0 """
-        try:
-            curs.execute(RunNoQuery)
-            rc, = curs.fetchone()
-            print "rc=",rc
-        except:
-            print "not able to get rc"
+##         RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS WHERE LUMISECTION > 0 """
+##         try:
+##             curs.execute(RunNoQuery)
+##             rc, = curs.fetchone()
+##             print "rc=",rc
+##         except:
+##             print "not able to get rc"
         
     else:
         r = runNo
