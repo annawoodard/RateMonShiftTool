@@ -934,7 +934,7 @@ class DatabaseParser:
 def ConnectDB(user='trg'):
     host = os.uname()[1]
     offline = 1 if host.startswith('lxplus') else 0
-    print offline
+    ##print offline
     trg = ['~centraltspro/secure/cms_trg_r.txt','~/secure/cms_trg_r.txt']
     hlt = ['~hltpro/secure/cms_hlt_r.txt','~/secure/cms_hlt_r.txt']
 
@@ -956,7 +956,9 @@ def ConnectDB(user='trg'):
     return orcl.cursor()
 
 def GetLatestRunNumber(runNo=9999999):
+    
     curs = ConnectDB()
+    
     if runNo==9999999:
 
         ##
@@ -976,35 +978,35 @@ def GetLatestRunNumber(runNo=9999999):
         except:
             print "not able to get run"
 
-        ## RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL"""
-##         try:
-##             curs.execute(RunNoQuery)
-##             ra, = curs.fetchone()
-##             print "ra=",ra
-##         except:
-##             print "not able to get ra"
+        RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL"""
+        try:
+            curs.execute(RunNoQuery)
+            ra, = curs.fetchone()
+            print "ra=",ra
+        except:
+            print "not able to get ra"
 
 
-##         RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_WBM.RUNSUMMARY WHERE TRIGGERS>0"""
-##         try:
-##             curs.execute(RunNoQuery)
-##             rb, = curs.fetchone()
-##             print "rb=",rb
-##         except:
-##             print "not able to get rb"
+        RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_WBM.RUNSUMMARY WHERE TRIGGERS>0"""
+        try:
+            curs.execute(RunNoQuery)
+            rb, = curs.fetchone()
+            print "rb=",rb
+        except:
+            print "not able to get rb"
 
-##         RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS WHERE LUMISECTION > 0 """
-##         try:
-##             curs.execute(RunNoQuery)
-##             rc, = curs.fetchone()
-##             print "rc=",rc
-##         except:
-##             print "not able to get rc"
+        RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS WHERE LUMISECTION > 0 """
+        try:
+            curs.execute(RunNoQuery)
+            rc, = curs.fetchone()
+            print "rc=",rc
+        except:
+            print "not able to get rc"
         
     else:
         r = runNo
-
     isCol=0
+
     TrigModeQuery = """
     SELECT TRIGGERMODE FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
     """ % r
@@ -1012,10 +1014,9 @@ def GetLatestRunNumber(runNo=9999999):
     try:
         trigm, = curs.fetchone()
     except:
-        pass
+        print "unable to get trigm from query for run ",r
     isCol=0
     isGood=1
-    
     
     try:
         if trigm is None:
@@ -1025,9 +1026,7 @@ def GetLatestRunNumber(runNo=9999999):
             isCol=1
         
     except:
-        print "trigm exception. This should not happen! Post to HLT on-call elog\nwith run number."
         isGood=0
-    
     return (r,isCol,isGood,)
 
 def ClosestIndex(value,table):
