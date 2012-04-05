@@ -43,14 +43,14 @@ class Modes:
 
 def pickYear():
     global thisyear
-    thisyear="2011"
+    thisyear="2012"
     print "Year set to ",thisyear
 
 
 def main():
     try:
         
-        ##set year to 2011
+        ##set year to 2012
         pickYear()
         try:
             opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam"])
@@ -265,7 +265,7 @@ def main():
         ###### TO CREATE FITS #########
         if mode == Modes.fits:
             trig_name = "HLT"
-            num_ls = 10
+            num_ls = 4
             physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
             #JSON = [] ##To not use a JSON file, just leave the array empty
             debug_print = False
@@ -322,8 +322,8 @@ def main():
         ##    print "Missing LS!"
     
     
-        ## for iterator in range(len(Rates["HLT_IsoMu30_eta2p1_v7"]["rawrate"])):
-##             print iterator, "ls=",Rates["HLT_IsoMu30_eta2p1_v7"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu30_eta2p1_v7"]["rawrate"][iterator],2) 
+        for iterator in range(len(Rates["HLT_IsoMu24_eta2p1_v11"]["rawrate"])):
+            print iterator, "ls=",Rates["HLT_IsoMu24_eta2p1_v11"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu24_eta2p1_v11"]["rawrate"][iterator],2) 
     
         rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
     except KeyboardInterrupt:

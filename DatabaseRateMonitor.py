@@ -186,6 +186,8 @@ def main():
     SaveRun = False
     if CompareRunNum=="":  # if no run # specified on the CL, get the most recent run
         CompareRunNum,isCol,isGood = GetLatestRunNumber()
+        
+            
         if not isGood:
             print "NO TRIGGER KEY FOUND for run ",CompareRunNum
 
@@ -256,7 +258,6 @@ def main():
                 LastGoodLS=HeadParser.GetLastLS(isCol)
                 if not isCol:
                     ##clear()
-                    
                     MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                 else:
                     if (len(HeadLumiRange)>0):
@@ -264,7 +265,7 @@ def main():
                         if FindL1Zeros:
                             CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
                     else:
-                        "No lumis with physics data"
+                        print "No lumisections that are taking physics data"
             if int(Config.ShifterMode):
                 #print "Shifter Mode. Continuing"
                 pass
@@ -306,9 +307,11 @@ def main():
                     HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)    
                     if len(HeadLumiRange) is 0:
                         HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,False)
+                        print "No lumisections that are taking physics data"
                         if len(HeadLumiRange)>0:
                             isGood=1
                             isCol=0
+                            
                             
                     LastGoodLS=HeadParser.GetLastLS(isCol)
                     ##print CurrRun, isCol, isGood
@@ -327,6 +330,7 @@ def main():
                     HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
                     if len(HeadLumiRange) is 0:
                         HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,False)
+                        print "No lumisections that are taking physics data"
                         if len(HeadLumiRange)>0:
                             isGood=1
                             isCol=0
@@ -414,7 +418,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
            
             ##PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
             PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi)
-            print "expected rate=",PSCorrectedExpectedRate
+            ##print "expected rate=",PSCorrectedExpectedRate
 
             if PSCorrectedExpectedRate[0] < 0:  ##This means we don't have a prediction for this trigger
                 continue

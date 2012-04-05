@@ -175,9 +175,9 @@ class DatabaseParser:
                     psi = 0
  
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
-                    print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
+                    ##print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
-                    print "l1ps=",l1ps
+                    ##print "l1ps=",l1ps
                 else:
                     ##print "zero ",LSRange[0], self.PSColumnByLS[LSRange[0]]
                     AvL1Prescales = self.CalculateAvL1Prescales([LSRange[0]])
@@ -352,11 +352,12 @@ class DatabaseParser:
         deadtimeba_sum=0
         ii=0
         for deadtimebeamactive in self.curs.fetchall():
-            try:
-                deadtimeba_sum=deadtimeba_sum+deadtimebeamactive[0]
-            except:
-                ##print "no dtba for run ",self.RunNumber, ", ls ",LSRange[ii], "using dt"
-                deadtimeba_sum=deadtimeba_sum+self.GetDeadTime(LSRange[ii])
+            ##try:
+            ##    deadtimeba_sum=deadtimeba_sum+deadtimebeamactive[0]
+            ##    FAIL
+            ##except:
+            ##    ##print "no dtba for run ",self.RunNumber, ", ls ",LSRange[ii], "using dt"
+            deadtimeba_sum=deadtimeba_sum+self.GetDeadTime(LSRange[ii])
             ii=ii+1
         deadtimeba_av=deadtimeba_sum/len(LSRange)
         
