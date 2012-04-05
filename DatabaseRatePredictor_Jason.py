@@ -558,8 +558,10 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             #for keys, values in MoreLumiMulti.iteritems():
                             #    Rates[name][keys] = []
                         
-                            
+                        
                         [avps, ps, rate, psrate] = TriggerRates[key]
+                        if live < 200:
+                            continue
                         #print "TriggerRates=",TriggerRates[key], "key=",key
                         Rates[name]["run"].append(RefRunNum)
                         Rates[name]["ls"].append(nls)
@@ -672,14 +674,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         
         for iterator in range(len(Rates[print_trigger]["rate"])):
             if Rates[print_trigger]["live_lumi"][iterator] <= meanlumi_init:
-                if ( Rates[print_trigger]["rawrate"][iterator] > 0.004 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < max_dt and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 0):
+                if ( Rates[print_trigger]["rawrate"][iterator] > 0.004 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < max_dt and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 200):
                     meanxsec+=Rates[print_trigger]["xsec"][iterator]
                     lowxsec+=Rates[print_trigger]["xsec"][iterator]
                     meanlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     lowlumi+=Rates[print_trigger]["live_lumi"][iterator]
                     nlow+=1
             if Rates[print_trigger]["live_lumi"][iterator] > meanlumi_init:
-                if ( Rates[print_trigger]["rawrate"][iterator] > 0.004 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < max_dt and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 0):
+                if ( Rates[print_trigger]["rawrate"][iterator] > 0.004 and Rates[print_trigger]["physics"][iterator] == 1 and Rates[print_trigger]["active"][iterator] == 1 and Rates[print_trigger]["deadtime"][iterator] < max_dt and Rates[print_trigger]["psi"][iterator] > 0 and Rates[print_trigger]["live_lumi"] > 200):
                     meanxsec+=Rates[print_trigger]["xsec"][iterator]
                     highxsec+=Rates[print_trigger]["xsec"][iterator]
                     meanlumi+=Rates[print_trigger]["live_lumi"][iterator]
@@ -885,7 +887,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                         #print '%-60s cube % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParError(0), f1b.GetParameter(1), f1b.GetParError(1), f1b.GetParameter(2), f1b.GetParError(2), f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
                     #else:
                 #print '%-60s quad % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), f1a.GetParameter(0)+f1a.GetParameter(1)*5000.0,0, 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
-                print '%-60s linear % .2f    % .2e    % .2e    %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParameter(1),  f1a.GetParameter(0)+f1a.GetParameter(1)*5000.,  f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
+                print '%-100s linear % .2f    % .2e    % .2e    %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParameter(1),  f1a.GetParameter(0)+f1a.GetParameter(1)*5000.,  f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
                         
                 
                     
