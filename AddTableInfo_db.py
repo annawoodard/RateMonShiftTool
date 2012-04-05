@@ -76,17 +76,19 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         
     write(text)
     if badExpress:
-        if (ExpRate-PeakRate)/(len(LumiRange)-1) <=config.MaxExpressRate: ## one lumisection causes this
-            write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
-        else:
-            if NHighExpress > 1:  # big problem, call HLT DOC
-                write(colored("  <<  WARNING: Current Express rate is too high!",'red',attrs=['reverse']) )
-                Warn = True
+        if len(LumiRange>1):
+            if (ExpRate-PeakRate)/(len(LumiRange)-1) <=config.MaxExpressRate: ## one lumisection causes this
+                write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
+            else:
+                if NHighExpress > 1:  # big problem, call HLT DOC
+                    write(colored("  <<  WARNING: Current Express rate is too high!",'red',attrs=['reverse']) )
+                    Warn = True
 
                 #    if AvgExpRate > config.MaxExpressRate:
                 #        write( colored("\n\nWARNING: Average Express Stream Rate is too high (%0.1f Hz)  << CALL HLT DOC" % AvgExpRate,'red',attrs=['reverse']) )
                 #        Warn = True
-    
+        
+            
 
 
     #########################################
@@ -104,12 +106,13 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
 
     write(textA)
     if badStreamA:
-        if (ARate-PeakRateA)/(len(LumiRange)-1) <=config.MaxStreamARate: ## one lumisection causes this
-            write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
-        else:
-            if NHighStreamA >1: ##Call HLT doc!
-                write(colored("  <<  WARNING: Current Stream A rate is too high!",'red',attrs=['reverse']) )
-                Warn = True
+        if len(LumiRange)>1:
+            if (ARate-PeakRateA)/(len(LumiRange)-1) <=config.MaxStreamARate: ## one lumisection causes this
+                write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
+            else:
+                if NHighStreamA >1: ##Call HLT doc!
+                    write(colored("  <<  WARNING: Current Stream A rate is too high!",'red',attrs=['reverse']) )
+                    Warn = True
     write("\n\n")
             
     ######################################
