@@ -161,15 +161,15 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     ##write(  "Last Lumisection where DAQ is active is:  "+str(parser.GetLastLS(True)) )
     write("\n\n\n")
 
-    if isCol:
-        L1RatePredictions = config.GetExpectedL1Rates(AvInstLumi)
-        if len(L1RatePredictions):
-            print "Expected Level 1 Rates:"
-        for key,val in L1RatePredictions.iteritems():
-            write("Prescale Column "+str(key)+":  "+str(round(val/1000,1))+" kHz")
-            if key == LastPSCol:
-                write(' << taking data in this column')
-            write('\n')
+    ## if isCol:
+##         L1RatePredictions = config.GetExpectedL1Rates(AvInstLumi)
+##         if len(L1RatePredictions):
+##             print "Expected Level 1 Rates:"
+##         for key,val in L1RatePredictions.iteritems():
+##             write("Prescale Column "+str(key)+":  "+str(round(val/1000,1))+" kHz")
+##             if key == LastPSCol:
+##                 write(' << taking data in this column')
+##             write('\n')
         
     
 

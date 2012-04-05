@@ -365,7 +365,6 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
 
     try:
-        
         pkl_file = open(Config.FitFileName, 'rb')
         FitInput = pickle.load(pkl_file)
         pkl_file.close()
@@ -379,7 +378,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         RefRatesInput = pickle.load(pkl_file)
         pkl_file.close()
     except:
-        pass
+        RefRatesInput={}
 
     for HeadName in HeadUnprescaledRates:
 ##  SKIP triggers in the skip list
@@ -391,11 +390,14 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 ## unless we are Listing Ignored paths only look at triggers in the .list file specifed in defaults.cfg
 
         #if StripVersion(HeadName) not in Config.MonitorList and not ListIgnoredPaths:
-        
+
+        #print "MonitorList=",Config.MonitorList
+        #print HeadName
         if HeadName not in Config.MonitorList and not ListIgnoredPaths:
             continue
-                
+        
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+        #masked_triggers = ["AlCa_", "DST_", "HLT_L2", "HLT_Zero"]
         masked_trig = False
         for mask in masked_triggers:
             if str(mask) in HeadName:
@@ -405,11 +407,12 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 
         skipTrig=False
         TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
-
+        ##print "RefRatesInput=",RefRatesInput
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
            
             ##PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
             PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi)
+            ##print "expected rate=",PSCorrectedExpectedRate
 
             if PSCorrectedExpectedRate[0] < 0:  ##This means we don't have a prediction for this trigger
                 continue
@@ -437,6 +440,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         else:  ## Use a reference run
             ## cheap trick to only get triggers in list when in shifter mode
             #print "shifter mode=",int(Config.ShifterMode)
+            print "REfRun!!!"
             if int(Config.ShifterMode)==1:
                 if not HeadParser.AvgL1Prescales[HeadParser.HLTSeed[HeadName]]==1:
                     continue

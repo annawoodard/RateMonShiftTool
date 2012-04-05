@@ -42,7 +42,8 @@ class RateMonConfig:
                 list.append( line )
             else:
                 split = line.split(':')
-                list.append([split[0],split[1],split[2],split[3]])
+                list.append(split[0])
+                ##list.append([split[0],split[1],split[2],split[3]])
         f.close()
         return list
 
@@ -153,15 +154,15 @@ class RateMonConfig:
         return -1
                     
         
-    def GetExpectedL1Rates(self,lumi):
-        if not lumi:
-            return {}
-        expectedRates = {}
-        for col,inter,slope,quad in self.L1Predictions:
-            try:
-                expectedRates[int(col)] = lumi*(float(inter)+float(slope)*lumi+float(quad)*lumi*lumi)
-            except:
-                return {}
-        return expectedRates
+##     def GetExpectedL1Rates(self,lumi):
+##         if not lumi:
+##             return {}
+##         expectedRates = {}
+##         for col,inter,slope,quad in self.L1Predictions:
+##             try:
+##                 expectedRates[int(col)] = lumi*(float(inter)+float(slope)*lumi+float(quad)*lumi*lumi)
+##             except:
+##                 return {}
+##         return expectedRates
        
     
