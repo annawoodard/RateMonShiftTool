@@ -62,7 +62,7 @@ def main():
         if o=="--ConfigFile":
             Config.CFGfile=a
     Config.ReadCFG()
-
+    
     
 
     AllowedRateDiff   = Config.DefAllowRateDiff
@@ -165,7 +165,8 @@ def main():
         if not os.path.exists(RefRunFile[:RefRunFile.rfind('/')]):  # folder for ref run file must exist
             print "Reference run folder does not exist, please create" # should probably create programmatically, but for now force user to create
             print RefRunFile[:RefRunFile.rfind('/')]
-            sys.exit(0)   
+            sys.exit(0)
+            
             return
         if not os.path.exists(RefRunFile):
             # create the reference run file
@@ -374,8 +375,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         pkl_file = open(Config.FitFileName, 'rb')
         FitInput = pickle.load(pkl_file)
         pkl_file.close()
+        print "fit file name=",Config.FitFileName
     except:
-        "No fit file specified"
+        print "No fit file specified"
         sys.exit(2)
         
     try:    

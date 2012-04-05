@@ -265,7 +265,7 @@ def main():
         ###### TO CREATE FITS #########
         if mode == Modes.fits:
             trig_name = "HLT"
-            num_ls = 4
+            num_ls = 6
             physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
             #JSON = [] ##To not use a JSON file, just leave the array empty
             debug_print = False
@@ -316,6 +316,8 @@ def main():
         for k in SubSystemOff.iterkeys():
             print k,"=",SubSystemOff[k],"   ",
         print " "
+
+        print "Trigger list=",trig_list
         ########  END PARAMETERS - CALL FUNCTIONS ##########
         [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff)
         ##if not checkLS(Rates,LumiPageInfo,trig_list):
