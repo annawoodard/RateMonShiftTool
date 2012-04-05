@@ -13,6 +13,7 @@ except NameError:
 class DatabaseParser:
     
     def __init__(self):
+        
         self.curs = ConnectDB()
         ##-- Defined in ParsePage1 --##
         self.RunNumber = 0
@@ -123,7 +124,8 @@ class DatabaseParser:
             self.curs.execute(KeyQuery)
             self.L1_HLT_Key,self.HLT_Key,self.GTRS_Key,self.TSC_Key,self.ConfigId,self.GT_Key = self.curs.fetchone()        
         except:
-            print "Unable to get L1 and HLT keys for this run"
+            ##print "Unable to get L1 and HLT keys for this run"
+            pass
         
         
     def UpdateRateTable(self):  # lets not rebuild the rate table every time, rather just append new LSs
@@ -247,7 +249,8 @@ class DatabaseParser:
         for hltName in self.HLTSeed:
             self.HLTRatesByLS[hltName] = self.GetTriggerRatesByLS(hltName)
 
-    def GetLumiInfo(self): 
+    def GetLumiInfo(self):
+        
         sqlquery="""SELECT RUNNUMBER,LUMISECTION,PRESCALE_INDEX,INSTLUMI,LIVELUMI,DELIVLUMI,DEADTIME
         ,DCSSTATUS,PHYSICS_FLAG,CMS_ACTIVE
         FROM CMS_RUNTIME_LOGGER.LUMI_SECTIONS A,CMS_GT_MON.LUMI_SECTIONS B WHERE A.RUNNUMBER=%s
@@ -350,7 +353,7 @@ class DatabaseParser:
             try:
                 deadtimeba_sum=deadtimeba_sum+deadtimebeamactive[0]
             except:
-                print "no dtba for run ",self.RunNumber, ", ls ",LSRange[ii], "using dt"
+                ##print "no dtba for run ",self.RunNumber, ", ls ",LSRange[ii], "using dt"
                 deadtimeba_sum=deadtimeba_sum+self.GetDeadTime(LSRange[ii])
             ii=ii+1
         deadtimeba_av=deadtimeba_sum/len(LSRange)
@@ -375,7 +378,7 @@ class DatabaseParser:
         for deadtime in self.curs.fetchall():
             try:
                 dt=deadtime[0]
-                print "dt=",dt
+                #print "dt=",dt
             except:
                 print "no dt for run ",self.RunNumber, ", ls ",LS
                 dt=1.0
@@ -666,12 +669,14 @@ class DatabaseParser:
         curLS=StartLS
         step = NLS/abs(NLS)
         NLS=abs(NLS)
+        
         while len(LS)<NLS:
             if (curLS<0 and step<0) or (curLS>=self.LastLSParsed and step>0):
                 break
             if curLS>=0 and curLS<self.LastLSParsed-1:
                 if (not self.Physics.has_key(curLS) or not self.Active.has_key(curLS)) and reqPhysics:
                     break
+                
                 if not reqPhysics or (self.Physics[curLS] and self.Active[curLS]):
                     if step>0:
                         LS.append(curLS)
@@ -682,9 +687,18 @@ class DatabaseParser:
 
     def GetLastLS(self,phys=False):
         self.GetLumiInfo()
+        
         try:
             if not phys:
-                return max(self.Physics.keys())
+                maxLS=-1
+                for ls, active in self.Active.iteritems():
+                    if active and ls>maxLS:
+                        maxLS=ls
+                if maxLS==-1:
+                    return 0
+                else:
+                    return maxLS                             
+                
             else:
                 maxLS=-1
                 for ls,phys in self.Physics.iteritems():
@@ -932,8 +946,11 @@ class DatabaseParser:
         self = pickle.load( open( fileName ) )
 
 def ConnectDB(user='trg'):
-    host = os.uname()[1]
-    offline = 1 if host.startswith('lxplus') else 0
+    try:
+        host = os.uname()[1]
+        offline = 1 if host.startswith('lxplus') else 0
+    except:
+        print "Please setup database parsing:\nsource set.sh"
     ##print offline
     trg = ['~centraltspro/secure/cms_trg_r.txt','~/secure/cms_trg_r.txt']
     hlt = ['~hltpro/secure/cms_hlt_r.txt','~/secure/cms_hlt_r.txt']
@@ -955,7 +972,7 @@ def ConnectDB(user='trg'):
     orcl = cx_Oracle.connect(connect)
     return orcl.cursor()
 
-def GetLatestRunNumber(runNo=9999999):
+def GetLatestRunNumber(runNo=9999999,newRun=False):
     
     curs = ConnectDB()
     
@@ -974,11 +991,11 @@ def GetLatestRunNumber(runNo=9999999):
         try:
             curs.execute(RunNoQuery)
             r, = curs.fetchone()
-            print "r=",r
+            ##print "\nr=",r
         except:
             print "not able to get run"
 
-       ##  RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL"""
+        ## RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_RUNINFO.RUNNUMBERTBL"""
 ##         try:
 ##             curs.execute(RunNoQuery)
 ##             ra, = curs.fetchone()

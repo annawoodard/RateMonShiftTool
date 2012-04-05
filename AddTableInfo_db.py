@@ -15,13 +15,24 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         LastPSCol = PSCols[-1]
     except:
         LastPSCol = -1
+    if isCol:
         
-    aRates = parser.GetTriggerRatesByLS("AForPPOutput")
+        aRates = parser.GetTriggerRatesByLS("AOutput")
+    else:
+        if len(parser.GetTriggerRatesByLS("AOutput"))>0:
+            aRates = parser.GetTriggerRatesByLS("AOutput")
+        else:
+            aRates = parser.GetTriggerRatesByLS("AForPPOutput")
+            
+    
     expressRates = {}
     if isCol:
         expressRates = parser.GetTriggerRatesByLS("ExpressOutput")
     else:
-        expressRates = parser.GetTriggerRatesByLS("ExpressForCosmicsOutput")
+        if len(parser.GetTriggerRatesByLS("ExpressOutput"))>0:
+            expressRates=parser.GetTriggerRatesByLS("ExpressOutput")
+        else:
+            expressRates = parser.GetTriggerRatesByLS("ExpressForCosmicsOutput")
     ExpRate=0
     PeakRate=0
     AvgExpRate=0
@@ -143,7 +154,8 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     else:
         write("%d - %d\n" % (min(LumiRange),max(LumiRange),))
     print "\nLast Lumisection of the run is:        "+str(parser.GetLastLS())
-    write(  "Last Lumisection good for physics is:  "+str(parser.GetLastLS(True)) )
+    write(  "Last Lumisection good where DAQ is active is:  "+str(parser.GetLastLS(isCol)) )
+    ##write(  "Last Lumisection where DAQ is active is:  "+str(parser.GetLastLS(True)) )
     write("\n\n\n")
 
     if isCol:

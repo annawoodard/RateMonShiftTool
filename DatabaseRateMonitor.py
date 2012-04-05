@@ -43,8 +43,8 @@ def usage():
 
 def pickYear():
     global thisyear
-    thisyear="2011"
-    print "Year set to ",thisyear
+    thisyear="2012"
+    ##print "Year set to ",thisyear
 
 def main():
     pickYear()
@@ -63,6 +63,8 @@ def main():
             Config.CFGfile=a
     Config.ReadCFG()
 
+    
+
     AllowedRateDiff   = Config.DefAllowRateDiff
     CompareRunNum     = ""
     FindL1Zeros       = False
@@ -75,10 +77,11 @@ def main():
     ShowPSTriggers    = True
     Force             = False
 
-    if int(Config.ShifterMode):
-        print "ShifterMode!!"
-    else:
-        print "ExpertMode"
+    
+   ##  if int(Config.ShifterMode):
+##         print "ShifterMode!!"
+##     else:
+##         print "ExpertMode"
 
     if Config.LSWindow > 0:
         NumLS = -1*Config.LSWindow
@@ -113,7 +116,7 @@ def main():
             print "Invalid Option "+a
             sys.exit(1)
 
-    
+        
     RefLumisExists = False
 
     """
@@ -157,7 +160,7 @@ def main():
 
     RefRunFile = RefRunNameTemplate % RefRunNum
     RefParser = DatabaseParser()
-    print "Reference Run: "+str(RefRunNum)
+    ##print "Reference Run: "+str(RefRunNum)
     if RefRunNum > 0:
         if not os.path.exists(RefRunFile[:RefRunFile.rfind('/')]):  # folder for ref run file must exist
             print "Reference run folder does not exist, please create" # should probably create programmatically, but for now force user to create
@@ -184,27 +187,48 @@ def main():
     if CompareRunNum=="":  # if no run # specified on the CL, get the most recent run
         CompareRunNum,isCol,isGood = GetLatestRunNumber()
         if not isGood:
-            print "NO TRIGGERMODE FOUND: exiting\nWait for next run before restarting."
+            print "NO TRIGGER KEY FOUND for run ",CompareRunNum
 
-            sys.exit(0)
+            ##sys.exit(0)
 
         if not isCol:
             print "Most Recent run, "+str(CompareRunNum)+", is NOT collisions"
             print "Monitoring only stream A and Express"
             #if not Force:
             #    sys.exit(0) # maybe we should walk back and try to find a collisions run, but for now just exit
-        print "Most Recent run is "+str(CompareRunNum)
+
+        else:
+            print "Most Recent run is "+str(CompareRunNum)
     else:
         CompareRunNum,isCol,isGood = GetLatestRunNumber(CompareRunNum)
         if not isGood:
-            print "NO TRIGGERMODE FOUND: exiting\nWait for next run before restarting."
+            print "NO TRIGGER KEY FOUND for run ", CompareRunNum
+            ##sys.exit(0)
 
-            sys.exit(0)
-
+    
     HeadParser = DatabaseParser()
     HeadParser.RunNumber = CompareRunNum
-    HeadParser.ParseRunSetup()
-    HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
+        
+    try:
+        HeadParser.ParseRunSetup()
+        HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
+        LastGoodLS=HeadParser.GetLastLS(isCol)
+        CurrRun=CompareRunNum
+    except:
+        HeadLumiRange=[]
+        LastGoodLS=-1
+        CurrRun=CompareRunNum
+        isGood=0
+        
+    if len(HeadLumiRange) is 0:
+        print "No lumisections that are taking physics data"
+        HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,False)
+        if len(HeadLumiRange)>0:
+            isGood=1
+            isCol=0
+        ##sys.exit(0)
+    
+    
     if PrintLumi:
         for LS in HeadParser.LumiInfo[0]:
             try:
@@ -214,7 +238,7 @@ def main():
             except:
                 print "Lumisection "+str(LS-1)+" was not parsed from the LumiSections page"
                                                                                                                                  
-        sys.exit(0)
+                sys.exit(0)
 
     if RefRunNum == 0:
         RefRates = 0
@@ -223,22 +247,28 @@ def main():
 
 ### Now actually compare the rates, make tables and look at L1. Loops for ShifterMode
         #CheckTriggerList(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
-   
+    
+    ###isGood=1##if there is a trigger key
     try:
         while True:
-            if not isCol:
-                ##clear()
-                MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
-            else:
-                RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
-
-                if FindL1Zeros:
-                    CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
-                if int(Config.ShifterMode):
-                    print "Shifter Mode. Continuing"
+            
+            if isGood:
+                LastGoodLS=HeadParser.GetLastLS(isCol)
+                if not isCol:
+                    ##clear()
+                    
+                    MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                 else:
-                    print "Expert Mode. Quitting."
-                    sys.exit(0)
+                
+                    RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
+                    if FindL1Zeros:
+                        CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+            if int(Config.ShifterMode):
+                #print "Shifter Mode. Continuing"
+                pass
+            else:
+                print "Expert Mode. Quitting."
+                sys.exit(0)
 
             
             print "Sleeping for 1 minute before repeating  "
@@ -246,17 +276,76 @@ def main():
                 write(".")
                 sys.stdout.flush()
                 time.sleep(3)
-            write("  Updating")
+            write("  Updating\n")
             sys.stdout.flush()
-            CurrRun,isCol,isGood = GetLatestRunNumber()  ## update to the latest run and lumi range
-            if not isGood:
-                print "NO TRIGGERMODE FOUND: exiting\nWait for next run before restarting."
+            
+            ##print "\nminLS=",min(HeadLumiRange),"Last LS=",HeadParser.GetLastLS(isCol),"run=",HeadParser.RunNumber
+            ###Get a new run if DAQ stops
+            ##print "\nLastGoodLS=",LastGoodLS
 
-                sys.exit(0)
-            if not CurrRun == CompareRunNum:
-                HeadParser.RunNumber = CompareRunNum
-                HeadParser.ParseRunSetup()
-            HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
+            ##### NEED PLACEHOLDER TO COMPARE CURRENT RUN TO LATEST RUN #####
+            
+            NewRun,isCol,isGood = GetLatestRunNumber(9999999)  ## update to the latest run and lumi range
+            
+            try:
+                maxLumi=max(HeadLumiRange)
+            except:
+                maxLumi=0
+            
+            ##### THESE ARE CONDITIONS TO GET NEW RUN #####
+            if maxLumi>(LastGoodLS+1) or not isGood or NewRun!=CurrRun:
+                print "Trying to get new Run"
+                try:
+                    HeadParser = DatabaseParser()
+                    HeadParser.RunNumber = NewRun
+                    HeadParser.ParseRunSetup()
+                    CurrRun,isCol,isGood=GetLatestRunNumber(9999999)
+                    FirstLS=9999
+                    HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)    
+                    if len(HeadLumiRange) is 0:
+                        HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,False)
+                        if len(HeadLumiRange)>0:
+                            isGood=1
+                            isCol=0
+                            
+                    LastGoodLS=HeadParser.GetLastLS(isCol)
+                    print CurrRun, isCol, isGood
+                except:
+                    isGood=0
+                    isCol=0
+                    print "failed"
+                
+                                
+                
+                
+            ##CurrRun,isCol,isGood = GetLatestRunNumber(CurrRun)  ## update to the latest run and lumi range
+            else:
+                try:
+                    HeadParser.ParseRunSetup()
+                    HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
+                    if len(HeadLumiRange) is 0:
+                        HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,False)
+                        if len(HeadLumiRange)>0:
+                            isGood=1
+                            isCol=0
+                    LastGoodLS=HeadParser.GetLastLS(isCol)
+                
+                except:
+                    isGood=0
+                    isCol=0
+                    clear()
+                    print "NO TRIGGER KEY FOUND YET for run", NewRun ,"repeating search"
+                
+    
+            ## try:
+##                 HeadParser.GetLumiInfo()
+##                 if len(HeadParser.Active)>0:
+##                     isGood=1
+##                     ##print "setting to good"
+##             except:
+##                 pass
+
+                
         #end while True
     #end try
     except KeyboardInterrupt:
@@ -269,7 +358,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     Data   = []
     Warn   = []
     IgnoredRates=[]
-
+    
     [HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols] = HeadParser.GetAvLumiInfo(HeadLumiRange)
     ##[HeadUnprescaledRates, HeadTotalPrescales, HeadL1Prescales, HeadTriggerRates] = HeadParser.UpdateRun(HeadLumiRange)
     HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
@@ -284,11 +373,13 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         "No fit file specified"
         sys.exit(2)
         
-        
-    refrunfile="RefRuns/%s/Rates_HLT_10LS_JPAP.pkl" % (thisyear)
-    pkl_file = open(refrunfile, 'rb')
-    RefRatesInput = pickle.load(pkl_file)
-    pkl_file.close()
+    try:    
+        refrunfile="RefRuns/%s/Rates_HLT_10LS_JPAP.pkl" % (thisyear)
+        pkl_file = open(refrunfile, 'rb')
+        RefRatesInput = pickle.load(pkl_file)
+        pkl_file.close()
+    except:
+        pass
 
     for HeadName in HeadUnprescaledRates:
 ##  SKIP triggers in the skip list
