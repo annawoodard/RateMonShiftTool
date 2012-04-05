@@ -884,9 +884,10 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     #elif (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
                         #print '%-60s cube % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParError(0), f1b.GetParameter(1), f1b.GetParError(1), f1b.GetParameter(2), f1b.GetParError(2), f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
                     #else:
-                print '%-60s quad % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), f1a.GetParameter(0)+f1a.GetParameter(1)*5000.0,0, 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
+                #print '%-60s quad % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), f1a.GetParameter(0)+f1a.GetParameter(1)*5000.0,0, 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
+                print '%-60s linear % .2f    % .2e    % .2e    %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParameter(1),  f1a.GetParameter(0)+f1a.GetParameter(1)*5000.,  f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
                         
-
+                
                     
             else: ##If this is not a rate plot
                 f1a = TF1("f1a","pol1",0,8000)
