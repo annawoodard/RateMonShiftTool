@@ -76,7 +76,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         
     write(text)
     if badExpress:
-        if len(LumiRange>1):
+        if len(LumiRange)>1:
             if (ExpRate-PeakRate)/(len(LumiRange)-1) <=config.MaxExpressRate: ## one lumisection causes this
                 write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
             else:
