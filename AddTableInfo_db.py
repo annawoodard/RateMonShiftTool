@@ -9,8 +9,12 @@ NHighStreamA=0
 
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
-    [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
-    deadtimebeamactive=parser.GetDeadTimeBeamActive(LumiRange)
+    if len(LumiRange)>0:
+        [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
+        deadtimebeamactive=parser.GetDeadTimeBeamActive(LumiRange)
+    else:
+        print "no lumisections to monitor"
+        return
     try:
         LastPSCol = PSCols[-1]
     except:
@@ -156,8 +160,8 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         write(str(LumiRange)+"   Lumisections are not sequential (bad LS skipped)\n")
     else:
         write("%d - %d\n" % (min(LumiRange),max(LumiRange),))
-    print "\nLast Lumisection of the run is:        "+str(parser.GetLastLS())
-    write(  "Last Lumisection good where DAQ is active is:  "+str(parser.GetLastLS(isCol)) )
+    ##print "\nLast Lumisection of the run is:        "+str(parser.GetLastLS())
+    write(  "\nLast Lumisection good where DAQ is active is:  "+str(parser.GetLastLS(isCol)) )
     ##write(  "Last Lumisection where DAQ is active is:  "+str(parser.GetLastLS(True)) )
     write("\n\n\n")
 

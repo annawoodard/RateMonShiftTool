@@ -175,7 +175,9 @@ class DatabaseParser:
                     psi = 0
  
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
+                    print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
+                    print "l1ps=",l1ps
                 else:
                     ##print "zero ",LSRange[0], self.PSColumnByLS[LSRange[0]]
                     AvL1Prescales = self.CalculateAvL1Prescales([LSRange[0]])
@@ -374,7 +376,7 @@ class DatabaseParser:
         query=sqlquery %(self.RunNumber,LS)
         #print query
         self.curs.execute(query)
-
+        dt=1.0
         for deadtime in self.curs.fetchall():
             try:
                 dt=deadtime[0]

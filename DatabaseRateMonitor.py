@@ -259,10 +259,12 @@ def main():
                     
                     MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                 else:
-                
-                    RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
-                    if FindL1Zeros:
-                        CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+                    if (len(HeadLumiRange)>0):
+                        RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
+                        if FindL1Zeros:
+                            CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+                    else:
+                        "No lumis with physics data"
             if int(Config.ShifterMode):
                 #print "Shifter Mode. Continuing"
                 pass
@@ -309,7 +311,7 @@ def main():
                             isCol=0
                             
                     LastGoodLS=HeadParser.GetLastLS(isCol)
-                    print CurrRun, isCol, isGood
+                    ##print CurrRun, isCol, isGood
                 except:
                     isGood=0
                     isCol=0
@@ -396,8 +398,8 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         if HeadName not in Config.MonitorList and not ListIgnoredPaths:
             continue
         
-        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-        #masked_triggers = ["AlCa_", "DST_", "HLT_L2", "HLT_Zero"]
+        ##masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+        masked_triggers = ["AlCa_", "DST_", "HLT_L2", "HLT_Zero"]
         masked_trig = False
         for mask in masked_triggers:
             if str(mask) in HeadName:
@@ -412,7 +414,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
            
             ##PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
             PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi)
-            ##print "expected rate=",PSCorrectedExpectedRate
+            print "expected rate=",PSCorrectedExpectedRate
 
             if PSCorrectedExpectedRate[0] < 0:  ##This means we don't have a prediction for this trigger
                 continue
