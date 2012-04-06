@@ -96,7 +96,8 @@ def GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,doPrint):
     HLTSeed = {}
     for HLTPath,L1Seed in curs.fetchall():
         if not HLTSeed.has_key(HLTPath): ## this should protect us from L1_SingleMuOpen
-            HLTSeed[HLTPath] = L1Seed.lstrip('"').rstrip('"') 
+            tmp = L1Seed.lstrip('"').rstrip('"') 
+            HLTSeed[HLTPath] = tmp.rstrip(' ')
             
     HLTPrescales = GetHLTPrescaleMatrix(curs,HLT_Key)
 
@@ -123,6 +124,7 @@ def GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,doPrint):
             continue
         thisL1PS = []
         for seed in L1Seeds.split(' OR '): ## unwind the OR of multiple seeds
+            seed = seed.lstrip(' ').rstrip(' ')
             if seed.isdigit():
                 continue
             if not L1Names.has_key(seed):
