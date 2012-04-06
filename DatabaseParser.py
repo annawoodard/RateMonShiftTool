@@ -173,7 +173,8 @@ class DatabaseParser:
                     print "The value of LSRange[0] is:"
                     print str(LSRange[0])
                     psi = 0
- 
+                if psi is None:
+                    psi=0
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     ##print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
@@ -204,7 +205,8 @@ class DatabaseParser:
                     print "The value of LSRange[on] is:"
                     print str(LSRange[on])
                     psi = 0
-
+                if psi is None:
+                    psi=0
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:

@@ -11,7 +11,8 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
     if len(LumiRange)>0:
         [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
-        deadtimebeamactive=parser.GetDeadTimeBeamActive(LumiRange)
+        deadtimebeamactive=parser.GetDeadTimeBeamActive(LumiRange)*100
+        ##print "dtba=",deadtimebeamactive
     else:
         print "no lumisections to monitor"
         return
