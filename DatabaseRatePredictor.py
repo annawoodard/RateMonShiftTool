@@ -38,6 +38,7 @@ def usage():
     print "--ECal                               Mask LS with ECal barrel off"
     print "--EndCap                             Mask LS with EndCap sys off, used in combination with other subsys"
     print "--Beam                               Mask LS with Beam off"
+    print "--NoVersion                          Ignore version numbers"
 class Modes:
     none,fits,secondary = range(3)
 
@@ -53,7 +54,7 @@ def main():
         ##set year to 2012
         pickYear()
         try:
-            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam"])
+            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion"])
             
         except getopt.GetoptError, err:
             print str(err)
@@ -109,6 +110,7 @@ def main():
         trig_list = []
         max_dt=-1.0
         subsys=-1.0
+        NoVersion=False
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
             if o == "--makeFits":
@@ -142,6 +144,8 @@ def main():
             elif o=="--Beam":
                 SubSystemOff["Beam"]=True
                 subsys=1
+            elif o=="--NoVersion":
+                NoVersion=True
             elif o == "--TriggerList":
                 try:
                     f = open(a)
@@ -265,18 +269,18 @@ def main():
         ###### TO CREATE FITS #########
         if mode == Modes.fits:
             trig_name = "HLT"
-            num_ls = 6
+            num_ls = 10
             physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
             #JSON = [] ##To not use a JSON file, just leave the array empty
             debug_print = False
             no_versions=False
-            min_rate = 0.1
+            min_rate = 0.0
             print_table = False
             data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            plot_properties = [["delivered", "rate", True, True, False, fitFile]]
+            plot_properties = [["delivered", "rate", True, False, False, fitFile]]
         
-            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
             save_fits = True
             if max_dt==-1.0:
                 max_dt=0.08 ## no deadtime cutuse 2.0
@@ -293,7 +297,7 @@ def main():
             physics_active_psi = True
             debug_print = False
             no_versions=False
-            min_rate = 1.0
+            min_rate = 0.0
             print_table = False
             data_clean = True
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
@@ -301,7 +305,7 @@ def main():
             ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
             plot_properties = [["ls", "rawrate", False, True, False,fitFile]]
 
-            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
+            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
             save_fits = False
             if max_dt==-1.0:
                 max_dt=2.0 ## no deadtime cut=2.0
@@ -317,21 +321,22 @@ def main():
             print k,"=",SubSystemOff[k],"   ",
         print " "
 
-        print "Trigger list=",trig_list
+        ##print "Trigger list=",trig_list
         ########  END PARAMETERS - CALL FUNCTIONS ##########
-        [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff)
+        [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion)
         ##if not checkLS(Rates,LumiPageInfo,trig_list):
         ##    print "Missing LS!"
     
     
-        for iterator in range(len(Rates["HLT_IsoMu24_eta2p1_v11"]["rawrate"])):
-            print iterator, "ls=",Rates["HLT_IsoMu24_eta2p1_v11"]["ls"][iterator],"rate=",round(Rates["HLT_IsoMu24_eta2p1_v11"]["rawrate"][iterator],2) 
+        ## for iterator in range(len(Rates["HLT_Mu17_TkMu8_v9"]["rawrate"])):
+##             print iterator, "ls=",Rates["HLT_Mu17_TkMu8_v9"]["ls"][iterator],"rate=",round(Rates["HLT_Mu17_TkMu8_v9"]["rawrate"][iterator],2)
+            
     
-        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info)
+        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion)
     except KeyboardInterrupt:
         print "Wait... come back..."
 
-def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff):
+def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion):
     
     Rates = {}
     LumiPageInfo={}
@@ -387,7 +392,16 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
             print "using",RefLumiFile
         except:
             print str(RefLumiFile)+" doesn't exist. Make it..."
-            
+
+
+    trig_list_noV=[]
+    for trigs in trig_list:
+        trig_list_noV.append(StripVersion(trigs))
+    ##print "trig list nov=",trig_list_noV
+
+    if NoVersion:
+        trig_list=trig_list_noV
+        
     for RefRunNum in run_list:
         if JSON:
             if not RefRunNum in JSON:
@@ -439,7 +453,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 RefLumiRange = []
                 RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit
 
-
+        
                 ## We have specified the trig list without version numbers, we add them specific to this run
                 ##print "Processing Triggers: "
                 ## trig_list=[]
@@ -528,8 +542,10 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         
                         ##if not trig_name in key:
                         ##    continue
-                        ##name = StripVersion(key)
-                        name=key
+                        if NoVersion:
+                            name = StripVersion(key)
+                        else:
+                            name=key
                         ##if re.match('.*_v[0-9]+',name): ##Removes _v#
                         ##    name = name[:name.rfind('_')]
                         if not name in trig_list:
@@ -597,7 +613,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
     
     return [Rates,LumiPageInfo]
 
-def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info):
+def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion):
     min_run = min(run_list)
     max_run = max(run_list)
     
@@ -631,11 +647,20 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 goodtrig_list.append(trig)
         trig_list = goodtrig_list
 
+    trig_list_noV=[]
+    for trigs in trig_list:
+        trig_list_noV.append(StripVersion(trigs))
+    ##print "trig list nov=",trig_list_noV
+    if NoVersion:
+        trig_list=trig_list_noV
+
     for print_trigger in sorted(Rates):
         ##Limits Rates[] to runs in run_list
         NewTrigger = {}
+        
         if not print_trigger in trig_list:
             continue
+        
         for key in Rates[print_trigger]:
             NewTrigger[key] = []
         for iterator in range (len(Rates[print_trigger]["run"])):
@@ -643,6 +668,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 for key in Rates[print_trigger]:
                     NewTrigger[key].append(Rates[print_trigger][key][iterator])
         Rates[print_trigger] = NewTrigger
+        
         
         meanrawrate = sum(Rates[print_trigger]["rawrate"])/len(Rates[print_trigger]["rawrate"])
         if not trig_name in print_trigger:
@@ -655,7 +681,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 masked_trig = True
         if masked_trig:
             continue
-                
+        
         OutputFit[print_trigger] = {}
 
         lowlumi = 0
@@ -877,12 +903,12 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     
                     
 
-                    if (f1c.GetChisquare()/f1c.GetNDF() < f1b.GetChisquare()/f1b.GetNDF() and f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
-                        print '%-60s expo % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1c.GetParameter(0), f1c.GetParError(0), f1c.GetParameter(1), f1c.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1c.GetChisquare(), f1c.GetNDF(), f1c.GetChisquare()/f1c.GetNDF())
-                    elif (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
-                        print '%-60s cube % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParError(0), f1b.GetParameter(1), f1b.GetParError(1), f1b.GetParameter(2), f1b.GetParError(2), f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
-                    else:
-                        print '%-60s quad % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
+                    ## if (f1c.GetChisquare()/f1c.GetNDF() < f1b.GetChisquare()/f1b.GetNDF() and f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
+##                         print '%-60s expo % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1c.GetParameter(0), f1c.GetParError(0), f1c.GetParameter(1), f1c.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1c.GetChisquare(), f1c.GetNDF(), f1c.GetChisquare()/f1c.GetNDF())
+##                     elif (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
+##                         print '%-60s cube % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParError(0), f1b.GetParameter(1), f1b.GetParError(1), f1b.GetParameter(2), f1b.GetParError(2), f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
+##                     else:
+                    print '%-60s quad % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
                         
 
                     
@@ -929,12 +955,12 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             if not do_fit:
                 print "Can't have save_fits = True and do_fit = False"
                 continue
-            if f1c.GetChisquare()/f1c.GetNDF() < 0.95*f1a.GetChisquare()/f1a.GetNDF() and f1c.GetChisquare()/f1c.GetNDF() < 0.95*f1b.GetChisquare()/f1b.GetNDF():
-                OutputFit[print_trigger] = ["expo", f1c.GetParameter(0), f1c.GetParameter(1), f1c.GetParameter(3), 0.0, f1c.GetChisquare()/f1c.GetNDF(), meanrawrate, f1c.GetParError(0), f1c.GetParError(1), f1c.GetParError(2), f1c.GetParError(3)]
-            elif f1b.GetChisquare()/f1b.GetNDF() < 0.95*f1a.GetChisquare()/f1a.GetNDF():
-                OutputFit[print_trigger] = ["poly", f1b.GetParameter(0), f1b.GetParameter(1), f1b.GetParameter(2), f1b.GetParameter(3), f1b.GetChisquare()/f1b.GetNDF(), meanrawrate,f1b.GetParError(0), f1b.GetParError(1), f1b.GetParError(2), f1b.GetParError(3)]
-            else:
-                OutputFit[print_trigger] = ["poly", f1a.GetParameter(0), f1a.GetParameter(1), f1a.GetParameter(2), 0.0, f1a.GetChisquare()/f1a.GetNDF(), meanrawrate, f1a.GetParError(0), f1a.GetParError(1), f1a.GetParError(2), 0.0]
+            ## if f1c.GetChisquare()/f1c.GetNDF() < 0.95*f1a.GetChisquare()/f1a.GetNDF() and f1c.GetChisquare()/f1c.GetNDF() < 0.95*f1b.GetChisquare()/f1b.GetNDF():
+##                 OutputFit[print_trigger] = ["expo", f1c.GetParameter(0), f1c.GetParameter(1), f1c.GetParameter(3), 0.0, f1c.GetChisquare()/f1c.GetNDF(), meanrawrate, f1c.GetParError(0), f1c.GetParError(1), f1c.GetParError(2), f1c.GetParError(3)]
+##             elif f1b.GetChisquare()/f1b.GetNDF() < 0.95*f1a.GetChisquare()/f1a.GetNDF():
+##                 OutputFit[print_trigger] = ["poly", f1b.GetParameter(0), f1b.GetParameter(1), f1b.GetParameter(2), f1b.GetParameter(3), f1b.GetChisquare()/f1b.GetNDF(), meanrawrate,f1b.GetParError(0), f1b.GetParError(1), f1b.GetParError(2), f1b.GetParError(3)]
+            ##else:
+            OutputFit[print_trigger] = ["poly", f1a.GetParameter(0), f1a.GetParameter(1), f1a.GetParameter(2), 0.0, f1a.GetChisquare()/f1a.GetNDF(), meanrawrate, f1a.GetParError(0), f1a.GetParError(1), f1a.GetParError(2), 0.0]
             ##print print_trigger, OutputFit[print_trigger]
     if save_root:
         print "Output root file is "+str(RootFile)

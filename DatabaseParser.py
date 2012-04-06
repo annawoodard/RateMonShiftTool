@@ -352,12 +352,11 @@ class DatabaseParser:
         deadtimeba_sum=0
         ii=0
         for deadtimebeamactive in self.curs.fetchall():
-            ##try:
-            ##    deadtimeba_sum=deadtimeba_sum+deadtimebeamactive[0]
-            ##    FAIL
-            ##except:
-            ##    ##print "no dtba for run ",self.RunNumber, ", ls ",LSRange[ii], "using dt"
-            deadtimeba_sum=deadtimeba_sum+self.GetDeadTime(LSRange[ii])
+            try:
+                deadtimeba_sum=deadtimeba_sum+deadtimebeamactive[0]
+            except:
+                ##print "no dtba for run ",self.RunNumber, ", ls ",LSRange[ii], "using dt"
+                deadtimeba_sum=deadtimeba_sum+self.GetDeadTime(LSRange[ii])
             ii=ii+1
         deadtimeba_av=deadtimeba_sum/len(LSRange)
         
