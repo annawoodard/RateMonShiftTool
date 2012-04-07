@@ -39,6 +39,7 @@ def usage():
     print "--EndCap                             Mask LS with EndCap sys off, used in combination with other subsys"
     print "--Beam                               Mask LS with Beam off"
     print "--NoVersion                          Ignore version numbers"
+    print "--linear                             Force Linear fits"
 class Modes:
     none,fits,secondary = range(3)
 
@@ -54,7 +55,7 @@ def main():
         ##set year to 2012
         pickYear()
         try:
-            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion"])
+            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear"])
             
         except getopt.GetoptError, err:
             print str(err)
@@ -111,6 +112,7 @@ def main():
         max_dt=-1.0
         subsys=-1.0
         NoVersion=False
+        linear=False
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
             if o == "--makeFits":
@@ -146,6 +148,8 @@ def main():
                 subsys=1
             elif o=="--NoVersion":
                 NoVersion=True
+            elif o=="--linear":
+                linear=True
             elif o == "--TriggerList":
                 try:
                     f = open(a)
@@ -278,7 +282,7 @@ def main():
             print_table = False
             data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            plot_properties = [["delivered", "rate", True, False, False, fitFile]]
+            plot_properties = [["delivered", "rate", True, True, False, fitFile]]
         
             masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
             save_fits = True
@@ -332,7 +336,7 @@ def main():
 ##             print iterator, "ls=",Rates["HLT_Mu17_TkMu8_v9"]["ls"][iterator],"rate=",round(Rates["HLT_Mu17_TkMu8_v9"]["rawrate"][iterator],2)
             
     
-        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion)
+        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear)
     except KeyboardInterrupt:
         print "Wait... come back..."
 
@@ -613,7 +617,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
     
     return [Rates,LumiPageInfo]
 
-def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion):
+def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear):
     min_run = min(run_list)
     max_run = max(run_list)
     
@@ -855,14 +859,18 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             gr3.SetFillStyle(3003)
             
         if do_fit:
-            if "rate" in varY:
+            if "rate" in varY and not linear:
+                
                 f1a = TF1("f1a","pol2",0,8000)
                 f1a.SetLineColor(4)
                 f1a.SetLineWidth(2)
                 f1a.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
+                
                 f1a.SetParLimits(1,0,2.0*max(VY)/(max(VX)*max(VX)))
                 #gr1.Fit("f1a","B","Q")
                 gr1.Fit("f1a","Q","rob=0.90")
+
+                
                 
                 f1b = 0
                 f1c = 0
@@ -908,7 +916,10 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 ##                     elif (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
 ##                         print '%-60s cube % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParError(0), f1b.GetParameter(1), f1b.GetParError(1), f1b.GetParameter(2), f1b.GetParError(2), f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
 ##                     else:
+                    
                     print '%-60s quad % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
+                    
+                        
                         
 
                     
@@ -926,6 +937,10 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     f1a.SetParLimits(0,-1000,1000)
                 gr1.Fit("f1a","Q","rob=0.80")
 
+                if (first_trigger):
+                        print '%-60s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
+                        first_trigger=False
+                print '%-60s line % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
         if save_root or save_png:
             gr1.Draw("APZ")
 ##                 ##Option to draw stats box
@@ -960,7 +975,9 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 ##             elif f1b.GetChisquare()/f1b.GetNDF() < 0.95*f1a.GetChisquare()/f1a.GetNDF():
 ##                 OutputFit[print_trigger] = ["poly", f1b.GetParameter(0), f1b.GetParameter(1), f1b.GetParameter(2), f1b.GetParameter(3), f1b.GetChisquare()/f1b.GetNDF(), meanrawrate,f1b.GetParError(0), f1b.GetParError(1), f1b.GetParError(2), f1b.GetParError(3)]
             ##else:
+            
             OutputFit[print_trigger] = ["poly", f1a.GetParameter(0), f1a.GetParameter(1), f1a.GetParameter(2), 0.0, f1a.GetChisquare()/f1a.GetNDF(), meanrawrate, f1a.GetParError(0), f1a.GetParError(1), f1a.GetParError(2), 0.0]
+            
             ##print print_trigger, OutputFit[print_trigger]
     if save_root:
         print "Output root file is "+str(RootFile)

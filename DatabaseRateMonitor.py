@@ -405,7 +405,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             continue
         
         ##masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
-        masked_triggers = ["AlCa_", "DST_", "HLT_L2", "HLT_Zero"]
+        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
         masked_trig = False
         for mask in masked_triggers:
             if str(mask) in HeadName:
