@@ -132,7 +132,7 @@ class DatabaseParser:
         pass
 
     def GetHLTRates(self,LSRange):
-
+        
         sqlquery = """SELECT SUM(A.L1PASS),SUM(A.PSPASS),SUM(A.PACCEPT)
         ,SUM(A.PEXCEPT),(SELECT L.NAME FROM CMS_HLT.PATHS L WHERE L.PATHID=A.PATHID) PATHNAME 
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER IN %s
@@ -161,6 +161,7 @@ class DatabaseParser:
             hltps = 0
             if PSPass:
                 hltps = float(L1Pass)/PSPass
+                                
             if not TriggerRates.has_key(name):
                 try:
                     psi = self.PSColumnByLS[LSRange[0]]
@@ -178,7 +179,6 @@ class DatabaseParser:
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     ##print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
-                    ##print "l1ps=",l1ps
                 else:
                     ##print "zero ",LSRange[0], self.PSColumnByLS[LSRange[0]]
                     AvL1Prescales = self.CalculateAvL1Prescales([LSRange[0]])
@@ -231,10 +231,10 @@ class DatabaseParser:
             except:
                 #print "Rate = 0 for "+str(name)+", setting ps to 1"
                 ps = avps
+                
             TriggerRates[name] = [avps,ps,rate/n,psrate/n]
             
-            
-       
+               
         return TriggerRates
 
     def GetTriggerRatesByLS(self,triggerName):

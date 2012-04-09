@@ -9,7 +9,9 @@ NHighStreamA=0
 
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
+    print "len=",len(LumiRange)
     if len(LumiRange)>0:
+        
         [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
         deadtimebeamactive=parser.GetDeadTimeBeamActive(LumiRange)*100
         ##print "dtba=",deadtimebeamactive

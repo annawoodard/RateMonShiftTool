@@ -375,7 +375,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         pkl_file = open(Config.FitFileName, 'rb')
         FitInput = pickle.load(pkl_file)
         pkl_file.close()
-        print "fit file name=",Config.FitFileName
+        ##print "fit file name=",Config.FitFileName
     except:
         print "No fit file specified"
         sys.exit(2)
