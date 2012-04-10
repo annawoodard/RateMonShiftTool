@@ -9,6 +9,7 @@ def usage():
     print sys.argv[0]+" [options]"
     print "This script makes a pkl file from TMD rate predictions\nto be used in the RatePredictor script for new menu deployment"
     print "--TriggerList=<path>"
+    print "--NColBunch=<# colliding bunches>"
 
 def main():
     print "making TMD pkl fit files"
@@ -18,9 +19,14 @@ def main():
     fit_file="fits_TMD.pkl"
 
 #######################################
-    
+
+    ncolbunch=28
+    ntotbunch=1331
+    bunfrac=float(ncolbunch)/float(ntotbunch)
+
+#######################################
     try:
-        opt, args = getopt.getopt(sys.argv[1:],"",["TriggerList="])
+        opt, args = getopt.getopt(sys.argv[1:],"",["NColBunch=","TriggerList="])
             
     except getopt.GetoptError, err:
         print str(err)
@@ -30,7 +36,11 @@ def main():
     trig_list=[]
     fit_list={}
     for o,a in opt:
-        if o == "--TriggerList":
+        if o == "--NColBunch":
+            ncolbunch=int(a)
+            ntotbunch=1331
+            bunfrac=float(ncolbunch)/float(ntotbunch)
+        elif o == "--TriggerList":
             try:
                 f = open(a)
                 for line in f:
@@ -40,13 +50,14 @@ def main():
                     if len(line)<3 or line=='\n':
                         continue
                     line = ((line.rstrip('\n')).rstrip(' '))
-                    if line.find(':')==-1: # exclude list, no rate estimates
+                    if line.find(':')==-1: 
                         list.append( line )
+                    
                     else:
                         split = line.split(':')
                         ##trig_list.append([split[0],split[1],split[2],split[3]])
                         trig_list.append(split[0])
-                        fit_list[split[0]]=[float(split[1]),float(split[2]),float(split[3])]
+                        fit_list[split[0]]=[float(split[1])*bunfrac,float(split[2])*bunfrac,float(split[3])*bunfrac]
                         
 
                     
