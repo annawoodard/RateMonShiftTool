@@ -625,10 +625,12 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
     OutputFit = {}
     first_trigger=True
 
-    RootNameTemplate = "%s_%sLS_Run%sto%s.root"
-    RootFile = RootNameTemplate % (trig_name, num_ls, min_run, max_run)
-
+    
     [[varX, varY, do_fit, save_root, save_png, fit_file]] = plot_properties
+
+    RootNameTemplate = "%s_%sLS_%s_vs_%s_Run%s-%s.root"
+    RootFile = RootNameTemplate % (trig_name, num_ls, varX, varY, min_run, max_run)
+
     if not do_fit:
         try:
             pkl_file = open(fit_file, 'rb')

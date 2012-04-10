@@ -16,7 +16,7 @@ def main():
     
 ############# fIT FILE NAME ###########
     
-    fit_file="fits_TMD.pkl"
+    fit_file="fits_TMD_ncolbunch%s.pkl"
 
 #######################################
 
@@ -92,6 +92,8 @@ def main():
         
         OutputFit[keys]=fit_list_fortrig
         ##print "trig=",keys, "fit pars=",fit_list_fortrig
+
+    fit_file = fit_file % (ncolbunch)
     
     if os.path.exists(fit_file):
             os.remove(fit_file)
