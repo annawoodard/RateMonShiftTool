@@ -376,7 +376,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         FitInput = pickle.load(pkl_file)
         pkl_file.close()
         ##print "fit file name=",Config.FitFileName
-        print "FitInput=",FitInput
+        
     except:
         print "No fit file specified"
         sys.exit(2)
@@ -400,15 +400,14 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             trig_list.append(StripVersion(trigger))
         for trigger in FitInput.iterkeys():
             FitInputNoV[StripVersion(trigger)]=FitInput[trigger]
-        print "\n\nFitInputNoV=",FitInputNoV
         FitInput=FitInputNoV
-    print trig_list
+    
     
     ##trig_list=Config.MonitorList
     for HeadName in HeadUnprescaledRates:
         
         HeadNameNoV=StripVersion(HeadName)
-        print HeadNameNoV, HeadName
+    
                           
         
 ##  SKIP triggers in the skip list
