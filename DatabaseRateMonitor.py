@@ -63,7 +63,7 @@ def main():
             Config.CFGfile=a
     Config.ReadCFG()
     
-    
+    print "NoVersion=",Config.NoVersion
 
     AllowedRateDiff   = Config.DefAllowRateDiff
     CompareRunNum     = ""
@@ -370,12 +370,13 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     ##[HeadUnprescaledRates, HeadTotalPrescales, HeadL1Prescales, HeadTriggerRates] = HeadParser.UpdateRun(HeadLumiRange)
     HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
-
+    deadtimebeamactive=HeadParser.GetDeadTimeBeamActive(HeadLumiRange)
     try:
         pkl_file = open(Config.FitFileName, 'rb')
         FitInput = pickle.load(pkl_file)
         pkl_file.close()
         ##print "fit file name=",Config.FitFileName
+        print "FitInput=",FitInput
     except:
         print "No fit file specified"
         sys.exit(2)
@@ -388,7 +389,28 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     except:
         RefRatesInput={}
 
+
+    trig_list=Config.MonitorList
+    
+    if Config.NoVersion:
+        trig_list=[]
+        FitInputNoV={}
+        
+        for trigger in Config.MonitorList:
+            trig_list.append(StripVersion(trigger))
+        for trigger in FitInput.iterkeys():
+            FitInputNoV[StripVersion(trigger)]=FitInput[trigger]
+        print "\n\nFitInputNoV=",FitInputNoV
+        FitInput=FitInputNoV
+    print trig_list
+    
+    ##trig_list=Config.MonitorList
     for HeadName in HeadUnprescaledRates:
+        
+        HeadNameNoV=StripVersion(HeadName)
+        print HeadNameNoV, HeadName
+                          
+        
 ##  SKIP triggers in the skip list
 ##         if not HeadTotalPrescales.has_key(HeadName): ## for whatever reason we have no prescale here, so skip (calibration paths)
 ##             continue
@@ -401,8 +423,16 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 
         #print "MonitorList=",Config.MonitorList
         #print HeadName
-        if HeadName not in Config.MonitorList and not ListIgnoredPaths:
-            continue
+        if Config.NoVersion:
+            if HeadNameNoV not in trig_list and not ListIgnoredPaths:
+                continue
+            if HeadNameNoV not in FitInput.keys():
+                continue
+        else:       
+            if HeadName not in trig_list and not ListIgnoredPaths:
+                continue
+            if HeadName not in FitInput.keys():
+                continue
         
         ##masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
@@ -415,19 +445,18 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 
         skipTrig=False
         TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
-        ##print "RefRatesInput=",RefRatesInput
+        
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
            
-            ##PSCorrectedExpectedRate = Config.GetExpectedRate(StripVersion(HeadName),HeadAvInstLumi)
-            PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi)
-            ##print "expected rate=",PSCorrectedExpectedRate
+            
+            PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive)
+            
 
             if PSCorrectedExpectedRate[0] < 0:  ##This means we don't have a prediction for this trigger
                 continue
-##             if not HeadTotalPrescales[HeadName]:
-##                 print HeadName+ " has total prescale 0"
-##                 continue
+
             ExpectedRate = round((PSCorrectedExpectedRate[0] / HeadUnprescaledRates[HeadName][1]),2)
+
             PerDiff=0
             if ExpectedRate>0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)

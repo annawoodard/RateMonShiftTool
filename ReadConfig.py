@@ -24,6 +24,7 @@ class RateMonConfig:
         self.LSWindow=-1
         self.CompareReference=0
         self.ShifterMode=0
+        self.NoVersion=0
         self.MaxExpressRate=999
 
     def ReadList(self,filename):
@@ -101,6 +102,8 @@ class RateMonConfig:
                 self.MaxStreamARate=float(arg)
             elif par=="FitFileName":
                 self.FitFileName=arg
+            elif par=="NoVersion":
+                self.NoVersion=int(arg)
             
             else:
                 print "Invalid Option : "+strippedLine
@@ -123,17 +126,23 @@ class RateMonConfig:
 ##                     return intercept + 3000*slope/1000 + 3000*3000*quad/1000000
 ##         return -1
 
-    def GetExpectedRate(self,TrigName,Input,Rates,live,delivered):
+    def GetExpectedRate(self,TrigName,Input,Rates,live,delivered,deadtime):
         RefRun = False
-                    
+        #replaced live/delivered with deadtimebeamactive
+        if self.NoVersion:
+            TrigName=StripVersion(TrigName)
+        if TrigName not in Input.keys():
+            print TrigName,"NOT IN"
+            
         try:
             Chi2 = Input[TrigName][5]
             if Input[TrigName][0] == "poly":
-                return [(live/delivered)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), Chi2]
+                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), Chi2]
             else:
-                return [(live/delivered)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]*delivered)), Chi2]
+                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]*delivered)), Chi2]
         except:
             RefRun = True
+            #print "EXCEPT ERR"
 
         if RefRun:
 
