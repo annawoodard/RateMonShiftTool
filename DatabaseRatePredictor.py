@@ -40,6 +40,8 @@ def usage():
     print "--Beam                               Mask LS with Beam off"
     print "--NoVersion                          Ignore version numbers"
     print "--linear                             Force Linear fits"
+    print "--inst                               Fits using inst not delivered"
+    print "--TMDerr                             Use errors from TMD predictions"
 class Modes:
     none,fits,secondary = range(3)
 
@@ -55,7 +57,7 @@ def main():
         ##set year to 2012
         pickYear()
         try:
-            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear"])
+            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear","inst","TMDerr"])
             
         except getopt.GetoptError, err:
             print str(err)
@@ -113,6 +115,8 @@ def main():
         subsys=-1.0
         NoVersion=False
         linear=False
+        do_inst=False
+        TMDerr=False
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
             if o == "--makeFits":
@@ -150,6 +154,10 @@ def main():
                 NoVersion=True
             elif o=="--linear":
                 linear=True
+            elif o=="--inst":
+                do_inst=True
+            elif o=="--TMDerr":
+                TMDerr=True
             elif o == "--TriggerList":
                 try:
                     f = open(a)
@@ -207,7 +215,10 @@ def main():
         ##usage()
         ##sys.exit(0)
         elif fitFile=="":
-            fitFile="Fits/%s/Fit_HLT_10LS_Run%sto%s.pkl" % (thisyear,min(run_list),max(run_list))
+            if not do_inst:
+                fitFile="Fits/%s/Fit_HLT_10LS_Run%sto%s.pkl" % (thisyear,min(run_list),max(run_list))
+            else:
+                fitFile="Fits/%s/Fit_inst_HLT_10LS_Run%sto%s.pkl" % (thisyear,min(run_list),max(run_list))
             
 
         print "fitFile=",fitFile
@@ -282,7 +293,11 @@ def main():
             print_table = False
             data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            plot_properties = [["delivered", "rate", True, True, False, fitFile]]
+            ##plot_properties = [["delivered", "rate", True, True, False, fitFile]]
+            if not do_inst:
+                plot_properties = [["delivered", "rate", True, True, False, fitFile]]
+            else:
+                plot_properties = [["inst", "rate", True, True, False, fitFile]]
         
             masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
             save_fits = True
@@ -332,11 +347,13 @@ def main():
         ##    print "Missing LS!"
     
     
-        ## for iterator in range(len(Rates["HLT_Mu17_TkMu8_v9"]["rawrate"])):
-##             print iterator, "ls=",Rates["HLT_Mu17_TkMu8_v9"]["ls"][iterator],"rate=",round(Rates["HLT_Mu17_TkMu8_v9"]["rawrate"][iterator],2)
-            
+        ##for iterator in range(len(Rates["HLT_Mu17_TkMu8_v9"]["rawrate"])):
+            ##print iterator, "ls=",Rates["HLT_Mu17_TkMu8_v9"]["ls"][iterator],"rate=",round(Rates["HLT_Mu17_TkMu8_v9"]["rawrate"][iterator],2)
+        for trigger in trig_list:
+            print trigger
+        print Rates.keys()
     
-        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear)
+        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr)
     except KeyboardInterrupt:
         print "Wait... come back..."
 
@@ -617,7 +634,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
     
     return [Rates,LumiPageInfo]
 
-def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear):
+def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst, TMDerr):
     min_run = min(run_list)
     max_run = max(run_list)
     
@@ -635,6 +652,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         try:
             pkl_file = open(fit_file, 'rb')
             InputFit = pickle.load(pkl_file)
+            print "InputFit=",InputFit.keys()
         except:
             print "ERROR: could not open fit file: %s" % (fit_file,)
     if save_root:
@@ -643,22 +661,25 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         except:
             pass
 
-    ## check that all the triggers we ask to plot are in the input fit
-    if not save_fits:
-        goodtrig_list = []
-        for trig in trig_list:
-            if not InputFit.has_key(trig):
-                print "WARNING:  No Fit Prediction for Trigger %s, SKIPPING" % (trig,)
-            else:
-                goodtrig_list.append(trig)
-        trig_list = goodtrig_list
-
     trig_list_noV=[]
     for trigs in trig_list:
         trig_list_noV.append(StripVersion(trigs))
     ##print "trig list nov=",trig_list_noV
     if NoVersion:
         trig_list=trig_list_noV
+
+    ## check that all the triggers we ask to plot are in the input fit
+    if not save_fits:
+        goodtrig_list = []
+        for trig in trig_list:
+            print "trig=",trig
+            if not InputFit.has_key(trig):
+                print "WARNING:  No Fit Prediction for Trigger %s, SKIPPING" % (trig,)
+            else:
+                goodtrig_list.append(trig)
+        trig_list = goodtrig_list
+
+    
 
     for print_trigger in sorted(Rates):
         ##Limits Rates[] to runs in run_list
@@ -734,6 +755,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             X2 = InputFit[print_trigger][3]
             X3 = InputFit[print_trigger][4]
             Chi2 = InputFit[print_trigger][5]
+            X0err= InputFit[print_trigger][7]
+            print print_trigger," X0err=",X0err
             #print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
             #if (first_trigger):
             #    print '%20s % 10s % 6s % 5s % 5s % 3s % 4s' % ('trigger', 'fit type ', 'cubic', 'quad', '  linear', ' c ', 'Chi2')
@@ -785,12 +808,18 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                         e_rawxsec_t.append(0.)
                         e_xsec_t.append(0.)
                 if not do_fit:
-                    if FitType == "expo":
-                        rate_prediction = X0 + X1*math.exp(X2*delivered_t[-1])
-                    else:
-                        rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1] + X3*delivered_t[-1]*delivered_t[-1]*delivered_t[-1]
+                    if not do_inst:
+                        if FitType == "expo":
+                            rate_prediction = X0 + X1*math.exp(X2*delivered_t[-1])
+                        else:
+                            rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1] + X3*delivered_t[-1]*delivered_t[-1]*delivered_t[-1]
 ##                     if rate_t[-1] < 0.7 * rate_prediction or rate_t[-1] > 1.4 * rate_prediction:
 ##                         print str(run_t[-1])+"  "+str(ls_t[-1])+"  "+str(print_trigger)+"  "+str(ps_t[-1])+"  "+str(deadtime_t[-1])+"  "+str(rate_prediction)+"  "+str(rate_t[-1])+"  "+str(rawrate_t[-1])
+                    else:
+                        if FitType == "expo":
+                            rate_prediction = X0 + X1*math.exp(X2*inst_t[-1])
+                        else:
+                            rate_prediction = X0 + X1*inst_t[-1] + X2*inst_t[-1]*inst_t[-1] + X3*inst_t[-1]*inst_t[-1]*inst_t[-1]
 
                     if live_t[-1] == 0:
                         rawrate_fit_t.append(0)
@@ -809,18 +838,33 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                             rawrate_fit_t.append(0.0)
                         
                         rate_fit_t.append(rate_prediction)
+                        e_rate_fit_t.append(math.sqrt(Chi2))
                         rawxsec_fit_t.append(rawrate_fit_t[-1]/live_t[-1])
                         xsec_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/live_t[-1])
-                        e_rawrate_fit_t.append(math.sqrt(Chi2)*rawrate_fit_t[-1]/rate_fit_t[-1])
-                        e_rate_fit_t.append(math.sqrt(Chi2))
-                        e_rawxsec_fit_t.append(math.sqrt(Chi2)*rawxsec_fit_t[-1]/rate_fit_t[-1])
-                        e_xsec_fit_t.append(math.sqrt(Chi2)*xsec_fit_t[-1]/rate_fit_t[-1])
+                        try:
+                            
+                            if not TMDerr:
+                                e_rawrate_fit_t.append(math.sqrt(Chi2)*rawrate_fit_t[-1]/rate_fit_t[-1])
+                                e_rawxsec_fit_t.append(math.sqrt(Chi2)*rawxsec_fit_t[-1]/rate_fit_t[-1])
+                                e_xsec_fit_t.append(math.sqrt(Chi2)*xsec_fit_t[-1]/rate_fit_t[-1])
+                            ###error from TMD predictions, calculated at 5e33
+                            else:
+                                e_rawrate_fit_t.append(X0err*inst_t[-1]/5000.)
+                                e_rawxsec_fit_t.append(X0err/live_t[-1]*inst_t[-1]/5000.)
+                                e_xsec_fit_t.append(X0err/live_t[-1]*inst_t[-1]/5000.)
+                                
+                        except:
+                            print print_trigger, "has no fitted rate for LS", Rates[print_trigger]["ls"][iterator]
+                            e_rawrate_fit_t.append(math.sqrt(Chi2))
+                            e_rawxsec_fit_t.append(math.sqrt(Chi2))
+                            e_xsec_fit_t.append(math.sqrt(Chi2))
                         #print "live_t>0", ls_t[-1], rawrate_fit_t[-1]
 
                 ##print iterator, iterator, "ls=",ls_t[-1],"rate=",round(rawrate_t[-1],2), "deadtime=",round(deadtime_t[-1],2),"rawrate_fit=",round(rawrate_fit_t[-1],2),"max it=",len(Rates[print_trigger]["rate"])
                 
                 if (print_info and num_ls==1 and (fabs(rawrate_fit_t[-1]-rawrate_t[-1])>2.5*sqrt(sum(Rates[print_trigger]["rawrate"])/len(Rates[print_trigger]["rawrate"])))):
-                    print '%-60s has a bad prediction, run=%-10s LS=%-4s' % (print_trigger, Rates[print_trigger]["run"][iterator], Rates[print_trigger]["ls"][iterator])
+                    pass
+                    ###print '%-60s has a bad prediction, run=%-10s LS=%-4s' % (print_trigger, Rates[print_trigger]["run"][iterator], Rates[print_trigger]["ls"][iterator])
 
             else: ##If the data point does not pass the data_clean filter
                 #print "not passed", iterator, ls_t[-1], rawrate_fit_t[-1]
@@ -1197,7 +1241,7 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
 ##                     break
 ##         else:
         if SubSystemOff["Mu"] or SubSystemOff["All"]:
-            if not (LumiPageInfo[LS]["rpc"] or LumiPageInfo[LS]["dt0"] or LumiPageInfo[LS]["dtp"] or LumiPageInfo[LS]["dtm"] or LumiPageInfo["cscp"] or LumiPageInfo["cscm"]):
+            if not (LumiPageInfo[LS]["rpc"] and LumiPageInfo[LS]["dt0"] and LumiPageInfo[LS]["dtp"] and LumiPageInfo[LS]["dtm"] and LumiPageInfo[LS]["cscp"] and LumiPageInfo[LS]["cscm"]):
                 Passed=False
                 subsystemfailed.append("Mu")
         if SubSystemOff["HCal"] or SubSystemOff["All"]:
@@ -1229,6 +1273,7 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         
         Passed=True
             
+    
         
     if not data_clean or (
  ##        (
@@ -1263,7 +1308,6 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
     else:
         
         if (print_info and print_trigger==trig_list[0] and num_ls==1):
-            
             print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Failed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed)
         
         return False
