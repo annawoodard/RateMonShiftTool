@@ -10,6 +10,7 @@ NHighStreamA=0
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
     print "len=",len(LumiRange)
+    print "LSRange=", LumiRange
     if len(LumiRange)>0:
         
         [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)

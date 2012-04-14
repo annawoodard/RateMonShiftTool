@@ -134,7 +134,7 @@ class DatabaseParser:
     def GetHLTRates(self,LSRange):
         
         sqlquery = """SELECT SUM(A.L1PASS),SUM(A.PSPASS),SUM(A.PACCEPT)
-        ,SUM(A.PEXCEPT),(SELECT L.NAME FROM CMS_HLT.PATHS L WHERE L.PATHID=A.PATHID) PATHNAME 
+        ,SUM(A.PEXCEPT), A.LSNUMBER, (SELECT L.NAME FROM CMS_HLT.PATHS L WHERE L.PATHID=A.PATHID) PATHNAME 
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A WHERE RUNNUMBER=%s AND A.LSNUMBER IN %s
         GROUP BY A.LSNUMBER,A.PATHID"""
 
@@ -144,7 +144,10 @@ class DatabaseParser:
                            
         StartLS = LSRange[0]
         EndLS   = LSRange[-1]
-
+        LSUsed={}
+        for lumisection in LSRange:
+            LSUsed[lumisection]=False
+        
         AvgL1Prescales = [0]*self.nAlgoBits
         
         #print "Getting HLT Rates for LS from %d to %d" % (LSRange[0],LSRange[-1],)
@@ -153,18 +156,20 @@ class DatabaseParser:
         self.curs.execute(query)
 
         TriggerRates = {}
-        for L1Pass,PSPass,HLTPass,HLTExcept,name in self.curs.fetchall():
+        for L1Pass,PSPass,HLTPass,HLTExcept,LS ,name in self.curs.fetchall():
             if not self.HLTSeed.has_key(name):
                 continue 
             
             rate = HLTPass/23.3
             hltps = 0
+            
             if PSPass:
                 hltps = float(L1Pass)/PSPass
                                 
             if not TriggerRates.has_key(name):
+                
                 try:
-                    psi = self.PSColumnByLS[LSRange[0]]
+                    psi = self.PSColumnByLS[LS]
                     ##print "psi=",psi
                 #except:
                     #psi = self.PSColumnByLS[1]
@@ -172,7 +177,7 @@ class DatabaseParser:
                 except:
                     print "HLT in: Cannot figure out PSI for LS "+str(StartLS)+"  setting to 0"
                     print "The value of LSRange[0] is:"
-                    print str(LSRange[0])
+                    print str(LS)
                     psi = 0
                 if psi is None:
                     psi=0
@@ -180,8 +185,8 @@ class DatabaseParser:
                     ##print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
-                    ##print "zero ",LSRange[0], self.PSColumnByLS[LSRange[0]]
-                    AvL1Prescales = self.CalculateAvL1Prescales([LSRange[0]])
+                    ##print "zero ",LSRange[0], self.PSColumnByLS[LS]
+                    AvL1Prescales = self.CalculateAvL1Prescales([LS])
                     l1ps = self.UnwindORSeed(self.HLTSeed[name],AvL1Prescales)
                     #l1ps = 1
                     #print "L1IndexNameMap has no key for "+str(self.HLTSeed[name])
@@ -193,7 +198,10 @@ class DatabaseParser:
                 #    ps = 1
                 psrate = ps*rate
                 TriggerRates[name]= [ps,rate,psrate,1]
+                LSUsed[LS]=True
+                
             else:
+                
                 [ops,orate,opsrate,on] = TriggerRates[name]
                 try:
                     psi = self.PSColumnByLS[LSRange[on]]
@@ -203,7 +211,7 @@ class DatabaseParser:
                 except:
                     print "HLT out: Cannot figure out PSI for index "+str(on)+" setting to 0"
                     print "The value of LSRange[on] is:"
-                    print str(LSRange[on])
+                    print str(LS)
                     psi = 0
                 if psi is None:
                     psi=0
@@ -211,7 +219,7 @@ class DatabaseParser:
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
                     ##print "on ",
-                    AvL1Prescales = self.CalculateAvL1Prescales([LSRange[on]])
+                    AvL1Prescales = self.CalculateAvL1Prescales([LS])
                     l1ps = self.UnwindORSeed(self.HLTSeed[name],AvL1Prescales)
                     #l1ps = 1
                     #print "L1IndexNameMap has no key for "+str(self.HLTSeed[name])
@@ -221,8 +229,28 @@ class DatabaseParser:
                     ##print "Oops! somehow ps for "+str(name)+" = "+str(ps)+", where L1 PS = "+str(l1ps)+" and HLT PS = "+str(hltps)
                 #    ps = 1
                 psrate = ps*rate
-                TriggerRates[name]= [ops+ps,orate+rate,opsrate+psrate,on+1]                
-       
+                TriggerRates[name]= [ops+ps,orate+rate,opsrate+psrate,on+1]
+                LSUsed[LS]=True
+                
+                    
+        
+        
+        ###check if LS is used above, if not and deadtime is 100% add extra lumi for calculation
+        lumirange_one=[]
+        for key in LSUsed.iterkeys():
+            lumirange_one=[key]##set LSRange equal to one LS so can get deadtime
+            if LSUsed[key]:
+                continue
+            if self.GetDeadTimeBeamActive(lumirange_one)<=0.9999:
+                ##print "LS",key,"gottcha", LSUsed[key]
+                LSUsed[key]=True
+                print "Some strange error LS",key, "has deadtime ", self.GetDeadTimeBeamActive(lumirange_one)
+            else:
+                print "increasing # LS by one, LS", key, "has 100% deadtime"
+                for name,val in TriggerRates.iteritems():
+                    [ops,orate,opsrate,on] = TriggerRates[name]
+                    TriggerRates[name]= [ops,orate,opsrate,on+1]
+                    
         for name,val in TriggerRates.iteritems():
             [ps,rate,psrate,n] = val
             avps = ps/n
@@ -233,8 +261,8 @@ class DatabaseParser:
                 ps = avps
                 
             TriggerRates[name] = [avps,ps,rate/n,psrate/n]
-            
-               
+        
+        
         return TriggerRates
 
     def GetTriggerRatesByLS(self,triggerName):
