@@ -38,6 +38,7 @@ def usage():
     print "--PrintLumi                          Prints Instantaneous, Delivered, and Live lumi by LS for the run"
     print "--RefRun=<Run #>                     Specifies <Run #> as the reference run to use (Default in defaults.cfg)"
     print "--ShowPSTriggers                     Show prescaled triggers in rate comparison"
+    print "--sortBy=<field>                     Sort the triggers by field.  Valid fields are: name, rate, rateDiff"
     print "--force                              Override the check for collisions run"
     print "--help                               Print this help"
 
@@ -51,7 +52,7 @@ def main():
     try:
         opt, args = getopt.getopt(sys.argv[1:],"",["AllowedDiff=","CompareRun=","FindL1Zeros",\
                                                    "FirstLS=","NumberLS=","IgnoreLowRate=","ListIgnoredPaths",\
-                                                   "PrintLumi","RefRun=","ShowPSTriggers","force","help"])
+                                                   "PrintLumi","RefRun=","ShowPSTriggers","force","sortBy=","help"])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -76,7 +77,9 @@ def main():
     RefRunNum         = int(Config.ReferenceRun)
     ShowPSTriggers    = True
     Force             = False
+    SortBy            = ""
 
+    ShifterMode       = int(Config.ShifterMode) # get this from the config, but can be overridden by other options
     
    ##  if int(Config.ShifterMode):
 ##         print "ShifterMode!!"
@@ -88,25 +91,30 @@ def main():
 
     for o,a in opt: # get options passed on the command line
         if o=="--AllowedDiff":
-            AllowedRateDiff = float(a)/100.0
+            AllowedRateDiff = float(a)
         elif o=="--CompareRun":
             CompareRunNum=int(a)
+            ShifterMode = False
         elif o=="--FindL1Zeros":
             FindL1Zeros = True
         elif o=="--FirstLS":
             FirstLS = int(a)
+            ShifterMode = False
         elif o=="--NumberLS":
             NumLS = int(a)
         elif o=="--IgnoreLowRate":
             IgnoreThreshold = float(a)
         elif o=="--ListIgnoredPaths":
             ListIgnoredPaths=True
+            ShifterMode = False
         elif o=="--PrintLumi":
             PrintLumi = True
         elif o=="--RefRun":
             RefRunNum=int(a)
         elif o=="--ShowPSTriggers":
             ShowPSTriggers=True
+        elif o=="--sortBy":
+            SortBy = a
         elif o=="--force":
             Force = True
         elif o=="--help":
@@ -262,12 +270,12 @@ def main():
                     MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                 else:
                     if (len(HeadLumiRange)>0):
-                        RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths)
+                        RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy)
                         if FindL1Zeros:
                             CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
                     else:
                         print "No lumisections that are taking physics data"
-            if int(Config.ShifterMode):
+            if ShifterMode:
                 #print "Shifter Mode. Continuing"
                 pass
             else:
@@ -359,8 +367,7 @@ def main():
         print "Quitting. Peace Out."
 
             
-def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths):
-
+def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy):
     Header = ["Trigger Name","Actual","Expected","% Inc","Cur PS","Comments"]
     Data   = []
     Warn   = []
@@ -409,28 +416,15 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         HeadNameNoV=StripVersion(HeadName)
     
                           
-        
-##  SKIP triggers in the skip list
-##         if not HeadTotalPrescales.has_key(HeadName): ## for whatever reason we have no prescale here, so skip (calibration paths)
-##             continue
-##         if not HeadTotalPrescales[HeadName]: ## prescale is thought to be 0
-##             continue
-        
-## unless we are Listing Ignored paths only look at triggers in the .list file specifed in defaults.cfg
-
-        #if StripVersion(HeadName) not in Config.MonitorList and not ListIgnoredPaths:
-
-        #print "MonitorList=",Config.MonitorList
-        #print HeadName
         if Config.NoVersion:
             if HeadNameNoV not in trig_list and not ListIgnoredPaths:
                 continue
-            if HeadNameNoV not in FitInput.keys():
+            if HeadNameNoV not in FitInput.keys() and not ListIgnoredPaths:
                 continue
         else:       
             if HeadName not in trig_list and not ListIgnoredPaths:
                 continue
-            if HeadName not in FitInput.keys():
+            if HeadName not in FitInput.keys() and not ListIgnoredPaths:
                 continue
         
         ##masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
@@ -451,25 +445,19 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive)
             
 
-            if PSCorrectedExpectedRate[0] < 0:  ##This means we don't have a prediction for this trigger
-                continue
+            #if PSCorrectedExpectedRate[0] < 0:  ##This means we don't have a prediction for this trigger
+            #    continue
             try:
                 ExpectedRate = round((PSCorrectedExpectedRate[0] / HeadUnprescaledRates[HeadName][1]),2)
             except:
                 ExpectedRate=0.
-                print "No rate for ", HeadName
+                #print "No rate for ", HeadName
 
             PerDiff=0
             if ExpectedRate>0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
-                if abs(PerDiff) > max(AllowedRateDiff/max(sqrt(TriggerRate),sqrt(ExpectedRate)),AllowedRateDiff/2.0):
-                    Warn.append(True)
-                else:
-                    Warn.append(False)
-            else:
-                Warn.append(False)
 
-            if TriggerRate < IgnoreThreshold and ExpectedRate < IgnoreThreshold:
+            if TriggerRate < IgnoreThreshold and (ExpectedRate < IgnoreThreshold and ExpectedRate!=0):
                 continue
 
             VC = ""
@@ -508,15 +496,31 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
             if TriggerRate < IgnoreThreshold and ScaledRefRate < IgnoreThreshold:
                 continue
 
-            if abs(PerDiff) > AllowedRateDiff:
-                Warn.append(True)
-            else:
-                Warn.append(False)
             VC = ""
             Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,round((HeadUnprescaledRates[HeadName][1]),1),VC])
 
-    
-    PrettyPrintTable(Header,Data,[80,10,10,10,10,20],Warn)
+    SortedData = []
+    if SortBy == "":
+        SortedData = Data # don't do any sorting
+    elif SortBy == "name":
+        SortedData=sorted(Data, key=lambda entry: entry[0])
+    elif SortBy == "rate":
+        SortedData=sorted(Data, key=lambda entry: entry[1],reverse=True)
+    elif SortBy == "rateDiff":
+        SortedData=sorted(Data, key=lambda entry: abs(entry[3]),reverse=True)
+    else:
+        print "Invalid sorting option %s\n"%SortBy
+        SortedData = Data
+
+    #check for triggers above the warning threshold
+    Warn=[]
+    for entry in SortedData:
+        if abs(entry[3]) > AllowedRateDiff:
+            Warn.append(True)
+        else:
+            Warn.append(False)
+
+    PrettyPrintTable(Header,SortedData,[80,10,10,10,10,20],Warn)
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config)
 

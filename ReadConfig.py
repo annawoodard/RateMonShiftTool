@@ -132,8 +132,8 @@ class RateMonConfig:
         if self.NoVersion:
             TrigName=StripVersion(TrigName)
         if TrigName not in Input.keys():
-            print TrigName,"NOT IN"
-            
+            return 0
+        
         try:
             Chi2 = Input[TrigName][5]
             if Input[TrigName][0] == "poly":
