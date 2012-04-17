@@ -63,7 +63,10 @@ def main():
         if o=="--ConfigFile":
             Config.CFGfile=a
     Config.ReadCFG()
-    
+
+
+    if "NoV" in Config.FitFileName:
+        Config.NoVersion=True
     print "NoVersion=",Config.NoVersion
 
     AllowedRateDiff   = Config.DefAllowRateDiff
@@ -526,7 +529,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     SortedData = []
     if SortBy == "":
         SortedData = Data # don't do any sorting
-        if RefRunParser>0:
+        if RefParser.RunNumber>0:
             SortedData=sorted(Data, key=lambda entry: abs(entry[3]),reverse=True) 
     elif SortBy == "name":
         SortedData=sorted(Data, key=lambda entry: entry[0])

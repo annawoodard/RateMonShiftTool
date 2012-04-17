@@ -215,13 +215,17 @@ def main():
         ##usage()
         ##sys.exit(0)
         elif fitFile=="":
+            NoVstr=""
+            if NoVersion:
+                NoVstr="NoV_"
             if not do_inst:
-                fitFile="Fits/%s/Fit_HLT_10LS_Run%sto%s.pkl" % (thisyear,min(run_list),max(run_list))
+                fitFile="Fits/%s/Fit_HLT_%s10LS_Run%sto%s.pkl" % (thisyear,NoVstr,min(run_list),max(run_list))
             else:
-                fitFile="Fits/%s/Fit_inst_HLT_10LS_Run%sto%s.pkl" % (thisyear,min(run_list),max(run_list))
+                fitFile="Fits/%s/Fit_inst_HLT_%s10LS_Run%sto%s.pkl" % (thisyear,NoVstr,min(run_list),max(run_list))
             
-
-        print "fitFile=",fitFile
+        if "NoV" in fitFile:
+            NoVersion=True
+        
 
 ###### TRIGGER LIST #######
         
