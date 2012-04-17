@@ -16,7 +16,7 @@ from math import *
 WBMPageTemplate = "http://cmswbm/cmsdb/servlet/RunSummary?RUN=%s&DB=cms_omds_lb"
 WBMRunInfoPage = "https://cmswbm/cmsdb/runSummary/RunSummary_1.html"
 
-RefRunNameTemplate = "RefRuns/Run_%s.pk"
+RefRunNameTemplate = "RefRuns/%s/Run_%s.pk"
 
 # define a function that clears the terminal screen
 def clear():
@@ -126,8 +126,8 @@ def main():
 
         
     RefLumisExists = False
-
     """
+    RefRunFile=RefRunNameTemplate % str(RefRunNum)
     if RefRunNum > 0:
         RefRates = {}
         for Iterator in range(1,100):
@@ -164,23 +164,26 @@ def main():
                 LastSuccessfulIterator = Iterator
             except:
                 print "Failed to get rates from LS "+str(Iterator*10)+" to "+str((Iterator+1)*10)
+    
     """
-
-    RefRunFile = RefRunNameTemplate % RefRunNum
+    RefRunFile = RefRunNameTemplate % (thisyear,RefRunNum)
     RefParser = DatabaseParser()
     ##print "Reference Run: "+str(RefRunNum)
     if RefRunNum > 0:
+        print "Geting RefRunFile",RefRunFile
         if not os.path.exists(RefRunFile[:RefRunFile.rfind('/')]):  # folder for ref run file must exist
             print "Reference run folder does not exist, please create" # should probably create programmatically, but for now force user to create
             print RefRunFile[:RefRunFile.rfind('/')]
             sys.exit(0)
-            
+            s
             return
         if not os.path.exists(RefRunFile):
+            print "RefRunFile does not exist"
             # create the reference run file
             try:
                 RefParser.RunNumber = RefRunNum
                 RefParser.ParseRunSetup()
+                print "RefParser is setup"
                 #RefParser.GetAllTriggerRatesByLS()
                 #RefParser.Save( RefRunFile )
             except e:
@@ -395,6 +398,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         pkl_file.close()
     except:
         RefRatesInput={}
+        print "Didn't open ref file"
 
 
     trig_list=Config.MonitorList
@@ -414,18 +418,25 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     for HeadName in HeadUnprescaledRates:
         
         HeadNameNoV=StripVersion(HeadName)
-    
-                          
-        if Config.NoVersion:
-            if HeadNameNoV not in trig_list and not ListIgnoredPaths:
+        
+        if RefParser.RunNumber == 0:  ##  If not ref run then just use trigger list           
+            if Config.NoVersion:
+                if HeadNameNoV not in trig_list and not ListIgnoredPaths:
+                    continue
+                if HeadNameNoV not in FitInput.keys() and not ListIgnoredPaths:
+                    continue
+            else:       
+                if HeadName not in trig_list and not ListIgnoredPaths:
+                    continue
+                if HeadName not in FitInput.keys() and not ListIgnoredPaths:
+                    continue
+        else:
+            if HeadUnprescaledRates[HeadName][2]<0.5:
                 continue
-            if HeadNameNoV not in FitInput.keys() and not ListIgnoredPaths:
-                continue
-        else:       
-            if HeadName not in trig_list and not ListIgnoredPaths:
-                continue
-            if HeadName not in FitInput.keys() and not ListIgnoredPaths:
-                continue
+            
+            ##if HeadUnprescaledRates[HeadName][0]>1.9:
+            ##    continue
+            
         
         ##masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_L2", "HLT_Zero"]
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
@@ -467,27 +478,40 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         else:  ## Use a reference run
             ## cheap trick to only get triggers in list when in shifter mode
             #print "shifter mode=",int(Config.ShifterMode)
-            print "REfRun!!!"
-            if int(Config.ShifterMode)==1:
-                if not HeadParser.AvgL1Prescales[HeadParser.HLTSeed[HeadName]]==1:
-                    continue
+            
+
+            
+           
+            ##if not HeadParser.AvgL1Prescales[HeadParser.HLTSeed[HeadName]]==1:
+            ##    continue
             
             RefInstLumi = 0
             RefIterator = 0
 
             RefStartIndex = ClosestIndex(HeadAvInstLumi,RefParser.GetAvLumiPerRange())
+            
             RefLen   = -10
-
-            ##[RefUnprescaledRates, RefTotalPrescales, RefL1Prescales, RefTriggerRates] = RefParser.UpdateRun(RefParser.GetLSRange(RefStartIndex,RefLen))
+            
+            
             RefUnprescaledRates = RefParser.UpdateRun(RefParser.GetLSRange(RefStartIndex,RefLen))
             [RefAvInstLumi,RefAvLiveLumi,RefAvDeliveredLumi,RefAvDeadTime,RefPSCols] = RefParser.GetAvLumiInfo(RefParser.GetLSRange(RefStartIndex,RefLen))
+            deadtimebeamactive=RefParser.GetDeadTimeBeamActive(RefParser.GetLSRange(RefStartIndex,RefLen))
+            
             RefRate = -1
             for k,v in RefUnprescaledRates.iteritems():
                 #if StripVersion(HeadName) == StripVersion(k): # versions may not match
-                RefRate = v
-
-            ScaledRefRate = round( RefRate*HeadAvLiveLumi/RefAvLiveLumi/(HeadUnprescaledRates[HeadName][1]), 2  )
-
+                if HeadName==k:
+                    RefRate = RefUnprescaledRates[k][2]
+                    
+            try:
+                ScaledRefRate = round( (RefRate*HeadAvLiveLumi/RefAvLiveLumi*(1-deadtimebeamactive)), 2  )
+                
+            except ZeroDivisionError:
+                ScaledRefRate=0
+                
+            
+        
+            ##print HeadName,"ScaledRefRate=",ScaledRefRate
             if ScaledRefRate == 0:
                 PerDiff = 100
             else:
@@ -502,6 +526,8 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
     SortedData = []
     if SortBy == "":
         SortedData = Data # don't do any sorting
+        if RefRunParser>0:
+            SortedData=sorted(Data, key=lambda entry: abs(entry[3]),reverse=True) 
     elif SortBy == "name":
         SortedData=sorted(Data, key=lambda entry: entry[0])
     elif SortBy == "rate":
