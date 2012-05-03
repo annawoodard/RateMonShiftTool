@@ -26,6 +26,7 @@ class RateMonConfig:
         self.ShifterMode=0
         self.NoVersion=0
         self.MaxExpressRate=999
+        self.ForbiddenCols=[]
 
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -82,6 +83,13 @@ class RateMonConfig:
                     #self.MonitorIntercept.append(float(line[1]))
                     #self.MonitorSlope.append(float(line[2]))
                     #self.MonitorQuad.append(float(line[3]))
+            elif par=="ForbiddenColumns":
+                tmp=arg.split(',')
+                for line in tmp:
+                    try:
+                        self.ForbiddenCols.append(int(line))
+                    except:
+                        print "Cannot parse Forbidden Cols parameter"
             elif par=="L1CrossSection":
                 self.L1Predictions = self.ReadList(arg)
             elif par == "MonitorOnlyListed":

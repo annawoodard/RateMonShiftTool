@@ -157,9 +157,10 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
             write(bcolors.OKBLUE)
         write(str(round(deadtimebeamactive,2))+"%")
         write(bcolors.ENDC+"\n")
-
-    print "Used prescale column(s): "+str(PrescaleColumnString)    
-    write("Lumisections: ")
+    write("Used prescale column(s): %s  " % (str(PrescaleColumnString),) )
+    if LastPSCol in config.ForbiddenCols and isCol:
+        write( colored("<< Using column %d! Please check in the documentation that this is the correct column" % (LastPSCol),'red',attrs=['reverse']) )
+    write("\nLumisections: ")
     if not isSequential(LumiRange):
         write(str(LumiRange)+"   Lumisections are not sequential (bad LS skipped)\n")
     else:
