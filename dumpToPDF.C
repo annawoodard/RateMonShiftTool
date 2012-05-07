@@ -3,26 +3,52 @@
 //Usage: root -b -l -q 'dumpToPDF.C("infile.root")'  
 
 void
-dumpToPDF(string inName){
+dumpToPDF(string inName, string fitName){
   TFile *fin = TFile::Open(inName.c_str(), "read"); assert(fin);
+
 
   string outName = inName;
   outName.replace(outName.find(".root"), 5, ".pdf");
+
+  //fitName = "HLT_10LS_delivered_vs_rate_Run190949-191090.root";
+  TFile *fFit = TFile::Open(fitName.c_str(), "read"); assert(fFit);
 
   TCanvas c1;
   c1.Print(Form("%s[", outName.c_str()), "pdf"); //Open .pdf
 
   //get list of keys
   int nplots = fin->GetNkeys(); 
-  TList* plots = fin->GetListOfKeys();
+  int nfits = fFit->GetNkeys(); 
+  printf("nplots: %i, nfits: %i\n", nplots, nfits);
+  assert(nplots == nfits);
+  TList* plots = fin->GetListOfKeys();  
+  TList* fits  = fFit->GetListOfKeys();
   for(int i=0; i<nplots; ++i){
-    TKey* key = (TKey*) plots->At(i);
-    if(!fin->GetKey(key->GetName())){
-      cout<<"Didn't find "<<key<<". Removing."<<endl;
+    TKey* plot = (TKey*) plots->At(i);
+    TKey* fit = (TKey*) fits->At(i);//assume they're in the same order for now
+
+    if(!fin->GetKey(plot->GetName())){
+      cout<<"Didn't find "<<plot<<". Removing."<<endl;
+      abort();
     }
-    TCanvas* c = (TCanvas*) fin->Get(key->GetName());
+    if(!fFit->GetKey(fit->GetName())){
+      cout<<"Didn't find "<<fit<<". Removing."<<endl;
+      abort();
+    }
+    TCanvas* c = new TCanvas();
+    c->Divide(1,2);
+
+    TCanvas* cPlot = (TCanvas*) fin->Get(plot->GetName());
+    c->cd(1);
+    cPlot->DrawClonePad();
+
+    TCanvas* cFit  = (TCanvas*) fFit->Get(fit->GetName());
+    c->cd(2);
+    cFit->DrawClonePad();
+
     string bookmarkName = "Title: ";
-    bookmarkName += key->GetName();
+    bookmarkName += plot->GetName();
+
     c->Print(outName.c_str(), bookmarkName.c_str());
   }
 
