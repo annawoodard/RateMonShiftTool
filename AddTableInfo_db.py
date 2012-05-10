@@ -37,8 +37,10 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     else:
         if len(parser.GetTriggerRatesByLS("AOutput"))>0:
             aRates = parser.GetTriggerRatesByLS("AOutput")
+            bRates = parser.GetTriggerRatesByLS("BOutput")
         else:
             aRates = parser.GetTriggerRatesByLS("AForPPOutput")
+            bRates = parser.GetTriggerRatesByLS("BForPPOutput")
             
     
     expressRates = {}
