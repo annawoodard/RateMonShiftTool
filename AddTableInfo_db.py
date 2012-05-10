@@ -26,6 +26,14 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     if isCol:
         
         aRates = parser.GetTriggerRatesByLS("AOutput")
+        bRates = parser.GetTriggerRatesByLS("BOutput")
+        if len(bRates) == 0:
+            realARates = aRates
+        else:
+            realARates={}
+            for k,v in bRates.iteritems():
+                realARates[k]=aRates[k]-bRates[k]
+                #realARates = aRates - bRates*20;
     else:
         if len(parser.GetTriggerRatesByLS("AOutput"))>0:
             aRates = parser.GetTriggerRatesByLS("AOutput")
@@ -49,6 +57,10 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     PeakRateA=0
     AvgRateA=0
     
+    realARate=0
+    realPeakRateA=0
+    realAvgRateA=0
+    
     if len(expressRates.values()) > 20:
         AvgExpRate = sum(expressRates.values())/len(expressRates.values())
 
@@ -62,7 +74,11 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         ARate+=thisRateA
         if thisRateA>PeakRateA:
             PeakRateA=thisRateA
-        
+
+        thisRealRateA = aRates.get(ls,0) - bRates.get(ls,0)
+        realARate+=thisRealRateA
+        if thisRealRateA > realPeakRateA:
+            realReakRateA = thisRealRateA
         #ARate+=aRates.get(ls,0)
     ## Print Stream A Rate --moved see below
     ##print "Current Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
@@ -103,19 +119,23 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     ##Check if Stream A is too high
     #########################################
     global NHighStreamA
-    badStreamA =ARate/len(LumiRange) > config.MaxStreamARate ##Cosmics Express Rate 300 Hz max
+    badStreamA =realARate/len(LumiRange) > config.MaxStreamARate ##Cosmics Express Rate 300 Hz max
     baseTextA= "\nCurrent Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
+    baseTextRealA= "\nCurrent PROMPT Steam A Rate is: %0.1f Hz" % (realARate/len(LumiRange),)
     if badStreamA:
         textA=colored(baseTextA,'red',attrs=['reverse'])  ## bad, make the text white on red
+        textRealA=colored(baseTextRealA,'red',attrs=['reverse'])  ## bad, make the text white on red
         NHighStreamA+=1
     else:
         textA=baseTextA
+        textRealA=baseTextRealA
         NHighStreamA=0
 
     write(textA)
+    write(textRealA)
     if badStreamA:
         if len(LumiRange)>1:
-            if (ARate-PeakRateA)/(len(LumiRange)-1) <=config.MaxStreamARate: ## one lumisection causes this
+            if (realARate-realPeakRateA)/(len(LumiRange)-1) <=config.MaxStreamARate: ## one lumisection causes this
                 write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
             else:
                 if NHighStreamA >1: ##Call HLT doc!
