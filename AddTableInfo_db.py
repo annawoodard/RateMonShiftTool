@@ -32,7 +32,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         else:
             realARates={}
             for k,v in bRates.iteritems():
-                realARates[k]=aRates[k]-bRates[k]
+                realARates[k]=aRates[k]-bRates[k]*20
                 #realARates = aRates - bRates*20;
     else:
         if len(parser.GetTriggerRatesByLS("AOutput"))>0:
@@ -77,7 +77,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         if thisRateA>PeakRateA:
             PeakRateA=thisRateA
 
-        thisRealRateA = aRates.get(ls,0) - bRates.get(ls,0)
+        thisRealRateA = aRates.get(ls,0) - bRates.get(ls,0)*20
         realARate+=thisRealRateA
         if thisRealRateA > realPeakRateA:
             realReakRateA = thisRealRateA

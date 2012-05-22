@@ -1070,10 +1070,8 @@ def GetLatestRunNumber(runNo=9999999,newRun=False):
     try:
         if trigm is None:
             isGood=0
-            
         elif trigm.find('l1_hlt_collisions')!=-1:
             isCol=1
-        
     except:
         isGood=0
     return (r,isCol,isGood,)

@@ -12,6 +12,7 @@ def usage():
     print "--TriggerList=<path>"
     print "--NColBunches=<# colliding bunches>"
     print "--NoVersion   Exclude version number"
+    print "--Lumi luminosity of estimations"
 
 def main():
     print "making TMD pkl fit files"
@@ -26,7 +27,7 @@ def main():
 
 #######################################
     try:
-        opt, args = getopt.getopt(sys.argv[1:],"",["NColBunches=","NoVersion","TriggerList="])
+        opt, args = getopt.getopt(sys.argv[1:],"",["NColBunches=","NoVersion","Lumi=","TriggerList="])
             
     except getopt.GetoptError, err:
         print str(err)
@@ -36,6 +37,7 @@ def main():
     trig_list=[]
     fit_list={}
     NoVersion=False
+    lumi=5000
     
     for o,a in opt:
         if o == "--NColBunches":
@@ -44,6 +46,9 @@ def main():
             bunfrac=float(ncolbunch)/float(ntotbunch)
         elif o == "--NoVersion":
             NoVersion=True
+        elif o == "--Lumi":
+            lumi=float(a)
+            
     for o,a in opt:
         if o == "--TriggerList":
             try:
@@ -63,11 +68,11 @@ def main():
                         ##trig_list.append([split[0],split[1],split[2],split[3]])
                         if not NoVersion:
                             trig_list.append(split[0])
-                            fit_list[split[0]]=[0.,float(split[1])/5000.,float(split[2])]
+                            fit_list[split[0]]=[0.,float(split[1])/lumi,float(split[2])]
                             
                         else:
                             trig_list.append(StripVersion(split[0]))
-                            fit_list[StripVersion(split[0])]=[0.,float(split[1])/5000.,float(split[2])]
+                            fit_list[StripVersion(split[0])]=[0.,float(split[1])/lumi,float(split[2])]
                             
                             
 
@@ -86,6 +91,8 @@ def main():
             bunfrac=float(ncolbunch)/float(ntotbunch)
         elif o == "--NoVersion":
             NoVersion=True
+        elif o == "--Lumi":
+            lumi=float(a)
         else:
             print "\nInvalid Option %s\n" % (str(o),)
             usage()
@@ -113,10 +120,10 @@ def main():
     ############# fIT FILE NAME ###########
 
     if not NoVersion:
-        fit_file="fits_TMD_ncolbunch%s.pkl"
+        fit_file="fits_TMD_ncolbunch%s_lumi%s.pkl"
     else:
-        fit_file="fits_TMD_ncolbunch%s_noV.pkl"
-    fit_file = fit_file % (ncolbunch)
+        fit_file="fits_TMD_ncolbunch%s_noV_lumi%s.pkl"
+    fit_file = fit_file % (ncolbunch,lumi)
     
     if os.path.exists(fit_file):
             os.remove(fit_file)

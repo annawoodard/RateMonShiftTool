@@ -231,14 +231,16 @@ def main():
         HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
         LastGoodLS=HeadParser.GetLastLS(isCol)
         CurrRun=CompareRunNum
+        print "done good"
     except:
+        print "exception"
         HeadLumiRange=[]
         LastGoodLS=-1
         CurrRun=CompareRunNum
         isGood=0
         
     if len(HeadLumiRange) is 0:
-        print "No lumisections that are taking physics data"
+        print "No lumisections that are taking physics data 0"
         HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,False)
         if len(HeadLumiRange)>0:
             isGood=1
@@ -280,7 +282,7 @@ def main():
                         if FindL1Zeros:
                             CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
                     else:
-                        print "No lumisections that are taking physics data"
+                        print "No lumisections that are taking physics data 1"
             if ShifterMode:
                 #print "Shifter Mode. Continuing"
                 pass
@@ -322,7 +324,7 @@ def main():
                     HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)    
                     if len(HeadLumiRange) is 0:
                         HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,False)
-                        print "No lumisections that are taking physics data"
+                        print "No lumisections that are taking physics data 2"
                         if len(HeadLumiRange)>0:
                             isGood=1
                             isCol=0
