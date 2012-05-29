@@ -928,51 +928,50 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         if do_fit:
             if "rate" in varY and not linear:
                 
+                f1a=0
                 f1a = TF1("f1a","pol2",0,8000)
                 f1a.SetLineColor(4)
                 f1a.SetLineWidth(2)
-                f1a.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
-                
-                f1a.SetParLimits(1,0,2.0*max(VY)/(max(VX)*max(VX)))
-                #gr1.Fit("f1a","B","Q")
+                #f1a.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
+                #f1a.SetParLimits(1,0,2.0*max(VY)/(max(VX)*max(VX)))
                 gr1.Fit("f1a","Q","rob=0.90")
-
+                
                 
                 
                 f1b = 0
                 f1c = 0
-                if True:
-                    f1b = TF1("f1b","pol3",0,8000)
-                    f1b.SetLineColor(2)
-                    f1b.SetLineWidth(2)
-                    f1b.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
-                    f1b.SetParLimits(1,0,f1a.GetParameter(1)+0.0000001)
-                    f1b.SetParLimits(2,0,f1a.GetParameter(2)+0.0000000001)
-                    f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX)))
-                    gr1.Fit("f1b","Q","rob=0.90")
-                    #if f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
-                    #print "X0 = "+str(f1a.GetParameter(0))+" X1 = "+str(f1a.GetParameter(1))+" X2 = "+str(f1a.GetParameter(2))
-                    #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1b Chi2 = "+str(10*f1b.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1b.GetNDF()))
-                    #print "X0 = "+str(f1b.GetParameter(0))+" X1 = "+str(f1b.GetParameter(1))+" X2 = "+str(f1b.GetParameter(2))+" X3 = "+str(f1b.GetParameter(3))
-                    if (first_trigger):
-                        print '%-60s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
+                ## if True:
+##                     f1b = TF1("f1b","pol3",0,8000)
+##                     f1b.SetLineColor(2)
+##                     f1b.SetLineWidth(2)
+##                     f1b.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
+##                     f1b.SetParLimits(1,0,f1a.GetParameter(1)+0.0000001)
+##                     f1b.SetParLimits(2,0,f1a.GetParameter(2)+0.0000000001)
+##                     f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX)))
+##                     gr1.Fit("f1b","Q","rob=0.90")
+##                     #if f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
+##                     #print "X0 = "+str(f1a.GetParameter(0))+" X1 = "+str(f1a.GetParameter(1))+" X2 = "+str(f1a.GetParameter(2))
+##                     #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1b Chi2 = "+str(10*f1b.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1b.GetNDF()))
+##                     #print "X0 = "+str(f1b.GetParameter(0))+" X1 = "+str(f1b.GetParameter(1))+" X2 = "+str(f1b.GetParameter(2))+" X3 = "+str(f1b.GetParameter(3))
+##                     if (first_trigger):
+##                         print '%-60s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
                         
-                        first_trigger=False
+##                         first_trigger=False
                     
                     
                     
-                    f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
-                    f1c.SetLineColor(3)
-                    f1c.SetLineWidth(2)
-                    f1c.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
-                    f1c.SetParLimits(1,max(VY)/math.exp(10.0),max(VY)/math.exp(2.0))
-                    f1c.SetParLimits(2,0.0,0.0000000001)
-                    f1c.SetParLimits(3,2.0/max(VX),10.0/max(VX))
-                    #print str(max(VY)/math.exp(2.0))+"  "+str(10.0/max(VX))
-                    gr1.Fit("f1c","Q","rob=0.90")
-                    #if f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
-                    #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1c Chi2 = "+str(10*f1c.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1c.GetNDF()))
-                    #print "X0 = "+str(f1c.GetParameter(0))+" X1 = "+str(f1c.GetParameter(1))+" X2 = "+str(f1c.GetParameter(2))+" X3 = "+str(f1c.GetParameter(3))
+##                     f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
+##                     f1c.SetLineColor(3)
+##                     f1c.SetLineWidth(2)
+##                     f1c.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
+##                     f1c.SetParLimits(1,max(VY)/math.exp(10.0),max(VY)/math.exp(2.0))
+##                     f1c.SetParLimits(2,0.0,0.0000000001)
+##                     f1c.SetParLimits(3,2.0/max(VX),10.0/max(VX))
+##                     #print str(max(VY)/math.exp(2.0))+"  "+str(10.0/max(VX))
+##                     gr1.Fit("f1c","Q","rob=0.90")
+##                     #if f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
+##                     #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1c Chi2 = "+str(10*f1c.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1c.GetNDF()))
+##                     #print "X0 = "+str(f1c.GetParameter(0))+" X1 = "+str(f1c.GetParameter(1))+" X2 = "+str(f1c.GetParameter(2))+" X3 = "+str(f1c.GetParameter(3))
                     
                     
                     
@@ -983,13 +982,12 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 ##                     elif (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
 ##                         print '%-60s cube % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParError(0), f1b.GetParameter(1), f1b.GetParError(1), f1b.GetParameter(2), f1b.GetParError(2), f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
 ##                     else:
+
+                
+                
+                print '%-60s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())
                     
-                    try:
-                        print '%-60s quad % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
-                    except:
-                        pass
-                        
-                        
+                                            
 
                     
             else: ##If this is not a rate plot
@@ -1049,7 +1047,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             ##else:
             try:
                 
-                OutputFit[print_trigger] = ["poly", f1a.GetParameter(0), f1a.GetParameter(1), f1a.GetParameter(2), 0.0, f1a.GetChisquare()/f1a.GetNDF(), meanrawrate, f1a.GetParError(0), f1a.GetParError(1), f1a.GetParError(2), 0.0]
+                OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , f1a.GetChisquare()/f1a.GetNDF() , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
+                
             except ZeroDivisionError:
                 print "No NDF for",print_trigger,"skipping"
             

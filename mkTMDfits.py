@@ -118,12 +118,12 @@ def main():
         print "trig=",keys, "fit pars=",fit_list_fortrig
 
     ############# fIT FILE NAME ###########
-
+    lumiint=int(lumi)
     if not NoVersion:
         fit_file="fits_TMD_ncolbunch%s_lumi%s.pkl"
     else:
         fit_file="fits_TMD_ncolbunch%s_noV_lumi%s.pkl"
-    fit_file = fit_file % (ncolbunch,lumi)
+    fit_file = fit_file % (ncolbunch,lumiint)
     
     if os.path.exists(fit_file):
             os.remove(fit_file)
