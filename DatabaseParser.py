@@ -1003,6 +1003,7 @@ def ConnectDB(user='trg'):
     connect = 'cms_%s_r/%s@cms_omds_lb' % (user,magic,)
     orcl = cx_Oracle.connect(connect)
     return orcl.cursor()
+    
 
 def GetLatestRunNumber(runNo=9999999,newRun=False):
     
@@ -1036,7 +1037,7 @@ def GetLatestRunNumber(runNo=9999999,newRun=False):
 ##             print "not able to get ra"
 
 
-##         RunNoQuery="""SELECT MAX(RUNNUMBER) FROM CMS_WBM.RUNSUMMARY WHERE TRIGGERS>0"""
+##         RunNoQuery="""SELECT TIER0_TRANSFER FROM CMS_WBM.RUNSUMMARY WHERE TRIGGERS>0 AND RUNUMBER=MAX(RUNNUMBER)"""
 ##         try:
 ##             curs.execute(RunNoQuery)
 ##             rb, = curs.fetchone()
@@ -1066,6 +1067,18 @@ def GetLatestRunNumber(runNo=9999999,newRun=False):
         print "unable to get trigm from query for run ",r
     isCol=0
     isGood=1
+
+    Tier0xferQuery = """
+    SELECT TIER0_TRANSFER TIER0 FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
+    """ % r
+    curs.execute(Tier0xferQuery)
+    try:
+        tier0, = curs.fetchone()
+        print "tier0 transfer=",tier0
+    except:
+        print "unable to get tier0 from query for run ",r
+
+
     
     try:
         if trigm is None:
