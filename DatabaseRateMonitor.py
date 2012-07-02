@@ -454,7 +454,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 
         skipTrig=False
         TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
-        
+        print HeadName
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
            
             
@@ -470,13 +470,21 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
                 #print "No rate for ", HeadName
 
             PerDiff=0
+            VC = ""
             if ExpectedRate>0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
+                print HeadName, "PerDiff=", PerDiff
+            else:
+                PerDiff=-999.
+                if ExpectedRate==0:
+                    VC="0 expected rate"
+                else:
+                    VC="lt 0 expected rate"
 
             if TriggerRate < IgnoreThreshold and (ExpectedRate < IgnoreThreshold and ExpectedRate!=0):
                 continue
 
-            VC = ""
+            
             
             Data.append([HeadName,TriggerRate,ExpectedRate,PerDiff,round(HeadUnprescaledRates[HeadName][1],1),VC]) 
 
