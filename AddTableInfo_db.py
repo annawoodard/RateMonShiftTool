@@ -88,10 +88,10 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     Warn = False
 
     ##########################################
-    ## Check if the express stream is too high
+    ## Check if the express stream is too high or low
     ##########################################
     global NHighExpress
-    badExpress = ExpRate/len(LumiRange) > config.MaxExpressRate ## avg express stream rate too high?
+    badExpress = ((ExpRate/len(LumiRange) > config.MaxExpressRate) or ExpRate<0.1) ## avg express stream rate too high?
     baseText = "\nCurrent Express Stream rate is: %0.1f Hz" % (ExpRate/len(LumiRange),) ## text to display
     if badExpress:
         text = colored(baseText,'red',attrs=['reverse'])  ## bad, make the text white on red
