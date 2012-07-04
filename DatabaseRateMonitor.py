@@ -561,6 +561,14 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config)
 
+    for warning in Warn:
+        if warning==True:
+            write(bcolors.WARNING)
+            print "If any trigger remains red for 3 minutes, CALL HLT DOC"
+            print "More instructions at https://twiki.cern.ch/twiki/bin/view/CMS/TriggerShiftHLTGuide"
+            write(bcolors.ENDC+"\n")
+            break
+
 def CheckTriggerList(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config):
     print "checking trigger list"
 
