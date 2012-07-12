@@ -7,7 +7,7 @@ from MenuAnalyzer import MenuAnalyzer
 from termcolor import colored, cprint
 
 def usage():
-    print "Usage: "+sys.arg[0]+" <path to cdaq area>"
+    print "Usage: "+sys.argv[0]+" <path to cdaq area>"
     print "Options: "
     print "-v                          Verbose mode (print out ALL checks)"
     print "--doAnalysis=<analysis>     Specify a specific check to so (default: do all)"
