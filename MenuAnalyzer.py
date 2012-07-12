@@ -21,7 +21,7 @@ class MenuAnalyzer:
 
         ##required streams
         self.requiredStreamsAndPDs = { 'Calibration' : ['TestEnablesEcalHcalDT'],'EcalCalibration' : ['EcalLaser'],
-                                  'TrackerCalibration' : ['TestEnablesTracker']}
+                                  'TrackerCalibration' : ['TestEnablesTracker'], 'DQM' : 'OnlineMonitor'}
         self.ExpressStreamName = 'Express'
         self.expressPDs      = { 'ExpressPhysics' : 'Collisions',
                                  'ExpressCosmics' : 'Cosmics' }
