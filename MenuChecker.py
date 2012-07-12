@@ -4,6 +4,7 @@ import os
 import sys
 import getopt
 from MenuAnalyzer import MenuAnalyzer
+from termcolor import colored, cprint
 
 def usage():
     print "Usage: "+sys.arg[0]+" <path to cdaq area>"
@@ -44,25 +45,34 @@ def main():
     analyzer.Analyze()
 
     ## check the results
+    if not analyzer.expressType=='':
+        print "\nEXPRESS Reconstruction will be:  %s" % analyzer.expressType
+    else:
+        print "WARNING: Cannot determine express reconstruction"
+
+    print "\n"
     failed=[]
-    format = "ANALYSIS%26s%12s"
+    format = "ANALYSIS%26s  %s"
+    pass_txt = colored("SUCCEEDED",'green')
+    fail_txt = colored("FAILED",'red')
     for analysis,result in analyzer.Results.iteritems():
         if isinstance(result,list): # list output
             if len(result) == 0:
-                print format % (analysis,"SUCCEEDED",)
+                print format % (analysis,pass_txt,)
             else:
-                print format % (analysis,"FAILED",)
+                print format % (analysis,fail_txt,)
                 failed.append(analysis)
         else:
             if result==0:
-                print format % (analysis,"SUCCEEDED",)
+                print format % (analysis,pass_txt,)
             else:
-                print format % (analysis,"FAILED",)
+                print format % (analysis,fail_txt,)
                 failed.append(analysis)
 
-    if len(failed)!=0: print "LIST OF FAILED ANALYSES:"
+
+    if len(failed)!=0: print "\nLIST OF FAILED ANALYSES:"
     for analysis in failed:
-        print analyzer.Results[analysis]
+        print analyzer.ProblemDescriptions[analysis]+":  "+str(analyzer.Results[analysis])
         
 
 if __name__=='__main__':

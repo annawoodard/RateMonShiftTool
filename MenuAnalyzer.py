@@ -48,6 +48,14 @@ class MenuAnalyzer:
             'checkExpress' : self.checkExpress,
             'checkNameFormats' :self.checkNameFormats
             }
+        self.ProblemDescriptions = {
+            'moduleLength':'Modules too long',
+            'numberOfPaths':'Too many paths',
+            'numberOfEndPaths':'Too many endpaths',
+            'reqStreamsAndPDs':'Missing required stream/PD',
+            'checkExpress' : 'Invalid or missing express stream/PD',
+            'checkNameFormats' : 'Invalid PD or path name format'
+            }
 
         self.T0REGEXP = { ## These are the regexps that T0 uses to access things
             # Regexp for save file name paths. We don't process anything else.
