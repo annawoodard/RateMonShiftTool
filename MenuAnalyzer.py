@@ -199,3 +199,18 @@ class MenuAnalyzer:
             if not self.perPDPathList.has_key(PDName): self.perPDPathList[PDName] = []
             self.perPDPathList[PDName].append(PathName)
 
+    def GetEventContent(self,cursor):
+        sqlquery= """
+        SELECT A.STREAMLABEL,E.NAME,F.DATASETLABEL
+        FROM
+        CMS_HLT.STREAMS A,
+        CMS_HLT.CONFIGURATIONS B,
+        CMS_HLT.ECSTREAMASSOC C
+        WHERE
+        B.CONFIGDESCRIPTOR='%s' AND
+        C.CONFIGID=B.CONFIGID AND
+        D.PATHID=C.PATHID AND
+        A.STREAMID=D.STREAMID AND
+        E.PATHID = C.PATHID AND
+        F.DATASETID = D.DATASETID
+        """ % (self.menuName,)
