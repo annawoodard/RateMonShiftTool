@@ -273,7 +273,13 @@ def main():
             
             if isGood:
                 LastGoodLS=HeadParser.GetLastLS(isCol)
-                if not isCol:
+                RefMoreLumiArray = HeadParser.GetMoreLumiInfo()
+                isBeams=True
+                for lumisection in HeadLumiRange:
+                    if not (RefMoreLumiArray["b1pres"][lumisection] and RefMoreLumiArray["b2pres"][lumisection] and RefMoreLumiArray["b1stab"][lumisection] and RefMoreLumiArray["b2stab"][lumisection]):
+                        isBeams=False
+                
+                if not (isCol and isBeams):
                     ##clear()
                     MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                 else:
