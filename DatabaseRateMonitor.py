@@ -276,7 +276,10 @@ def main():
                 RefMoreLumiArray = HeadParser.GetMoreLumiInfo()
                 isBeams=True
                 for lumisection in HeadLumiRange:
-                    if not (RefMoreLumiArray["b1pres"][lumisection] and RefMoreLumiArray["b2pres"][lumisection] and RefMoreLumiArray["b1stab"][lumisection] and RefMoreLumiArray["b2stab"][lumisection]):
+                    try: 
+                        if not (RefMoreLumiArray["b1pres"][lumisection] and RefMoreLumiArray["b2pres"][lumisection] and RefMoreLumiArray["b1stab"][lumisection] and RefMoreLumiArray["b2stab"][lumisection]):
+                            isBeams=False
+                    except:
                         isBeams=False
                 
                 if not (isCol and isBeams):
@@ -430,20 +433,21 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         
         HeadNameNoV=StripVersion(HeadName)
         
-        if RefParser.RunNumber == 0:  ##  If not ref run then just use trigger list           
-            if Config.NoVersion:
-                if HeadNameNoV not in trig_list and not ListIgnoredPaths:
-                    continue
-                if HeadNameNoV not in FitInput.keys() and not ListIgnoredPaths:
-                    continue
-            else:       
-                if HeadName not in trig_list and not ListIgnoredPaths:
-                    continue
-                if HeadName not in FitInput.keys() and not ListIgnoredPaths:
-                    continue
-        else:
-            if HeadUnprescaledRates[HeadName][2]<0.5:
-                continue
+       ##  if RefParser.RunNumber == 0:  ##  If not ref run then just use trigger list
+##             pass
+##             ## if Config.NoVersion:
+## ##                 if HeadNameNoV not in trig_list and not ListIgnoredPaths:
+## ##                     continue
+## ##                 if HeadNameNoV not in FitInput.keys() and not ListIgnoredPaths:
+## ##                     continue
+## ##             else:       
+## ##                 if HeadName not in trig_list and not ListIgnoredPaths:
+## ##                     continue
+## ##                 if HeadName not in FitInput.keys() and not ListIgnoredPaths:
+## ##                     continue
+##         else:
+##             if HeadUnprescaledRates[HeadName][2]<0.5:
+##                 continue
             
             ##if HeadUnprescaledRates[HeadName][0]>1.9:
             ##    continue
