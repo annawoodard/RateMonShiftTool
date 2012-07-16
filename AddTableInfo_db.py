@@ -2,6 +2,9 @@ import sys
 from colors import *
 from DatabaseParser import *
 from termcolor import colored, cprint
+import time
+
+
 write = sys.stdout.write
 
 NHighExpress=0
@@ -9,6 +12,8 @@ NHighStreamA=0
 
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
+    localtime = time.asctime( time.localtime(time.time()) )
+    print "Local current time :", localtime
     print "len=",len(LumiRange)
     print "LSRange=", LumiRange
     if len(LumiRange)>0:
