@@ -433,18 +433,18 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateD
         
         HeadNameNoV=StripVersion(HeadName)
         
-       ##  if RefParser.RunNumber == 0:  ##  If not ref run then just use trigger list
-##             pass
-##             ## if Config.NoVersion:
-## ##                 if HeadNameNoV not in trig_list and not ListIgnoredPaths:
-## ##                     continue
-## ##                 if HeadNameNoV not in FitInput.keys() and not ListIgnoredPaths:
-## ##                     continue
-## ##             else:       
-## ##                 if HeadName not in trig_list and not ListIgnoredPaths:
-## ##                     continue
-## ##                 if HeadName not in FitInput.keys() and not ListIgnoredPaths:
-## ##                     continue
+        if RefParser.RunNumber == 0:  ##  If not ref run then just use trigger list
+            pass
+            if Config.NoVersion:
+                if HeadNameNoV not in trig_list and not ListIgnoredPaths:
+                    continue
+                if HeadNameNoV not in FitInput.keys() and not ListIgnoredPaths:
+                    continue
+            else:       
+                if HeadName not in trig_list and not ListIgnoredPaths:
+                    continue
+                if HeadName not in FitInput.keys() and not ListIgnoredPaths:
+                    continue
 ##         else:
 ##             if HeadUnprescaledRates[HeadName][2]<0.5:
 ##                 continue
