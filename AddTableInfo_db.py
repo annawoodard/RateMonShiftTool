@@ -14,16 +14,38 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
     localtime = time.asctime( time.localtime(time.time()) )
     print "Local current time :", localtime
-    print "len=",len(LumiRange)
-    print "LSRange=", LumiRange
+    #print "len=",len(LumiRange)
+    #print "Lumisections used=", LumiRange
     if len(LumiRange)>0:
         
         [AvInstLumi, AvLiveLumi, AvDeliveredLumi, AvDeadTime,PSCols] = parser.GetAvLumiInfo(LumiRange)
         deadtimebeamactive=parser.GetDeadTimeBeamActive(LumiRange)*100
+        
         ##print "dtba=",deadtimebeamactive
     else:
         print "no lumisections to monitor"
         return
+    
+    try:
+        #print "trying v3"
+        lograte=parser.GetTriggerRatesByLS("HLT_LogMonitor_v3")
+        #print lograte
+        if not len(lograte):
+            #print "trying v4"
+            lograte=parser.GetTriggerRatesByLS("HLT_LogMonitor_v4")
+            
+        #print lograte
+        for lumi in lograte.iterkeys():
+            #print lumi, lograte[lumi]
+            if lograte[lumi]>config.MaxLogMonRate:
+                write(bcolors.WARNING)
+                print lograte[lumi], "post to elog. LogMonitor rate is high."
+                write(bcolors.ENDC+"\n")
+    except:
+        write(bcolors.WARNING)
+        print "problem getting log monitor rates"
+        write(bcolors.ENDC+"\n")
+
     try:
         LastPSCol = PSCols[-1]
     except:
@@ -31,6 +53,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     if isCol:
         
         aRates = parser.GetTriggerRatesByLS("AOutput")
+        aRatesPrompt = parser.GetTriggerRatesByLS("DQMOutput")
         bRates = parser.GetTriggerRatesByLS("BOutput")
         if len(bRates) == 0:
             realARates = aRates
@@ -65,12 +88,13 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     AvgRateA=0
     
     realARate=0
+    
     realPeakRateA=0
     realAvgRateA=0
     
     if len(expressRates.values()) > 20:
         AvgExpRate = sum(expressRates.values())/len(expressRates.values())
-
+    counter=0    
     for ls in LumiRange:  ## Find the sum and peak express stream rates
         thisR = expressRates.get(ls,0)
         ExpRate+=thisR
@@ -81,11 +105,18 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         ARate+=thisRateA
         if thisRateA>PeakRateA:
             PeakRateA=thisRateA
-
-        thisRealRateA = aRates.get(ls,0) - bRates.get(ls,0)*20
+        ##print PSCols[counter]
+        if isCol:
+            if PSCols[counter]!=config.CircBeamCol:
+                thisRealRateA= aRatesPrompt.get(ls,0)*10
+            else:
+                thisRealRateA = aRates.get(ls,0) - bRates.get(ls,0)*20
+        else:
+            thisRealRateA = aRates.get(ls,0) - bRates.get(ls,0)*20
         realARate+=thisRealRateA
         if thisRealRateA > realPeakRateA:
             realReakRateA = thisRealRateA
+        counter=counter+1
         #ARate+=aRates.get(ls,0)
     ## Print Stream A Rate --moved see below
     ##print "Current Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)

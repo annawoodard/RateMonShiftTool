@@ -27,6 +27,8 @@ class RateMonConfig:
         self.NoVersion=0
         self.MaxExpressRate=999
         self.ForbiddenCols=[]
+        self.CirculatingBeamsColumn=9
+        self.MaxLogMonRate=10
 
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -112,7 +114,10 @@ class RateMonConfig:
                 self.FitFileName=arg
             elif par=="NoVersion":
                 self.NoVersion=int(arg)
-            
+            elif par=="CirculatingBeamsColumn":
+                self.CircBeamCol=int(arg)
+            elif par=="MaxLogMonRate":
+                self.MaxLogMonRate=float(arg)
             else:
                 print "Invalid Option : "+strippedLine
         f.close()

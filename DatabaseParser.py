@@ -1,8 +1,11 @@
+#!/usr/bin/python
 import cx_Oracle
 import cPickle as pickle
-import os, sys
+import os
+import sys
 import time
 import re
+from colors import *
 
 try:  ## set is builtin in python 2.6.4 and sets is deprecated
     set
@@ -1068,18 +1071,7 @@ def GetLatestRunNumber(runNo=9999999,newRun=False):
     isCol=0
     isGood=1
 
-    Tier0xferQuery = """
-    SELECT TIER0_TRANSFER TIER0 FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
-    """ % r
-    curs.execute(Tier0xferQuery)
-    try:
-        tier0, = curs.fetchone()
-        print "tier0 transfer=",tier0
-    except:
-        print "unable to get tier0 from query for run ",r
-
-
-    
+       
     try:
         if trigm is None:
             isGood=0
@@ -1087,6 +1079,28 @@ def GetLatestRunNumber(runNo=9999999,newRun=False):
             isCol=1
     except:
         isGood=0
+
+    Tier0xferQuery = """
+    SELECT TIER0_TRANSFER TIER0 FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
+    """ % r
+    curs.execute(Tier0xferQuery)
+    try:
+        tier0, = curs.fetchone()
+                    
+    except:
+        print "unable to get tier0 from query for run ",r
+
+    if isCol and not tier0:
+        #write(bcolors.FAIL)
+        print "WARNING tier0 transfer is off"
+        #write(bcolors.ENDC+"\n")
+    elif not tier0:
+        #write(bcolors.WARINING)
+        print "Please check if tier0 transfer is supposed to be off"
+        #write(bcolors.ENDC+"\n")
+
+
+        
     return (r,isCol,isGood,)
 
 def ClosestIndex(value,table):

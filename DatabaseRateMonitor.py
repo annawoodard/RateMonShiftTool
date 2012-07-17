@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 #from AndrewGetRun import GetRun
-from DatabaseParser import *
 from ReadConfig import RateMonConfig
 import sys
 import os
@@ -12,6 +11,8 @@ from colors import *
 from TablePrint import *
 from AddTableInfo_db import MoreTableInfo
 from math import *
+from DatabaseParser import *
+
 
 WBMPageTemplate = "http://cmswbm/cmsdb/servlet/RunSummary?RUN=%s&DB=cms_omds_lb"
 WBMRunInfoPage = "https://cmswbm/cmsdb/runSummary/RunSummary_1.html"
@@ -67,7 +68,7 @@ def main():
 
     if "NoV" in Config.FitFileName:
         Config.NoVersion=True
-    print "NoVersion=",Config.NoVersion
+    #print "NoVersion=",Config.NoVersion
 
     AllowedRateDiff   = Config.DefAllowRateDiff
     CompareRunNum     = ""
@@ -229,13 +230,15 @@ def main():
     try:
         HeadParser.ParseRunSetup()
         HeadLumiRange = HeadParser.GetLSRange(FirstLS,NumLS,isCol)
-        LastGoodLS=HeadParser.GetLastLS(isCol)
+        LastGoodLS=HeadParser.GetLastLS(isCol)+1
+        tempLastGoodLS=LastGoodLS
         CurrRun=CompareRunNum
-        print "done good"
+        #print "done good"
     except:
-        print "exception"
+        #print "exception"
         HeadLumiRange=[]
         LastGoodLS=-1
+        tempLastGoodLS=LastGoodLS-1
         CurrRun=CompareRunNum
         isGood=0
         
@@ -272,26 +275,33 @@ def main():
         while True:
             
             if isGood:
+                tempLastGoodLS=LastGoodLS
                 LastGoodLS=HeadParser.GetLastLS(isCol)
-                RefMoreLumiArray = HeadParser.GetMoreLumiInfo()
-                isBeams=True
-                for lumisection in HeadLumiRange:
-                    try: 
-                        if not (RefMoreLumiArray["b1pres"][lumisection] and RefMoreLumiArray["b2pres"][lumisection] and RefMoreLumiArray["b1stab"][lumisection] and RefMoreLumiArray["b2stab"][lumisection]):
-                            isBeams=False
-                    except:
-                        isBeams=False
-                
-                if not (isCol and isBeams):
-                    ##clear()
-                    MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
+                ##print "Last Good=",LastGoodLS, tempLastGoodLS
+                if LastGoodLS==tempLastGoodLS:
+                    write(bcolors.FAIL)
+                    print "Trying to get new Run"
+                    write(bcolors.ENDC+"\n")
                 else:
-                    if (len(HeadLumiRange)>0):
-                        RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy)
-                        if FindL1Zeros:
-                            CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+                    RefMoreLumiArray = HeadParser.GetMoreLumiInfo()
+                    isBeams=True
+                    for lumisection in HeadLumiRange:
+                        try: 
+                            if not (RefMoreLumiArray["b1pres"][lumisection] and RefMoreLumiArray["b2pres"][lumisection] and RefMoreLumiArray["b1stab"][lumisection] and RefMoreLumiArray["b2stab"][lumisection]):
+                                isBeams=False
+                        except:
+                            isBeams=False
+                
+                    if not (isCol and isBeams):
+                    ##clear()
+                        MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                     else:
-                        print "No lumisections that are taking physics data 1"
+                        if (len(HeadLumiRange)>0):
+                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy)
+                            if FindL1Zeros:
+                                CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRateDiff,IgnoreThreshold,Config)
+                        else:
+                            print "No lumisections that are taking physics data 1"
             if ShifterMode:
                 #print "Shifter Mode. Continuing"
                 pass
@@ -338,8 +348,8 @@ def main():
                             isGood=1
                             isCol=0
                             
-                            
-                    LastGoodLS=HeadParser.GetLastLS(isCol)
+                    #tempLastGoodLS=LastGoodLS
+                    #LastGoodLS=HeadParser.GetLastLS(isCol)
                     ##print CurrRun, isCol, isGood
                 except:
                     isGood=0
@@ -360,7 +370,7 @@ def main():
                         if len(HeadLumiRange)>0:
                             isGood=1
                             isCol=0
-                    LastGoodLS=HeadParser.GetLastLS(isCol)
+                    #LastGoodLS=HeadParser.GetLastLS(isCol)
                 
                 except:
                     isGood=0
