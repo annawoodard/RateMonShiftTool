@@ -984,10 +984,10 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 ##                     else:
                     
                 print f1a.GetChisquare()/f1a.GetNDF(), f1b.GetChisquare()/f1b.GetNDF(), f1c.GetChisquare()/f1c.GetNDF() 
-                if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()+1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()+1)):
+                if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-1)):
                     print '%-60s | expo | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c.GetChisquare()/f1c.GetNDF())
                     f1c.SetLineColor(1)
-                elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()+1)):
+                elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1)):
                     print '%-60s | cube | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b.GetChisquare()/f1b.GetNDF())
                     f1b.SetLineColor(1)
                 else:
