@@ -70,6 +70,7 @@ def main():
         Config.NoVersion=True
     #print "NoVersion=",Config.NoVersion
 
+    ShowSigmaAndPercDiff = Config.DefShowSigmaAndPercDiff
     WarnOnSigmaDiff = Config.DefWarnOnSigmaDiff
     AllowedRatePercDiff   = Config.DefAllowRatePercDiff
     AllowedRateSigmaDiff  = Config.DefAllowRateSigmaDiff    
@@ -303,7 +304,7 @@ def main():
                         MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                     else:
                         if (len(HeadLumiRange)>0):
-                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff)
+                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff)
                             if FindL1Zeros:
                                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config)
                         else:
@@ -400,7 +401,7 @@ def main():
         print "Quitting. Peace Out."
 
             
-def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff):
+def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff):
     Data   = []
     Warn   = []
     IgnoredRates=[]
@@ -583,15 +584,19 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         else:
             Warn.append(False)
 
-    if RefParser.RunNumber == 0:
+    if ShowSigmaAndPercDiff == 1:
+        Header = ["Trigger Name", "Actual", "Expected","% Diff","Deviation", "Cur PS", "Comments"]
+        table_data=SortedData
+        PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,20],Warn)
+    elif WarnOnSigmaDiff == 1:
         Header = ["Trigger Name", "Actual", "Expected","Deviation", "Cur PS", "Comments"]
         table_data = [[col[0], col[1], col[2], col[4], col[5], col[6]] for col in SortedData]
-        
+        PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,20],Warn)
     else:
-        Header = ["Trigger Name", "Actual", "Expected", "% Difference", "Cur PS", "Comments"]
+        Header = ["Trigger Name", "Actual", "Expected", "% Diff", "Cur PS", "Comments"]
         table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in SortedData]
+        PrettyPrintTable(Header,table_data,[80,10,10,10,10,20],Warn)    
 
-    PrettyPrintTable(Header,table_data,[80,10,10,10,10,20],Warn)
 
     if RefParser.RunNumber == 0:
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'

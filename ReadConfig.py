@@ -31,6 +31,7 @@ class RateMonConfig:
         self.CirculatingBeamsColumn=9
         self.MaxLogMonRate=10
         self.DefWarnOnSigmaDiff=1
+        self.DefShowSigmaAndPercDiff=0
         
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -74,6 +75,8 @@ class RateMonConfig:
                 
             if par=="ReferenceRun":
                 self.ReferenceRun=arg
+            elif par=="ShowSigmaAndPercDiff":
+                self.DefShowSigmaAndPercDiff=float(arg)
             elif par=="DefaultAllowedRatePercDiff":
                 self.DefAllowRatePercDiff=float(arg)
             elif par=="DefaultAllowedRateSigmaDiff":
