@@ -70,6 +70,7 @@ def main():
         Config.NoVersion=True
     #print "NoVersion=",Config.NoVersion
 
+    WarnOnSigmaDiff = Config.DefWarnOnSigmaDiff
     AllowedRatePercDiff   = Config.DefAllowRatePercDiff
     AllowedRateSigmaDiff  = Config.DefAllowRateSigmaDiff    
     CompareRunNum     = ""
@@ -302,7 +303,7 @@ def main():
                         MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                     else:
                         if (len(HeadLumiRange)>0):
-                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy)
+                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff)
                             if FindL1Zeros:
                                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config)
                         else:
@@ -399,7 +400,7 @@ def main():
         print "Quitting. Peace Out."
 
             
-def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy):
+def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff):
     Data   = []
     Warn   = []
     IgnoredRates=[]
@@ -575,7 +576,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     #check for triggers above the warning threshold
     Warn=[]
     for entry in SortedData:
-        if abs(entry[3]) > AllowedRatePercDiff or abs(entry[4]) > AllowedRateSigmaDiff:  
+        if abs(entry[3]) > AllowedRatePercDiff and WarnOnSigmaDiff == 0:
+            Warn.append(True)
+        elif abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff == 1:  
             Warn.append(True)
         else:
             Warn.append(False)

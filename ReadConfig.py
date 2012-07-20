@@ -30,6 +30,7 @@ class RateMonConfig:
         self.ForbiddenCols=[]
         self.CirculatingBeamsColumn=9
         self.MaxLogMonRate=10
+        self.DefWarnOnSigmaDiff=1
         
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -121,6 +122,8 @@ class RateMonConfig:
                 self.CircBeamCol=int(arg)
             elif par=="MaxLogMonRate":
                 self.MaxLogMonRate=float(arg)
+            elif par=="WarnOnSigmaDiff":
+                self.DefWarnOnSigmaDiff=float(arg)
             else:
                 print "Invalid Option : "+strippedLine
         f.close()
