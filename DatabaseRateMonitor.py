@@ -252,6 +252,7 @@ def main():
             isCol=0
         ##sys.exit(0)
 
+    ## This reduces the sensitivity for a rate measurement to cause a warning during the beginning of a run
     if len(HeadLumiRange) < 10:
         AllowedRateSigmaDiff = AllowedRateSigmaDiff*10 / len(HeadLumiRange)
     
@@ -580,17 +581,15 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             Warn.append(False)
 
     if RefParser.RunNumber == 0:
-        #Header = ["Trigger Name", "Actual", "Expected","Deviation", "Cur PS", "Comments"]
-        #table_data = [[col[0], col[1], col[2], col[4], col[5], col[6]] for col in SortedData]
-        Header = ["Trigger Name", "Actual", "Expected","% Diff", "Deviation", "Cur PS", "Comments"]
-        table_data = SortedData
+        Header = ["Trigger Name", "Actual", "Expected","Deviation", "Cur PS", "Comments"]
+        table_data = [[col[0], col[1], col[2], col[4], col[5], col[6]] for col in SortedData]
         
     else:
         Header = ["Trigger Name", "Actual", "Expected", "% Difference", "Cur PS", "Comments"]
         table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in SortedData]
 
-#    PrettyPrintTable(Header,table_data,[80,10,10,10,10,20],Warn)
-    PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,20],Warn)    
+    PrettyPrintTable(Header,table_data,[80,10,10,10,10,20],Warn)
+
     if RefParser.RunNumber == 0:
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'
 
