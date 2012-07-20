@@ -10,7 +10,8 @@ class RateMonConfig:
         self.CFGfile=path+"/defaults.cfg"
         self.BasePath=path
         self.ReferenceRun=""
-        self.DefAllowRateDiff=0.0
+        self.DefAllowRatePercDiff=0.0
+        self.DefAllowRateSigmaDiff=0.0
         self.DefAllowIgnoreThresh=0.0
         self.ExcludeList=[]
         self.MonitorList=[]
@@ -29,7 +30,7 @@ class RateMonConfig:
         self.ForbiddenCols=[]
         self.CirculatingBeamsColumn=9
         self.MaxLogMonRate=10
-
+        
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
         list = []
@@ -72,8 +73,10 @@ class RateMonConfig:
                 
             if par=="ReferenceRun":
                 self.ReferenceRun=arg
-            elif par=="DefaultAllowedRateDiff":
-                self.DefAllowRateDiff=float(arg)
+            elif par=="DefaultAllowedRatePercDiff":
+                self.DefAllowRatePercDiff=float(arg)
+            elif par=="DefaultAllowedRateSigmaDiff":
+                self.DefAllowRateSigmaDiff=float(arg)                
             elif par=="DefaultIgnoreThreshold":
                 self.DefAllowIgnoreThresh=float(arg)
             elif par=="ExcludeTriggerList":
@@ -94,7 +97,7 @@ class RateMonConfig:
                         print "Cannot parse Forbidden Cols parameter"
             elif par=="L1CrossSection":
                 self.L1Predictions = self.ReadList(arg)
-            elif par == "MonitorOnlyListed":
+            elif par =="MonitorOnlyListed":
                 self.MonitorOnly=int(arg)
             elif par=="MonitorTargetLumi":
                 self.MonTargetLumi=float(arg)

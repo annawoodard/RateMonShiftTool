@@ -768,7 +768,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             X1 = InputFit[print_trigger][2]
             X2 = InputFit[print_trigger][3]
             X3 = InputFit[print_trigger][4]
-            Chi2 = InputFit[print_trigger][5]
+            Chi2 = InputFit[print_trigger][5] #This is actually Chi2/ (# degrees of freedom)
             X0err= InputFit[print_trigger][7]
             ##print print_trigger," X0err=",X0err
             #print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
@@ -825,15 +825,19 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     if not do_inst:
                         if FitType == "expo":
                             rate_prediction = X0 + X1*math.exp(X2+X3*delivered_t[-1])
+                            sigma = math.sqrt(Chi2)
                         else:
                             rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1] + X3*delivered_t[-1]*delivered_t[-1]*delivered_t[-1]
+                            sigma = math.sqrt(Chi2)
 ##                     if rate_t[-1] < 0.7 * rate_prediction or rate_t[-1] > 1.4 * rate_prediction:
 ##                         print str(run_t[-1])+"  "+str(ls_t[-1])+"  "+str(print_trigger)+"  "+str(ps_t[-1])+"  "+str(deadtime_t[-1])+"  "+str(rate_prediction)+"  "+str(rate_t[-1])+"  "+str(rawrate_t[-1])
                     else:
                         if FitType == "expo":
                             rate_prediction = X0 + X1*math.exp(X2+X3*inst_t[-1])
+                            sigma = math.sqrt(Chi2)
                         else:
                             rate_prediction = X0 + X1*inst_t[-1] + X2*inst_t[-1]*inst_t[-1] + X3*inst_t[-1]*inst_t[-1]*inst_t[-1]
+                            sigma = math.sqrt(Chi2)
 
                     if live_t[-1] == 0:
                         rawrate_fit_t.append(0)
@@ -841,7 +845,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                         rawxsec_fit_t.append(0)
                         xsec_fit_t.append(0)
                         e_rawrate_fit_t.append(0)
-                        e_rate_fit_t.append(math.sqrt(Chi2))
+                        e_rate_fit_t.append(sigma)
                         e_rawxsec_fit_t.append(0)
                         e_xsec_fit_t.append(0)
                         #print "live_t=0", ls_t[-1], rawrate_fit_t[-1]
@@ -852,15 +856,15 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                             rawrate_fit_t.append(0.0)
                         
                         rate_fit_t.append(rate_prediction)
-                        e_rate_fit_t.append(math.sqrt(Chi2))
+                        e_rate_fit_t.append(sigma)
                         rawxsec_fit_t.append(rawrate_fit_t[-1]/live_t[-1])
                         xsec_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/live_t[-1])
                         try:
                             
                             if not TMDerr:
-                                e_rawrate_fit_t.append(math.sqrt(Chi2)*rawrate_fit_t[-1]/rate_fit_t[-1])
-                                e_rawxsec_fit_t.append(math.sqrt(Chi2)*rawxsec_fit_t[-1]/rate_fit_t[-1])
-                                e_xsec_fit_t.append(math.sqrt(Chi2)*xsec_fit_t[-1]/rate_fit_t[-1])
+                                e_rawrate_fit_t.append(sigma*rawrate_fit_t[-1]/rate_fit_t[-1])
+                                e_rawxsec_fit_t.append(sigma*rawxsec_fit_t[-1]/rate_fit_t[-1])
+                                e_xsec_fit_t.append(sigma*xsec_fit_t[-1]/rate_fit_t[-1])
                             ###error from TMD predictions, calculated at 5e33
                             else:
                                 e_rawrate_fit_t.append(X0err*inst_t[-1]/5000.)
@@ -869,9 +873,9 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                                 
                         except:
                             print print_trigger, "has no fitted rate for LS", Rates[print_trigger]["ls"][iterator]
-                            e_rawrate_fit_t.append(math.sqrt(Chi2))
-                            e_rawxsec_fit_t.append(math.sqrt(Chi2))
-                            e_xsec_fit_t.append(math.sqrt(Chi2))
+                            e_rawrate_fit_t.append(sigma)
+                            e_rawxsec_fit_t.append(sigma)
+                            e_xsec_fit_t.append(sigma)
                         #print "live_t>0", ls_t[-1], rawrate_fit_t[-1]
 
                 ##print iterator, iterator, "ls=",ls_t[-1],"rate=",round(rawrate_t[-1],2), "deadtime=",round(deadtime_t[-1],2),"rawrate_fit=",round(rawrate_fit_t[-1],2),"max it=",len(Rates[print_trigger]["rate"])
