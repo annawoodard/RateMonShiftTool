@@ -5,6 +5,7 @@ import sys
 from DatabaseParser import ConnectDB
 import re
 import cx_Oracle
+import eventContent
 
 try:  ## set is builtin in python 2.6.4 and sets is deprecated
     set
@@ -36,6 +37,8 @@ class MenuAnalyzer:
         self.perPDPathList={}
         self.Results={}
         self.ModuleList=[]
+        self.eventContent={}
+
         self.AnalysisList=[]
         
 
@@ -46,7 +49,8 @@ class MenuAnalyzer:
             'numberOfEndPaths' : self.checkNumEndPaths,
             'reqStreamsAndPDs' : self.reqStreamsAndPDs,
             'checkExpress' : self.checkExpress,
-            'checkNameFormats' :self.checkNameFormats
+            'checkNameFormats' :self.checkNameFormats,
+            'checkEventContent':self.checkEventContent
             }
         self.ProblemDescriptions = {
             'moduleLength':'Modules too long',
@@ -54,7 +58,8 @@ class MenuAnalyzer:
             'numberOfEndPaths':'Too many endpaths',
             'reqStreamsAndPDs':'Missing required stream/PD',
             'checkExpress' : 'Invalid or missing express stream/PD',
-            'checkNameFormats' : 'Invalid PD or path name format'
+            'checkNameFormats' : 'Invalid PD or path name format',
+            'checkEventContent' : 'Invalid Event Content'
             }
 
         self.T0REGEXP = { ## These are the regexps that T0 uses to access things
@@ -84,6 +89,7 @@ class MenuAnalyzer:
         cursor = ConnectDB('hlt')
         self.GetModules(cursor)
         self.GetStreamsPathsPDs(cursor)
+        self.GetEventContent(cursor)
         for analysis in self.AnalysisList: 
             if not self.AnalysisMap.has_key(analysis):
                 print "ERROR: Analysis %s not defined" % (analysis,)
@@ -141,6 +147,18 @@ class MenuAnalyzer:
         for path in self.perPathModuleList.iterkeys():
             if not self.T0REGEXP['RXSAFEPATH'].match(path):
                 self.Results['checkNameFormats'].append(path)
+
+    def checkEventContent(self):
+        self.Results['checkEventContent']=[]
+        for stream,content in self.eventContent.iteritems():
+            #first check for a drop statement
+            if not ('drop *' in content or 'drop *_hlt*_*_*' in content):
+                self.Results['checkEventContent'].append(stream+'::drop *')
+            if not eventContent.requiredEventContent.has_key(stream): continue
+            requiredContent = eventContent.requiredEventContent[stream]
+            for entry in requiredContent:
+                if not entry in content:
+                    self.Results['checkEventContent'].append(stream+'::'+entry)
         
     def GetModules(self,cursor):
         sqlquery ="""  
@@ -200,17 +218,34 @@ class MenuAnalyzer:
             self.perPDPathList[PDName].append(PathName)
 
     def GetEventContent(self,cursor):
-        sqlquery= """
-        SELECT A.STREAMLABEL,E.NAME,F.DATASETLABEL
+        sqlquery = """
+        SELECT A.STREAMLABEL,H.STATEMENTTYPE,H.CLASSN,H.MODULEL,H.EXTRAN,H.PROCESSN
         FROM
         CMS_HLT.STREAMS A,
         CMS_HLT.CONFIGURATIONS B,
-        CMS_HLT.ECSTREAMASSOC C
+        CMS_HLT.CONFIGURATIONPATHASSOC C,
+        CMS_HLT.PATHSTREAMDATASETASSOC D,
+        CMS_HLT.PATHS E,
+        CMS_HLT.ECSTREAMASSOC F,
+        CMS_HLT.ECSTATEMENTASSOC G,
+        CMS_HLT.EVENTCONTENTSTATEMENTS H
         WHERE
         B.CONFIGDESCRIPTOR='%s' AND
         C.CONFIGID=B.CONFIGID AND
         D.PATHID=C.PATHID AND
         A.STREAMID=D.STREAMID AND
         E.PATHID = C.PATHID AND
-        F.DATASETID = D.DATASETID
+        F.STREAMID = D.STREAMID AND
+        G.EVENTCONTENTID=F.EVENTCONTENTID AND
+        H.STATEMENTID=G.STATEMENTID
         """ % (self.menuName,)
+
+        cursor.execute(sqlquery)
+        for stream,keep,Class,module,extra,process in cursor.fetchall():
+            if not self.eventContent.has_key(stream): self.eventContent[stream]=[]
+            statement = "%s_%s_%s_%s" % (Class,module,extra,process,)
+            if statement == "*_*_*_*": statement = "*"
+            if keep == 1: statement = "keep "+statement
+            else: statement = "drop "+statement
+            if not statement in self.eventContent[stream]:
+                self.eventContent[stream].append( statement )
