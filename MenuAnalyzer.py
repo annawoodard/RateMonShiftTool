@@ -37,6 +37,7 @@ class MenuAnalyzer:
         self.perPDPathList={}
         self.Results={}
         self.ModuleList=[]
+        self.ESModuleList=[]
         self.eventContent={}
 
         self.AnalysisList=[]
@@ -50,7 +51,8 @@ class MenuAnalyzer:
             'reqStreamsAndPDs' : self.reqStreamsAndPDs,
             'checkExpress' : self.checkExpress,
             'checkNameFormats' :self.checkNameFormats,
-            'checkEventContent':self.checkEventContent
+            'checkEventContent':self.checkEventContent,
+            'checkL1Unmask':self.checkL1Unmask
             }
         self.ProblemDescriptions = {
             'moduleLength':'Modules too long',
@@ -59,7 +61,8 @@ class MenuAnalyzer:
             'reqStreamsAndPDs':'Missing required stream/PD',
             'checkExpress' : 'Invalid or missing express stream/PD',
             'checkNameFormats' : 'Invalid PD or path name format',
-            'checkEventContent' : 'Invalid Event Content'
+            'checkEventContent' : 'Invalid Event Content',
+            'checkL1Unmask' : 'L1 Unmask Module in Menu'
             }
 
         self.T0REGEXP = { ## These are the regexps that T0 uses to access things
@@ -88,6 +91,7 @@ class MenuAnalyzer:
     def Analyze(self):
         cursor = ConnectDB('hlt')
         self.GetModules(cursor)
+        self.GetESModules(cursor)
         self.GetStreamsPathsPDs(cursor)
         self.GetEventContent(cursor)
         for analysis in self.AnalysisList: 
@@ -159,6 +163,14 @@ class MenuAnalyzer:
             for entry in requiredContent:
                 if not entry in content:
                     self.Results['checkEventContent'].append(stream+'::'+entry)
+
+    def checkL1Unmask(self):
+        self.Results['checkL1Unmask']=[]
+        if 'L1GtTriggerMaskAlgoTrigTrivialProducer' in self.ESModuleList:
+            self.Results['checkL1Unmask'].append('L1GtTriggerMaskAlgoTrigTrivialProducer')
+        if 'L1GtTriggerMaskTechTrigTrivialProducer' in self.ESModuleList:
+            self.Results['checkL1Unmask'].append('L1GtTriggerMaskTechTrigTrivialProducer')
+
         
     def GetModules(self,cursor):
         sqlquery ="""  
@@ -188,6 +200,7 @@ class MenuAnalyzer:
             if not self.perPathModuleList.has_key(PathName): self.perPathModuleList[PathName] = []
             self.perPathModuleList[PathName].append(ModuleName)
             self.perModuleTypeList[ModuleName] = ModuleType
+            if not ModuleName in self.ModuleList: self.ModuleList.append(ModuleName)
             if endPath: self.endPathList.add(PathName)
 
 
@@ -216,6 +229,23 @@ class MenuAnalyzer:
             if not PDName in self.perStreamPDList[StreamName]: self.perStreamPDList[StreamName].append(PDName)
             if not self.perPDPathList.has_key(PDName): self.perPDPathList[PDName] = []
             self.perPDPathList[PDName].append(PathName)
+
+    def GetESModules(self,cursor):
+        sqlquery = """
+        SELECT UNIQUE(F.NAME)
+        FROM
+        CMS_HLT.ESMODULES F,
+        CMS_HLT.CONFIGURATIONESMODULEASSOC G,
+        CMS_HLT.CONFIGURATIONS H
+        WHERE
+        G.ESMODULEID = F.SUPERID AND
+        G.CONFIGID=H.CONFIGID AND
+        H.CONFIGDESCRIPTOR='%s'
+        """ % (self.menuName,)
+
+        cursor.execute(sqlquery)
+        for ModuleName, in cursor.fetchall():
+            if not ModuleName in self.ESModuleList: self.ESModuleList.append(ModuleName)
 
     def GetEventContent(self,cursor):
         sqlquery = """
