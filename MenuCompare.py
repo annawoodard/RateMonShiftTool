@@ -8,9 +8,12 @@ import re
 import csv
 
 #########################################################################################
-#### This file needs: DatabaseRatePredictor_dev.py
-####                  DatabaseRateMonitor.py
-####                  
+#### This file uses: DatabaseRatePredictor.py
+####                 DatabaseRateMonitor.py
+#### to compare rates across hlt menus.
+####
+#### Instructions: https://twiki.cern.ch/twiki/bin/viewauth/CMS/MenuComparison_Tutorial
+####
 ####  Charlie Mueller 8/8/2012
 #########################################################################################
 def usage():
@@ -78,16 +81,16 @@ def main():
         else:
             json_string = "--json="+json
         
-        print " "
+        print " " 
         cmd1 = "env DISPLAY= python DatabaseRatePredictor.py --makeFits "+trigger_string+" --NoVersion "+json_string+" --maxdt=0.10 "+oldMenu
         cmd2 = "sed -i '/TriggerToMonitorList=/ c\TriggerToMonitorList="+triggerlist+"' defaults.cfg"
         cmd3 = "sed -i '/FitFileName=/ c\FitFileName=Fits/2012/Fit_HLT_NoV_10LS_Run"+run1+"to"+run2+".pkl' defaults.cfg"
         cmd4 = "sed -i '/prettyCSVwriter(/     c\    prettyCSVwriter(\"rateMon_oldmenu.csv\",[80,10,10,10,10,20,20],Header,SortedData,Warn)' DatabaseRateMonitor.py"
-        cmd5 = "python DatabaseRateMonitor.py --CompareRun="+run2+" --FirstLS="+LS1+" --NumberLS="+nLS1
+        cmd5 = "python DatabaseRateMonitor.py --write --CompareRun="+run2+" --FirstLS="+LS1+" --NumberLS="+nLS1
         cmd6 = "env DISPLAY= python DatabaseRatePredictor.py --makeFits "+trigger_string+" --NoVersion --maxdt=0.10 "+newMenu
         cmd7 = "sed -i '/FitFileName=/ c\FitFileName=Fits/2012/Fit_HLT_NoV_10LS_Run"+run3+"to"+run4+".pkl' defaults.cfg"
         cmd8 = "sed -i '/prettyCSVwriter(/ c\    prettyCSVwriter(\"rateMon_newmenu.csv\",[80,10,10,10,10,20,20],Header,SortedData,Warn)' DatabaseRateMonitor.py"
-        cmd9 = "python DatabaseRateMonitor.py --CompareRun="+run4+" --FirstLS="+LS2+" --NumberLS="+nLS2
+        cmd9 = "python DatabaseRateMonitor.py --write --CompareRun="+run4+" --FirstLS="+LS2+" --NumberLS="+nLS2
         cmds = [cmd1,cmd2,cmd3,cmd4,cmd5,cmd6,cmd7,cmd8,cmd9]
         for cmd in cmds:
             try:
