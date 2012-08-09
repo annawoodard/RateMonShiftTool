@@ -2,19 +2,19 @@ import sys
 from colors import *
 from DatabaseParser import *
 from termcolor import colored, cprint
+from StreamMonitor import *
 import time
 
 
 write = sys.stdout.write
 
-NHighExpress=0
-NHighStreamA=0
+NHighStreamA = 0
+NHighExpress = 0
 
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
     print "Monitoring Run %d" % (parser.RunNumber,)
     localtime = time.asctime( time.localtime(time.time()) )
     print "Local current time :", localtime
-    #print "len=",len(LumiRange)
     #print "Lumisections used=", LumiRange
     if len(LumiRange)>0:
         
@@ -50,74 +50,31 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         LastPSCol = PSCols[-1]
     except:
         LastPSCol = -1
-    if isCol:
-        
-        aRates = parser.GetTriggerRatesByLS("AOutput")
-        aRatesPrompt = parser.GetTriggerRatesByLS("DQMOutput")
-        bRates = parser.GetTriggerRatesByLS("BOutput")
-        if len(bRates) == 0:
-            realARates = aRates
-        else:
-            realARates={}
-            for k,v in bRates.iteritems():
-                realARates[k]=aRates[k]-bRates[k]*20
-                #realARates = aRates - bRates*20;
-    else:
-        if len(parser.GetTriggerRatesByLS("AOutput"))>0:
-            aRates = parser.GetTriggerRatesByLS("AOutput")
-            bRates = parser.GetTriggerRatesByLS("BOutput")
-        else:
-            aRates = parser.GetTriggerRatesByLS("AForPPOutput")
-            bRates = parser.GetTriggerRatesByLS("BForPPOutput")
-            
     
     expressRates = {}
     if isCol:
         expressRates = parser.GetTriggerRatesByLS("ExpressOutput")
     else:
         if len(parser.GetTriggerRatesByLS("ExpressOutput"))>0:
-            expressRates=parser.GetTriggerRatesByLS("ExpressOutput")
+            expressRates=parser.GetTriggerRatesByLS("else")
         else:
             expressRates = parser.GetTriggerRatesByLS("ExpressForCosmicsOutput")
+
     ExpRate=0
     PeakRate=0
     AvgExpRate=0
     
-    ARate=0
-    PeakRateA=0
-    AvgRateA=0
-    
-    realARate=0
-    
-    realPeakRateA=0
-    realAvgRateA=0
-    
     if len(expressRates.values()) > 20:
         AvgExpRate = sum(expressRates.values())/len(expressRates.values())
     counter=0    
+
     for ls in LumiRange:  ## Find the sum and peak express stream rates
         thisR = expressRates.get(ls,0)
         ExpRate+=thisR
         if thisR>PeakRate:
             PeakRate=thisR
 
-        thisRateA=aRates.get(ls,0)
-        ARate+=thisRateA
-        if thisRateA>PeakRateA:
-            PeakRateA=thisRateA
-        ##print PSCols[counter]
-        if isCol:
-            if PSCols[counter]!=config.CircBeamCol:
-                thisRealRateA= aRatesPrompt.get(ls,0)*10
-            else:
-                thisRealRateA = aRates.get(ls,0) - bRates.get(ls,0)*20
-        else:
-            thisRealRateA = aRates.get(ls,0) - bRates.get(ls,0)*20
-        realARate+=thisRealRateA
-        if thisRealRateA > realPeakRateA:
-            realReakRateA = thisRealRateA
-        counter=counter+1
-        #ARate+=aRates.get(ls,0)
+
     ## Print Stream A Rate --moved see below
     ##print "Current Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
 
@@ -126,7 +83,6 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     ##########################################
     ## Check if the express stream is too high or low
     ##########################################
-    global NHighExpress
     badExpress = ((ExpRate/len(LumiRange) > config.MaxExpressRate) or (ExpRate/len(LumiRange)<0.1 and isCol)) ## avg express stream rate too high?
     baseText = "\nCurrent Express Stream rate is: %0.1f Hz" % (ExpRate/len(LumiRange),) ## text to display
     if badExpress:
@@ -157,26 +113,37 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     ##Check if Stream A is too high
     #########################################
     global NHighStreamA
-    badStreamA =realARate/len(LumiRange) > config.MaxStreamARate ##Cosmics Express Rate 300 Hz max
-    baseTextA= "\nCurrent Steam A Rate is: %0.1f Hz" % (ARate/len(LumiRange),)
-    baseTextRealA= "\nCurrent PROMPT Steam A Rate is: %0.1f Hz" % (realARate/len(LumiRange),)
-    if badStreamA:
-        textA=colored(baseTextA,'red',attrs=['reverse'])  ## bad, make the text white on red
-        textRealA=colored(baseTextRealA,'red',attrs=['reverse'])  ## bad, make the text white on red
-        NHighStreamA+=1
-    else:
-        textA=baseTextA
-        textRealA=baseTextRealA
-        NHighStreamA=0
+    stream_mon = StreamMonitor()
+    core_a_rates = stream_mon.getStreamACoreRatesByLS(parser,LumiRange,config,isCol).values()
+    a_rates = stream_mon.getStreamARatesByLS(parser,LumiRange).values()
+    peak_core_a_rate = max(core_a_rates)
 
-    write(textA)
-    write(textRealA)
-    if badStreamA:
-        if len(LumiRange)>1:
-            if (realARate-realPeakRateA)/(len(LumiRange)-1) <=config.MaxStreamARate: ## one lumisection causes this
+    if len(LumiRange) > 0:
+        avg_core_a_rate = sum(core_a_rates)/len(LumiRange)
+        avg_a_rate = sum(a_rates)/len(LumiRange)
+        badStreamA = stream_mon.compareStreamARate(config, avg_core_a_rate, LumiRange,AvInstLumi,isCol)
+
+        baseTextA= "\nCurrent Stream A Rate is: %0.1f Hz" % (avg_a_rate)
+        baseTextRealA= "\nCurrent PROMPT Stream A Rate is: %0.1f Hz" % (avg_core_a_rate)
+
+        if badStreamA:
+            textA=colored(baseTextA,'red',attrs=['reverse'])  ## bad, make the text white on red
+            textRealA=colored(baseTextRealA,'red',attrs=['reverse'])  ## bad, make the text white on red
+            NHighStreamA+=1
+        else:
+            textA=baseTextA
+            textRealA=baseTextRealA
+
+        write(textA)
+        write(textRealA)
+    
+        if badStreamA and len(LumiRange) > 1:
+            trimmed_core_a_rates = core_a_rates
+            trimmed_core_a_rates.remove(peak_core_a_rate)
+            if sum(trimmed_core_a_rates)/(len(LumiRange)-1) <= config.MaxStreamARate: ## one lumisection causes this
                 write("  <<  This appears to be due to a 1 lumisection spike, please monitor\n")
             else:
-                if NHighStreamA >1: ##Call HLT doc!
+                if NHighStreamA > 1: ##Call HLT doc!
                     write(colored("  <<  WARNING: Current Stream A rate is too high!",'red',attrs=['reverse']) )
                     Warn = True
     write("\n\n")
@@ -192,7 +159,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
 
         write( colored(line,'red',attrs=['reverse','blink']) )
         write( colored("*"*cols+"\n",'red',attrs=['reverse','blink']) )
-    
+        
     
     PrescaleColumnString=''
     PSCols = list(set(PSCols))
