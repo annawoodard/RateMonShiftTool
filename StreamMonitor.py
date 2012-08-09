@@ -38,9 +38,9 @@ class StreamMonitor:
             try:
                 pred_stream_a = fit_input['HLT_Stream_A'][1]+fit_input['HLT_Stream_A'][2]*av_inst_lumi+fit_input['HLT_Stream_A'][3]*av_inst_lumi*av_inst_lumi
                 sigma = fit_input['HLT_Stream_A'][5]
-
-            except:#No fit for stream a; if one is desired, run DatabaseRatePredictor.py with a trigger list including 'HLT_Stream_A'
+            except:
                 break
+            #No fit for stream a; if one is desired, run DatabaseRatePredictor.py with a trigger list including 'HLT_Stream_A'
             
             per_diff = (curr_stream_a - pred_stream_a)/pred_stream_a * 100
             sigma_diff = (curr_stream_a - pred_stream_a)/sigma
