@@ -1084,6 +1084,7 @@ def GetLatestRunNumber(runNo=9999999,newRun=False):
     SELECT TIER0_TRANSFER TIER0 FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
     """ % r
     curs.execute(Tier0xferQuery)
+    tier0=1
     try:
         tier0, = curs.fetchone()
                     
