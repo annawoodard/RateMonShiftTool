@@ -12,7 +12,7 @@ from TablePrint import *
 from AddTableInfo_db import MoreTableInfo
 from math import *
 from DatabaseParser import *
-
+from TablePrint import *
 
 WBMPageTemplate = "http://cmswbm/cmsdb/servlet/RunSummary?RUN=%s&DB=cms_omds_lb"
 WBMRunInfoPage = "https://cmswbm/cmsdb/runSummary/RunSummary_1.html"
@@ -498,7 +498,11 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             VC = ""
             if ExpectedRate>0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
-                SigmaDiff = round( (TriggerRate - ExpectedRate)/sigma, 2)                
+                try:
+                    SigmaDiff = round( (TriggerRate - ExpectedRate)/sigma, 2)
+                except:
+                    SigmaDiff = 0#solves nasty zero division errors
+                
             else:
                 PerDiff=-999.
                 SigmaDiff=-999
@@ -597,6 +601,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in SortedData]
         PrettyPrintTable(Header,table_data,[80,10,10,10,10,20],Warn)    
 
+    prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,20],Header,SortedData,Warn)
 
     if RefParser.RunNumber == 0:
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'
