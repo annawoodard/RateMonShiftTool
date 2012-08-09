@@ -47,9 +47,7 @@ class StreamMonitor:
 
             if abs(sigma_diff) > config.DefAllowRateSigmaDiff*2 and config.DefWarnOnSigmaDiff:
                 bad_stream_a = True
-            elif abs(per_diff) > config.DefAllowRatePercDiff and not config.DefWarnOnSigmaDiff:
+            if abs(per_diff) > config.DefAllowRatePercDiff and not config.DefWarnOnSigmaDiff:
                 bad_stream_a = True
-            else:
-                bad_stream_a = False
 
         return bad_stream_a
