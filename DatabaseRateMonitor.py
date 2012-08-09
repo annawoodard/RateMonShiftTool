@@ -42,6 +42,7 @@ def usage():
     print "--ShowPSTriggers                     Show prescaled triggers in rate comparison"
     print "--sortBy=<field>                     Sort the triggers by field.  Valid fields are: name, rate, rateDiff"
     print "--force                              Override the check for collisions run"
+    print "--write                              Writes rates to .csv file"
     print "--help                               Print this help"
 
 def pickYear():
@@ -54,7 +55,7 @@ def main():
     try:
         opt, args = getopt.getopt(sys.argv[1:],"",["AllowedPercDiff=","AllowedSigmaDiff=","CompareRun=","FindL1Zeros",\
                                                    "FirstLS=","NumberLS=","IgnoreLowRate=","ListIgnoredPaths",\
-                                                   "PrintLumi","RefRun=","ShowPSTriggers","force","sortBy=","help"])
+                                                   "PrintLumi","RefRun=","ShowPSTriggers","force","sortBy=","write","help"])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -85,6 +86,7 @@ def main():
     RefRunNum         = int(Config.ReferenceRun)
     ShowPSTriggers    = True
     Force             = False
+    writeb            = False
     SortBy            = ""
     ShifterMode       = int(Config.ShifterMode) # get this from the config, but can be overridden by other options
     
@@ -126,6 +128,8 @@ def main():
             SortBy = a
         elif o=="--force":
             Force = True
+        elif o=="--write":
+            writeb = True
         elif o=="--help":
             usage()
             sys.exit(0)
@@ -303,7 +307,7 @@ def main():
                         MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                     else:
                         if (len(HeadLumiRange)>0):
-                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff)
+                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb)
                             if FindL1Zeros:
                                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config)
                         else:
@@ -387,7 +391,7 @@ def main():
         print "Quitting. Peace Out."
 
             
-def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff):
+def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb):
     Data   = []
     Warn   = []
     IgnoredRates=[]
@@ -574,7 +578,8 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in SortedData]
         PrettyPrintTable(Header,table_data,[80,10,10,10,10,20],Warn)
 
-    prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,20],Header,SortedData,Warn)
+    if writeb:
+        prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,20],Header,SortedData,Warn)
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config,True)
 
