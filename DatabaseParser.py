@@ -265,9 +265,42 @@ class DatabaseParser:
                 
             TriggerRates[name] = [avps,ps,rate/n,psrate/n]
         
-        
         return TriggerRates
 
+    def GetAvgTrigRateInLSRange(self,triggerName,LSRange):
+        sqlquery = """SELECT A.PACCEPT
+        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
+        WHERE RUNNUMBER=%s AND B.NAME = \'%s\' AND A.PATHID = B.PATHID AND A.LSNUMBER IN %s
+        """
+
+        LSRangeSTR = str(LSRange)
+        LSRangeSTR = LSRangeSTR.replace("[","(")
+        LSRangeSTR = LSRangeSTR.replace("]",")")
+
+        query = sqlquery % (self.RunNumber,triggerName,LSRangeSTR)
+        self.curs.execute(query)
+        avg_rate = sum([counts[0] for counts in self.curs.fetchall()])/ (23.3 * len(LSRange))
+
+        return avg_rate
+
+    def GetTrigRatesInLSRange(self,triggerName,LSRange):
+        sqlquery = """SELECT A.LSNUMBER, A.PACCEPT
+        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
+        WHERE RUNNUMBER=%s AND B.NAME = \'%s\' AND A.PATHID = B.PATHID AND A.LSNUMBER IN %s
+        ORDER BY A.LSNUMBER
+        """
+
+        LSRangeSTR = str(LSRange)
+        LSRangeSTR = LSRangeSTR.replace("[","(")
+        LSRangeSTR = LSRangeSTR.replace("]",")")
+
+        query = sqlquery % (self.RunNumber,triggerName,LSRangeSTR)
+        self.curs.execute(query)
+        r={}
+        for ls,accept in  self.curs.fetchall():
+            r[ls] = accept/23.3
+        return r
+    
     def GetTriggerRatesByLS(self,triggerName):
         sqlquery = """SELECT A.LSNUMBER, A.PACCEPT
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
@@ -283,6 +316,37 @@ class DatabaseParser:
     def GetAllTriggerRatesByLS(self):
         for hltName in self.HLTSeed:
             self.HLTRatesByLS[hltName] = self.GetTriggerRatesByLS(hltName)
+
+    def GetPSColumnsInLSRange(self,LSRange):
+        sqlquery="""SELECT LUMI_SECTION,PRESCALE_INDEX FROM
+        CMS_GT_MON.LUMI_SECTIONS B WHERE B.RUN_NUMBER=%s AND B.LUMI_SECTION IN %s"""        
+
+        LSRangeSTR = str(LSRange)
+        LSRangeSTR = LSRangeSTR.replace("[","(")
+        LSRangeSTR = LSRangeSTR.replace("]",")")
+        query = sqlquery % (self.RunNumber,LSRangeSTR)
+        self.curs.execute(query)
+
+        ps_columns={}
+        for ls, ps_index in self.curs.fetchall():
+            ps_columns[ls] = ps_index
+
+        return ps_columns
+
+    def GetAvDeliveredLumi(self,LSRange):
+        sqlquery="""SELECT DELIVLUMI FROM
+        CMS_RUNTIME_LOGGER.LUMI_SECTIONS A WHERE A.RUNNUMBER=%s AND A.LUMISECTION IN %s"""        
+
+        LSRangeSTR = str(LSRange)
+        LSRangeSTR = LSRangeSTR.replace("[","(")
+        LSRangeSTR = LSRangeSTR.replace("]",")")
+        query = sqlquery % (self.RunNumber,LSRangeSTR)
+        self.curs.execute(query)
+
+        delivered = [val[0] for val in self.curs.fetchall()]
+        avg_delivered = sum(delivered)/len(LSRange)
+
+        return avg_delivered
 
     def GetLumiInfo(self):
         
