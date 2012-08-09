@@ -26,17 +26,22 @@ class StreamMonitor:
         return a_rates
 
     def compareStreamARate(self, config, curr_stream_a, ls_list,av_inst_lumi,in_coll):
+        if curr_stream_a > config.MaxStreamARate:
+            bad_stream_a = True
+        else:
+            bad_stream_a = False
+        
         if in_coll:
             pkl_file = open(config.FitFileName, 'rb')
             fit_input = pickle.load(pkl_file)
 
-            pred_stream_a = fit_input['HLT_Stream_A'][1]+fit_input['HLT_Stream_A'][2]*av_inst_lumi+fit_input['HLT_Stream_A'][3]*av_inst_lumi*av_inst_lumi
-            sigma = fit_input['HLT_Stream_A'][5]
+            try:
+                pred_stream_a = fit_input['HLT_Stream_A'][1]+fit_input['HLT_Stream_A'][2]*av_inst_lumi+fit_input['HLT_Stream_A'][3]*av_inst_lumi*av_inst_lumi
+                sigma = fit_input['HLT_Stream_A'][5]
 
-            print '\n'
-            print 'pred stream a: '+str(pred_stream_a)
-            print 'sigma: '+str(sigma)
-
+            except:#No fit for stream a; if one is desired, run DatabaseRatePredictor.py with a trigger list including 'HLT_Stream_A'
+                break
+            
             per_diff = (curr_stream_a - pred_stream_a)/pred_stream_a * 100
             sigma_diff = (curr_stream_a - pred_stream_a)/sigma
 
@@ -44,14 +49,7 @@ class StreamMonitor:
                 bad_stream_a = True
             elif abs(per_diff) > config.DefAllowRatePercDiff and not config.DefWarnOnSigmaDiff:
                 bad_stream_a = True
-            elif curr_stream_a > config.MaxStreamARate:
-                bad_stream_a = True
             else:
                 bad_stream_a = False
-
-        elif curr_stream_a > config.MaxStreamARate:
-            bad_stream_a = True
-        else:
-            bad_stream_a = False
 
         return bad_stream_a
