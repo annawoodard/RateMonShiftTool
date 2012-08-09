@@ -7,7 +7,7 @@ import os
 from numpy import *
 import pickle
 import getopt
-
+from StreamMonitor import StreamMonitor
 
 from ROOT import gROOT, TCanvas, TF1, TGraph, TGraphErrors, TPaveStats, gPad, gStyle
 from ROOT import TFile, TPaveText, TBrowser
@@ -16,7 +16,6 @@ import array
 import math
 from ReadConfig import RateMonConfig
 from TablePrint import *
-
 from selectionParser import selectionParser
 
 def usage():
@@ -59,6 +58,7 @@ def main():
         
         ##set year to 2012
         pickYear()
+        
         try:
             opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear","inst","TMDerr","write"])
             
@@ -272,14 +272,6 @@ def main():
                 else:
                     trig_list.append(trig_input)
         
-                    
-            
-            
-        ##usage()
-        ##sys.exit(0)
-
-    
-    
     ## Can use any combination of LowestRunNumber, HighestRunNumber, and NumberOfRuns -
     ## just modify "ExistingRuns.sort" and for "run in ExistingRuns" accordingly
 
@@ -303,7 +295,6 @@ def main():
             print_table = False
             data_clean = True ##Gets rid of anomalous rate points, reqires physics_active_psi (PAP) and deadtime < 20%
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            ##plot_properties = [["delivered", "rate", True, True, False, fitFile]]
             if not do_inst:
                 plot_properties = [["delivered", "rate", True, True, False, fitFile]]
             else:
@@ -330,9 +321,7 @@ def main():
             print_table = False
             data_clean = True
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run176023to180252.pkl"]]
-            ##plot_properties = [["ls", "rawrate", False, True, False, "Fits/2011/Fit_HLT_10LS_Run179497to180252.pkl"]]
-            plot_properties = [["ls", "rawrate", False, True, False,fitFile]]
+            plot_properties = [["ls", "rate", False, True, False,fitFile]]
 
             masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
             save_fits = False
@@ -342,27 +331,20 @@ def main():
             print_info=True
             if subsys==-1.0:
                 SubSystemOff={'All':True,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':True}
-
-    
-    
     
         for k in SubSystemOff.iterkeys():
             print k,"=",SubSystemOff[k],"   ",
         print " "
 
-        ##print "Trigger list=",trig_list
         ########  END PARAMETERS - CALL FUNCTIONS ##########
         [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion)
-        ##if not checkLS(Rates,LumiPageInfo,trig_list):
-        ##    print "Missing LS!"
-    
-    
-        #for iterator in range(len(Rates["HLT_Mu17_TkMu8"]["run"])):
-        #    print iterator, "run=",Rates["HLT_Mu17_TkMu8"]["run"][iterator],"ls=",Rates["HLT_Mu17_TkMu8"]["ls"][iterator],"rate=",round(Rates["HLT_Mu17_TkMu8"]["run"][iterator],2)
-            
         rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool)
+
     except KeyboardInterrupt:
         print "Wait... come back..."
+
+
+
 
 def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion):
     
@@ -433,8 +415,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
         if JSON:
             if not RefRunNum in JSON:
                 continue
-        try:
-            
+        try:            
             ExistsAlready = False
             for key in Rates:
                 if RefRunNum in Rates[key]["run"]:
@@ -444,8 +425,6 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
             
             LumiExistsLAready=False
             for v in LumiPageInfo.itervalues():
-                #print RefRunNum, v["Run"]
-
                 if RefRunNum == v["Run"]:
                     LumiExistsAlready=True
                     break
@@ -480,19 +459,6 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 RefLumiRange = []
                 RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit
 
-        
-                ## We have specified the trig list without version numbers, we add them specific to this run
-                ##print "Processing Triggers: "
-                ## trig_list=[]
-                ## for entry in trig_list_noV:
-##                     trig_list.append(RefParser.GetTriggerVersion(entry))
-##                     if trig_list[-1]=="":
-##                         print ">> WARNING: could not find version for trigger %s, SKIPPING" % (entry,)
-##                     else:
-##                         ##print ">> %s " % (trig_list[-1],)
-##                         pass
-                #DeadTimeBeamActive=RefParser.GetDeadTimeBeamActive()
-                #print "deadtime ls run 180250=",DeadTimeBeamActive
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
                     ##cheap way of getting PSCol None-->0
                     if RefLumiArray[0][iterator] not in range(1,9):
@@ -526,13 +492,20 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
 
                 #print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
                 for nls in sorted(LSRange.iterkeys()):
-                    
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
-                    #print nls, RefLumiArray[1][nls], RefLumiArray[2][nls]
+
+                    ## Clumsy way to append Stream A. Should choose correct method for calculating stream a based on ps column used in data taking.
+                    if 'HLT_Stream_A' in trig_list:
+                        config = RateMonConfig(os.path.abspath(os.path.dirname(sys.argv[0])))
+                        config.ReadCFG()
+                        stream_mon = StreamMonitor() 
+                        core_a_rates = stream_mon.getStreamACoreRatesByLS(RefParser,LSRange[nls],config).values()
+                        avg_core_a_rate = sum(core_a_rates)/len(LSRange[nls])
+                        TriggerRates['HLT_Stream_A'] = [1,1,avg_core_a_rate,avg_core_a_rate]
 
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
                     deadtimebeamactive=RefParser.GetDeadTimeBeamActive(LSRange[nls])
-                    #print LSRange,deadtimebeamactive
+
                     physics = 1
                     active = 1
                     psi = 99
@@ -546,39 +519,21 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
 
                     MoreLumiMulti=LumiRangeGreens(RefMoreLumiArray,LSRange,nls,RefRunNum,deadtimebeamactive)
                     
-                    #print MoreLumiMulti.keys()
-#                    print "\n\n\n"
-
-                    
-
                     if inst < 0 or live < 0 or delivered < 0:
                         print "Run "+str(RefRunNum)+" LS "+str(nls)+" inst lumi = "+str(inst)+" live lumi = "+str(live)+", delivered = "+str(delivered)+", physics = "+str(physics)+", active = "+str(active)
 
 
                     
                     LumiPageInfo[nls]=MoreLumiMulti
-                    ##print LumiPageInfo[nls]
-##                         try:
-##                             LumiPageInfo[keys].append(values)
-##                         except:
-##                             print "Failed",RefRunNum, nls, keys
 
                     for key in TriggerRates:
-                        ##if not key in trig_list:
-                        ##    continue
-                        
-                        ##if not trig_name in key:
-                        ##    continue
                         if NoVersion:
                             name = StripVersion(key)
                         else:
                             name=key
-                        ##if re.match('.*_v[0-9]+',name): ##Removes _v#
-                        ##    name = name[:name.rfind('_')]
                         if not name in trig_list:
                             continue
-                        
-                        
+                         
                         if not Rates.has_key(name):
                             Rates[name] = {}
                             Rates[name]["run"] = []
@@ -596,12 +551,8 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             Rates[name]["active"] = []
                             Rates[name]["psi"] = []
 
-                            #for keys, values in MoreLumiMulti.iteritems():
-                            #    Rates[name][keys] = []
-                        
                             
                         [avps, ps, rate, psrate] = TriggerRates[key]
-                        #print "TriggerRates=",TriggerRates[key], "key=",key
                         Rates[name]["run"].append(RefRunNum)
                         Rates[name]["ls"].append(nls)
                         Rates[name]["ps"].append(ps)
@@ -621,15 +572,12 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         Rates[name]["physics"].append(physics)
                         Rates[name]["active"].append(active)
                         Rates[name]["psi"].append(psi)
-                        #print iterator, "LS=", nls, "dt=",round(deadtimebeamactive,2), "deliv=",delivered, "live=",live
+
                         
                         #for keys, values in MoreLumiMulti.iteritems():
                         #    Rates[name][keys].append(values)
                             #print nls, name, keys, values
-                #print " "        
-            #except: ##If we replace "if True:" with "try:"
-                #print "Failed to parse run "+str(RefRunNum)
-
+                                             
     RateOutput = open(RefRunFile, 'wb') ##Save new Rates[] to RefRuns
     pickle.dump(Rates, RateOutput, 2)
     RateOutput.close()
@@ -672,7 +620,6 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
     trig_list_noV=[]
     for trigs in trig_list:
         trig_list_noV.append(StripVersion(trigs))
-    ##print "trig list nov=",trig_list_noV
     if NoVersion:
         trig_list=trig_list_noV
     
@@ -776,7 +723,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             X1 = InputFit[print_trigger][2]
             X2 = InputFit[print_trigger][3]
             X3 = InputFit[print_trigger][4]
-            Chi2 = InputFit[print_trigger][5] #This is actually Chi2/ (# degrees of freedom)
+            sigma = InputFit[print_trigger][5]
             X0err= InputFit[print_trigger][7]
             ##print print_trigger," X0err=",X0err
             #print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
@@ -833,19 +780,15 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     if not do_inst:
                         if FitType == "expo":
                             rate_prediction = X0 + X1*math.exp(X2+X3*delivered_t[-1])
-                            sigma = math.sqrt(Chi2)
                         else:
                             rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1] + X3*delivered_t[-1]*delivered_t[-1]*delivered_t[-1]
-                            sigma = math.sqrt(Chi2)
 ##                     if rate_t[-1] < 0.7 * rate_prediction or rate_t[-1] > 1.4 * rate_prediction:
 ##                         print str(run_t[-1])+"  "+str(ls_t[-1])+"  "+str(print_trigger)+"  "+str(ps_t[-1])+"  "+str(deadtime_t[-1])+"  "+str(rate_prediction)+"  "+str(rate_t[-1])+"  "+str(rawrate_t[-1])
                     else:
                         if FitType == "expo":
                             rate_prediction = X0 + X1*math.exp(X2+X3*inst_t[-1])
-                            sigma = math.sqrt(Chi2)
                         else:
                             rate_prediction = X0 + X1*inst_t[-1] + X2*inst_t[-1]*inst_t[-1] + X3*inst_t[-1]*inst_t[-1]*inst_t[-1]
-                            sigma = math.sqrt(Chi2)
 
                     if live_t[-1] == 0:
                         rawrate_fit_t.append(0)
@@ -989,14 +932,10 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     f1c.SetParLimits(1,max(VY)/math.exp(10.0),max(VY)/math.exp(2.0))
                     f1c.SetParLimits(2,0.0,0.0000000001)
                     f1c.SetParLimits(3,2.0/max(VX),10.0/max(VX))
-##                     #print str(max(VY)/math.exp(2.0))+"  "+str(10.0/max(VX))
                     gr1.Fit("f1c","Q","rob=0.90")
 ##                     #if f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF():
 ##                     #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1c Chi2 = "+str(10*f1c.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1c.GetNDF()))
 ##                     #print "X0 = "+str(f1c.GetParameter(0))+" X1 = "+str(f1c.GetParameter(1))+" X2 = "+str(f1c.GetParameter(2))+" X3 = "+str(f1c.GetParameter(3))
-                    
-                    
-                    
                     
 
                     ## if (f1c.GetChisquare()/f1c.GetNDF() < f1b.GetChisquare()/f1b.GetNDF() and f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
@@ -1071,6 +1010,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 
 
         if print_table or save_fits:
+            residuals=[]
             if not do_fit:
                 print "Can't have save_fits = True and do_fit = False"
                 continue
@@ -1081,12 +1021,18 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             ##else:
             try:
                 if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()+1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()+1)):
-                    OutputFit[print_trigger] = ["expo", f1c.GetParameter(0) , f1c.GetParameter(1) , f1c.GetParameter(2) , f1c.GetParameter(3) , f1c.GetChisquare()/f1a.GetNDF() , meanrawrate, f1c.GetParError(0) , f1c.GetParError(1) , f1c.GetParError(2) , f1c.GetParError(3)]
+                    sigma = CalcSigma(VX, VY, f1c)
+                    OutputFit[print_trigger] = ["expo", f1c.GetParameter(0) , f1c.GetParameter(1) , f1c.GetParameter(2) , f1c.GetParameter(3) , sigma , meanrawrate, f1c.GetParError(0) , f1c.GetParError(1) , f1c.GetParError(2) , f1c.GetParError(3)]
+
+
                 elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()+1)):
-                    OutputFit[print_trigger] = ["poly", f1b.GetParameter(0) , f1b.GetParameter(1) , f1b.GetParameter(2) , f1b.GetParameter(3) , f1b.GetChisquare()/f1b.GetNDF() , meanrawrate, f1b.GetParError(0) , f1b.GetParError(1) , f1b.GetParError(2) , f1b.GetParError(3)]
+                    sigma = CalcSigma(VX, VY, f1b)
+                    OutputFit[print_trigger] = ["poly", f1b.GetParameter(0) , f1b.GetParameter(1) , f1b.GetParameter(2) , f1b.GetParameter(3) , sigma , meanrawrate, f1b.GetParError(0) , f1b.GetParError(1) , f1b.GetParError(2) , f1b.GetParError(3)]
+
                 else:
-                    OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , f1a.GetChisquare()/f1a.GetNDF() , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
-                
+                    sigma = CalcSigma(VX, VY, f1a)
+                    OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
+
             except ZeroDivisionError:
                 print "No NDF for",print_trigger,"skipping"
             
@@ -1120,6 +1066,15 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 
   ############# SUPPORTING FUNCTIONS ################
 
+
+def CalcSigma(var_x, var_y, func):
+    residuals = []
+    for x, y in zip(var_x,var_y):
+        residuals.append(y-func.Eval(x,0,0))
+
+    res_squared = [i*i for i in residuals]
+    sigma = math.sqrt(sum(res_squared)/(len(res_squared)-2)) 
+    return sigma
 
 def GetJSON(json_file):
 
@@ -1342,22 +1297,6 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
     
         
     if not data_clean or (
- ##        (
-        
-##         (
-##         realvalue > 0.4*prediction
-##         and realvalue < 2.5*prediction
-##         )
-        
-##         or
-
-##         (
-##         realvalue > 0.4*meanxsec
-##         and realvalue < 2.5*meanxsec
-##         )
-
-##         or prediction < 0
-##         )
         
         Rates[print_trigger]["physics"][iterator] == 1
         and Rates[print_trigger]["active"][iterator] == 1
