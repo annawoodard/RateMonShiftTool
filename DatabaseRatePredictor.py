@@ -724,7 +724,6 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             X2 = InputFit[print_trigger][3]
             X3 = InputFit[print_trigger][4]
             sigma = InputFit[print_trigger][5]*3#Display 3 sigma band to show outliers more clearly
-            print 'trig: '+str(print_trigger)+' sigma: '+str(sigma)
             X0err= InputFit[print_trigger][7]
             ##print print_trigger," X0err=",X0err
             #print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
