@@ -43,6 +43,7 @@ def usage():
     print "--inst                               Fits using inst not delivered"
     print "--TMDerr                             Use errors from TMD predictions"
     print "--write                              Writes fit info into csv, for ranking nonlinear triggers"
+    print "--AllTriggers                        Run for all triggers instead of specifying a trigger list"
     
 class Modes:
     none,fits,secondary = range(3)
@@ -60,7 +61,7 @@ def main():
         pickYear()
         
         try:
-            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear","inst","TMDerr","write"])
+            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear","inst","TMDerr","write","AllTriggers"])
             
         except getopt.GetoptError, err:
             print str(err)
@@ -121,6 +122,7 @@ def main():
         do_inst=False
         TMDerr=False
         wp_bool=False
+        all_triggers=False        
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
             if o == "--makeFits":
@@ -164,6 +166,8 @@ def main():
                 TMDerr=True
             elif o=="--write":
                 wp_bool=True
+            elif o=="--AllTriggers":
+                all_triggers=True                
             elif o == "--TriggerList":
                 try:
                     f = open(a)
@@ -235,7 +239,7 @@ def main():
 
 ###### TRIGGER LIST #######
         
-        if trig_list == []:
+        if trig_list == [] and not all_triggers:
         
             print "\nPlease specify list of triggers\n"
             print "Available lists are:"
@@ -337,8 +341,8 @@ def main():
         print " "
 
         ########  END PARAMETERS - CALL FUNCTIONS ##########
-        [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion)
-        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool)
+        [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers)
+        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers)
 
     except KeyboardInterrupt:
         print "Wait... come back..."
@@ -346,7 +350,7 @@ def main():
 
 
 
-def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion):
+def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion,all_triggers):
     
     Rates = {}
     LumiPageInfo={}
@@ -442,6 +446,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
             print "Run ",RefRunNum, " is not Collisions"
             
             continue
+        
         if not isCol:
             print "Run ",RefRunNum, " is not Collisions"
             
@@ -532,7 +537,10 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         else:
                             name=key
                         if not name in trig_list:
-                            continue
+                            if all_triggers:
+                                trig_list.append(name)
+                            else:
+                                continue
                          
                         if not Rates.has_key(name):
                             Rates[name] = {}
@@ -588,7 +596,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
     
     return [Rates,LumiPageInfo]
 
-def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst, TMDerr,wp_bool):
+def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst, TMDerr,wp_bool,all_triggers):
     min_run = min(run_list)
     max_run = max(run_list)
 
@@ -650,8 +658,11 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         NewTrigger = {}
         
         if not print_trigger in trig_list:
-            print "not in trig_list:",print_trigger, trig_list
-            continue
+            if all_triggers:
+                trig_list.append(print_trigger)
+            else:
+                print "not in trig_list:",print_trigger, trig_list
+                continue
         
         for key in Rates[print_trigger]:
             NewTrigger[key] = []
