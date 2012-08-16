@@ -574,7 +574,8 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             Rates[name]["rawxsec"].append(0.0)
                             Rates[name]["xsec"].append(0.0)
                         else:
-                            Rates[name]["rate"].append(psrate/(1.0-deadtimebeamactive))
+                            Rates[name]["rate"].append(psrate)
+#AW                            Rates[name]["rate"].append(psrate/(1.0-deadtimebeamactive))                            
                             Rates[name]["rawxsec"].append(rate/live)
                             Rates[name]["xsec"].append(psrate/live)
                         Rates[name]["physics"].append(physics)
@@ -817,7 +818,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                         else:
                             rawrate_fit_t.append(0.0)
                         
-                        rate_fit_t.append(rate_prediction)
+                        rate_fit_t.append(rate_prediction*(1.0-deadtime_t[-1]))
+#AW                        rate_fit_t.append(rate_prediction)                        
                         e_rate_fit_t.append(sigma)
                         rawxsec_fit_t.append(rawrate_fit_t[-1]/live_t[-1])
                         xsec_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/live_t[-1])
