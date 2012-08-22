@@ -157,9 +157,9 @@ class RateMonConfig:
             return 0
         
         try:
-            Chi2 = Input[TrigName][5]
+            sigma = Input[TrigName][5]
             if Input[TrigName][0] == "poly":
-                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), Chi2]
+                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma]
             else:
                 return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), Chi2]
         except:

@@ -28,8 +28,8 @@ def usage():
     print sys.argv[0]+" [Options]"
     print "This script gets the current HLT trigger rates and compares them to a reference run or a fit to multiple runs"
     print "Options: "
-    print "--AllowedPercDiff=<diff>             Report only if difference in trigger rate is greater than <diff>%"
-    print "--AllowedSigmaDiff=<diff>            Report only if difference in trigger rate is greater than <diff> standard deviations"
+    print "--AllowedPercDiff=<diff>             Warn only if difference in trigger rate is greater than <diff>%"
+    print "--AllowedSigmaDiff=<diff>            Warn only if difference in trigger rate is greater than <diff> standard deviations"
     print "--CompareRun=<Run #>                 Compare run <Run #> to the reference run (Default = Current Run)"
     print "--FindL1Zeros                        Look for physics paths with 0 L1 rate"    
     print "--FirstLS=<ls>                       Specify the first lumisection to consider. This will set LSSlidingWindow to -1"
@@ -43,6 +43,7 @@ def usage():
     print "--sortBy=<field>                     Sort the triggers by field.  Valid fields are: name, rate, rateDiff"
     print "--force                              Override the check for collisions run"
     print "--write                              Writes rates to .csv file"
+    print "--ShowAllBadRates                    Show a list of all triggers (not just those in the monitor list) with bad rates"
     print "--help                               Print this help"
 
 def pickYear():
@@ -55,7 +56,7 @@ def main():
     try:
         opt, args = getopt.getopt(sys.argv[1:],"",["AllowedPercDiff=","AllowedSigmaDiff=","CompareRun=","FindL1Zeros",\
                                                    "FirstLS=","NumberLS=","IgnoreLowRate=","ListIgnoredPaths",\
-                                                   "PrintLumi","RefRun=","ShowPSTriggers","force","sortBy=","write","help"])
+                                                   "PrintLumi","RefRun=","ShowPSTriggers","force","sortBy=","write","ShowAllBadRates","help"])
     except getopt.GetoptError, err:
         print str(err)
         usage()
@@ -87,8 +88,9 @@ def main():
     ShowPSTriggers    = True
     Force             = False
     writeb            = False
-    SortBy            = ""
+    SortBy            = "rate"
     ShifterMode       = int(Config.ShifterMode) # get this from the config, but can be overridden by other options
+    ShowAllBadRates   = False
     
    ##  if int(Config.ShifterMode):
 ##         print "ShifterMode!!"
@@ -130,6 +132,8 @@ def main():
             Force = True
         elif o=="--write":
             writeb = True
+        elif o=="--ShowAllBadRates":
+            ShowAllBadRates=True
         elif o=="--help":
             usage()
             sys.exit(0)
@@ -307,7 +311,7 @@ def main():
                         MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                     else:
                         if (len(HeadLumiRange)>0):
-                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb)
+                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates)
                             if FindL1Zeros:
                                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config)
                         else:
@@ -391,7 +395,7 @@ def main():
         print "Quitting. Peace Out."
 
             
-def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb):
+def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates):
     Data   = []
     Warn   = []
     IgnoredRates=[]
@@ -425,31 +429,22 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     
     if Config.NoVersion:
         trig_list=[]
-        FitInputNoV={}
         
         for trigger in Config.MonitorList:
             trig_list.append(StripVersion(trigger))
         for trigger in FitInput.iterkeys():
-            FitInputNoV[StripVersion(trigger)]=FitInput[trigger]
-        FitInput=FitInputNoV
+            FitInput[StripVersion(trigger)]=FitInput.pop(trigger)
+        for trigger in HeadUnprescaledRates:
+            HeadUnprescaledRates[StripVersion(trigger)]=HeadUnprescaledRates.pop(trigger)
     else:
         trig_list=Config.MonitorList
         
     for HeadName in HeadUnprescaledRates:
-        HeadNameNoV=StripVersion(HeadName)
-        
         if RefParser.RunNumber == 0: ##  If not ref run then just use trigger list
-            pass
-            if Config.NoVersion:
-                if HeadNameNoV not in trig_list and not ListIgnoredPaths:
-                    continue
-                if HeadNameNoV not in FitInput.keys() and not ListIgnoredPaths:
-                    continue
-            else:       
-                if HeadName not in trig_list and not ListIgnoredPaths:
-                    continue
-                if HeadName not in FitInput.keys() and not ListIgnoredPaths:
-                    continue
+            if HeadName not in trig_list and not ListIgnoredPaths and not ShowAllBadRates:
+                continue
+            if HeadName not in FitInput.keys() and not ListIgnoredPaths and not ShowAllBadRates:
+                continue           
 
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
         masked_trig = False
@@ -465,6 +460,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
 
             PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive)
+            VC = ""
 
             try:
                 ExpectedRate = round((PSCorrectedExpectedRate[0] / HeadUnprescaledRates[HeadName][1]),2)
@@ -472,24 +468,19 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
 
             except:
                 ExpectedRate=0. ##This means we don't have a prediction for this trigger
+                VC="No prediction"
 
             PerDiff=0
             SigmaDiff=0
-            VC = ""
-            if ExpectedRate > 0 and sigma > 0:
+            if ExpectedRate > 0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
-                try:
-                    SigmaDiff = round( (TriggerRate - ExpectedRate)/sigma, 2)
-                except:
-                    SigmaDiff = 0#solves nasty zero division errors
-                
             else:
-                PerDiff=-999.
-                SigmaDiff=-999
-                if ExpectedRate==0:
-                    VC="0 expected rate"
-                else:
-                    VC="lt 0 expected rate"
+                PerDiff=-999
+
+            if sigma > 0:
+                SigmaDiff = round( (TriggerRate - ExpectedRate)/sigma, 2)
+            else:
+                continue #Zero sigma means that when there were no rates for this trigger when the fit was made
 
             if TriggerRate < IgnoreThreshold and (ExpectedRate < IgnoreThreshold and ExpectedRate!=0):
                 continue
@@ -513,7 +504,6 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             
             RefRate = -1
             for k,v in RefUnprescaledRates.iteritems():
-                #if StripVersion(HeadName) == StripVersion(k): # versions may not match
                 if HeadName==k:
                     RefRate = RefUnprescaledRates[k][2]
                     
@@ -523,7 +513,6 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             except ZeroDivisionError:
                 ScaledRefRate=0
                 
-            ##print HeadName,"ScaledRefRate=",ScaledRefRate
             SigmaDiff = 0
             if ScaledRefRate == 0:
                 PerDiff = -999
@@ -555,31 +544,38 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
 
     #check for triggers above the warning threshold
     Warn=[]
+    core_data=[]
+    all_bad_trigs=[]
     for entry in SortedData:
-        if abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff:  
-            Warn.append(True)
-        elif abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff:
-            Warn.append(True)
+        bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff)
+        if entry[0] in trig_list or ListIgnoredPaths:
+            core_data.append(entry)
+            if bad_rate:
+                Warn.append(True)
+            else:
+                Warn.append(False)
         else:
-            Warn.append(False)
+            if bad_rate and entry[6] != "No prediction" and ShowAllBadRates:
+                core_data.append(entry)
+                Warn.append(True)
 
     if ShowSigmaAndPercDiff == 1:
         Header = ["Trigger Name", "Actual", "Expected","% Diff","Deviation", "Cur PS", "Comments"]
-        table_data=SortedData
+        table_data=core_data
         PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,20],Warn)
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'
     elif WarnOnSigmaDiff == 1:
         Header = ["Trigger Name", "Actual", "Expected","Deviation", "Cur PS", "Comments"]
-        table_data = [[col[0], col[1], col[2], col[4], col[5], col[6]] for col in SortedData]
+        table_data = [[col[0], col[1], col[2], col[4], col[5], col[6]] for col in core_data]
         PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,20],Warn)
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'
     else:
         Header = ["Trigger Name", "Actual", "Expected", "% Diff", "Cur PS", "Comments"]
-        table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in SortedData]
+        table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in core_data]
         PrettyPrintTable(Header,table_data,[80,10,10,10,10,20],Warn)
 
     if writeb:
-        prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,20],Header,SortedData,Warn)
+        prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,20],Header,core_data,Warn)
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config,True)
 
@@ -590,7 +586,8 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             print "More instructions at https://twiki.cern.ch/twiki/bin/view/CMS/TriggerShiftHLTGuide"
             write(bcolors.ENDC+"\n")
             break
-
+        
+ 
 def CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedPercRateDiff,IgnoreThreshold,Config):
     L1Zeros=[]
     IgnoreBits = ["L1_PreCollisions","L1_InterBunch_Bsc","L1_BeamHalo","L1_BeamGas_Hf"]

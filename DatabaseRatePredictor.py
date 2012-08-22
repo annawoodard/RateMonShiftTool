@@ -1004,7 +1004,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     print '%-60s | quad | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())
                     f1a.SetLineColor(1)
                     priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
-                    sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)                                        
+                    sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
                     OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
 
             except ZeroDivisionError:
@@ -1065,10 +1065,13 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 def CalcSigma(var_x, var_y, func):
     residuals = []
     for x, y in zip(var_x,var_y):
-        residuals.append(y-func.Eval(x,0,0))
+        residuals.append(y - func.Eval(x,0,0))
 
     res_squared = [i*i for i in residuals]
-    sigma = math.sqrt(sum(res_squared)/(len(res_squared)-2)) 
+    if len(res_squared) > 2:
+        sigma = math.sqrt(sum(res_squared)/(len(res_squared)-2))
+    else:
+        sigma = 0
     return sigma
 
 def GetJSON(json_file):
