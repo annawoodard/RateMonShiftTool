@@ -464,23 +464,23 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
 
             try:
                 ExpectedRate = round((PSCorrectedExpectedRate[0] / HeadUnprescaledRates[HeadName][1]),2)
-                sigma = round((sqrt(PSCorrectedExpectedRate[1]) / HeadUnprescaledRates[HeadName][1]),2)
+                sigma = PSCorrectedExpectedRate[1]/(sqrt(len(HeadLumiRange))* HeadUnprescaledRates[HeadName][1])
 
             except:
-                ExpectedRate=0. ##This means we don't have a prediction for this trigger
+                ExpectedRate = 0.0 ##This means we don't have a prediction for this trigger
+                PerDiff = 0.0
+                SigmaDiff = 0.0
                 VC="No prediction"
 
-            PerDiff=0
-            SigmaDiff=0
             if ExpectedRate > 0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
             else:
-                PerDiff=-999
+                PerDiff = 0.0
 
-            if sigma > 0:
+            if sigma > 0: 
                 SigmaDiff = round( (TriggerRate - ExpectedRate)/sigma, 2)
             else:
-                continue #Zero sigma means that when there were no rates for this trigger when the fit was made
+                SigmaDiff =-999 #Zero sigma means that when there were no rates for this trigger when the fit was made
 
             if TriggerRate < IgnoreThreshold and (ExpectedRate < IgnoreThreshold and ExpectedRate!=0):
                 continue
@@ -545,7 +545,6 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     #check for triggers above the warning threshold
     Warn=[]
     core_data=[]
-    all_bad_trigs=[]
     for entry in SortedData:
         bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff)
         if entry[0] in trig_list or ListIgnoredPaths:

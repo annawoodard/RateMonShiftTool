@@ -301,6 +301,7 @@ def main():
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
             if not do_inst:
                 plot_properties = [["delivered", "rate", True, True, False, fitFile]]
+#                plot_properties = [["delivered", "rawrate", True, True, False, fitFile]]                
             else:
                 plot_properties = [["inst", "rate", True, True, False, fitFile]]
         
@@ -502,13 +503,12 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
 
                     ## Clumsy way to append Stream A. Should choose correct method for calculating stream a based on ps column used in data taking.
-                    if 'HLT_Stream_A' in trig_list:
-                        config = RateMonConfig(os.path.abspath(os.path.dirname(sys.argv[0])))
-                        config.ReadCFG()
-                        stream_mon = StreamMonitor() 
-                        core_a_rates = stream_mon.getStreamACoreRatesByLS(RefParser,LSRange[nls],config).values()
-                        avg_core_a_rate = sum(core_a_rates)/len(LSRange[nls])
-                        TriggerRates['HLT_Stream_A'] = [1,1,avg_core_a_rate,avg_core_a_rate]
+                    config = RateMonConfig(os.path.abspath(os.path.dirname(sys.argv[0])))
+                    config.ReadCFG()
+                    stream_mon = StreamMonitor() 
+                    core_a_rates = stream_mon.getStreamACoreRatesByLS(RefParser,LSRange[nls],config).values()
+                    avg_core_a_rate = sum(core_a_rates)/len(LSRange[nls])
+                    TriggerRates['HLT_Stream_A'] = [1,1,avg_core_a_rate,avg_core_a_rate]
 
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
                     deadtimebeamactive=RefParser.GetDeadTimeBeamActive(LSRange[nls])
@@ -982,6 +982,9 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     pass
                 
         if print_table or save_fits:
+            if sum(VY) == 0 and all_triggers:
+                continue
+            
             if not do_fit:
                 print "Can't have save_fits = True and do_fit = False"
                 continue
@@ -1001,12 +1004,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     OutputFit[print_trigger] = ["poly", f1b.GetParameter(0) , f1b.GetParameter(1) , f1b.GetParameter(2) , f1b.GetParameter(3) , sigma , meanrawrate, f1b.GetParError(0) , f1b.GetParError(1) , f1b.GetParError(2) , f1b.GetParError(3)]
 
                 else:
-                    print '%-60s | quad | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())
+
+                    print '%-60s | quad | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())                    
                     f1a.SetLineColor(1)
                     priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
                     sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
+                    if print_trigger == "HLT_Mu8_TriJet30":
+                        print "sigma: "+str(sigma)+"VX: "+str(VX)+"VY: "+str(VY)
                     OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
-
             except ZeroDivisionError:
                 print "No NDF for",print_trigger,"skipping"
  
