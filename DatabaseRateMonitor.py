@@ -470,7 +470,8 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                 ExpectedRate = 0.0 ##This means we don't have a prediction for this trigger
                 PerDiff = 0.0
                 SigmaDiff = 0.0
-                VC="No prediction"
+                if HeadUnprescaledRates[HeadName][1] != 0:
+                    VC="No prediction"
 
             if ExpectedRate > 0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
