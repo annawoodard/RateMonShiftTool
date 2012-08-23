@@ -982,9 +982,6 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     pass
                 
         if print_table or save_fits:
-            if sum(VY) == 0 and all_triggers:
-                continue
-            
             if not do_fit:
                 print "Can't have save_fits = True and do_fit = False"
                 continue
@@ -1009,9 +1006,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     f1a.SetLineColor(1)
                     priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
                     sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
-                    if print_trigger == "HLT_Mu8_TriJet30":
-                        print "sigma: "+str(sigma)+"VX: "+str(VX)+"VY: "+str(VY)
                     OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
+                    
             except ZeroDivisionError:
                 print "No NDF for",print_trigger,"skipping"
  

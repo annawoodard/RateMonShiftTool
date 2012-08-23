@@ -555,7 +555,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             else:
                 Warn.append(False)
         else:
-            if bad_rate and entry[6] != "No prediction" and ShowAllBadRates:
+            if bad_rate and ShowAllBadRates:
                 core_data.append(entry)
                 Warn.append(True)
 
