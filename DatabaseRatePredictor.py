@@ -572,11 +572,14 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         Rates[name]["deadtime"].append(deadtimebeamactive)
                         Rates[name]["rawrate"].append(rate)
                         if live == 0:
-                            Rates[name]["rate"].append(0)
+                            Rates[name]["rate"].append(0.0)
                             Rates[name]["rawxsec"].append(0.0)
                             Rates[name]["xsec"].append(0.0)
                         else:
-                            Rates[name]["rate"].append(psrate/(1.0-deadtimebeamactive))                            
+                            try:
+                                Rates[name]["rate"].append(psrate/(1.0-deadtimebeamactive))
+                            except:
+                                Rates[name]["rate"].append(0.0)
                             Rates[name]["rawxsec"].append(rate/live)
                             Rates[name]["xsec"].append(psrate/live)
                         Rates[name]["physics"].append(physics)
@@ -643,9 +646,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 for trigger in InputFit.iterkeys():
                     FitInputNoV[StripVersion(trigger)]=InputFit[trigger]
                 InputFit=FitInputNoV
-                
-                    
-                
+                                    
             else:
                 if not InputFit.has_key(trig):
                     print "WARNING:  No Fit Prediction for Trigger %s, SKIPPING" % (trig,)
