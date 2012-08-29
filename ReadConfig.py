@@ -161,13 +161,12 @@ class RateMonConfig:
             if Input[TrigName][0] == "poly":
                 return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma]
             else:
-                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), Chi2]
+                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), sigma]
         except:
             RefRun = True
             #print "EXCEPT ERR"
 
         if RefRun:
-
             num_compare = 0
             pred_rate = 0
             for iterator in range(len(Rates[TrigName]["rate"])):
