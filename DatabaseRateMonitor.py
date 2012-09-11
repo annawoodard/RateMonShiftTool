@@ -287,7 +287,6 @@ def main():
     ###isGood=1##if there is a trigger key
     try:
         while True:
-            
             if isGood:
                 tempLastGoodLS=LastGoodLS
                 LastGoodLS=HeadParser.GetLastLS(isCol)
@@ -305,12 +304,16 @@ def main():
                                 isBeams=False
                         except:
                             isBeams=False
-                
+
                     if not (isCol and isBeams):
                     ##clear()
                         MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                     else:
                         if (len(HeadLumiRange)>0):
+                            if not isSequential(HeadLumiRange):
+                                print "Some lumisections have been skipped. Averaging over most recent sequential lumisections..."
+                                sequential_chunk = getSequential(HeadLumiRange)
+                                HeadLumiRange = sequential_chunk                                
                             RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates)
                             if FindL1Zeros:
                                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config)
@@ -323,7 +326,6 @@ def main():
                 print "Expert Mode. Quitting."
                 sys.exit(0)
 
-            
             print "Sleeping for 1 minute before repeating  "
             for iSleep in range(20):
                 write(".")
@@ -615,7 +617,25 @@ def CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,S
     #print "The average lumi of this run is: "+str(round(HeadParser.LumiInfo[6],1))+"e30"
         for Seed in L1Zeros:
             print Seed
-        
+
+def isSequential(t):
+    try:
+        if len(t)<2:
+            return True
+    except:
+        return True        
+    for i,e in enumerate(t[1:]):
+        if not abs(e-t[i])==1:
+            return False
+    return True
+
+def getSequential(range):
+    for i,j in zip(range[-2::-1],range[::-1]):
+        if j-i != 1:
+            range = range[range.index(j):]
+    return range
+
+
 if __name__=='__main__':
     global thisyear
     main()
