@@ -503,12 +503,13 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
 
                     ## Clumsy way to append Stream A. Should choose correct method for calculating stream a based on ps column used in data taking.
-                    config = RateMonConfig(os.path.abspath(os.path.dirname(sys.argv[0])))
-                    config.ReadCFG()
-                    stream_mon = StreamMonitor() 
-                    core_a_rates = stream_mon.getStreamACoreRatesByLS(RefParser,LSRange[nls],config).values()
-                    avg_core_a_rate = sum(core_a_rates)/len(LSRange[nls])
-                    TriggerRates['HLT_Stream_A'] = [1,1,avg_core_a_rate,avg_core_a_rate]
+                    if ('HLT_Stream_A' in trig_list) or all_triggers:
+                        config = RateMonConfig(os.path.abspath(os.path.dirname(sys.argv[0])))
+                        config.ReadCFG()
+                        stream_mon = StreamMonitor() 
+                        core_a_rates = stream_mon.getStreamACoreRatesByLS(RefParser,LSRange[nls],config).values()
+                        avg_core_a_rate = sum(core_a_rates)/len(LSRange[nls])
+                        TriggerRates['HLT_Stream_A'] = [1,1,avg_core_a_rate,avg_core_a_rate]
 
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
                     deadtimebeamactive=RefParser.GetDeadTimeBeamActive(LSRange[nls])
@@ -737,7 +738,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             X1 = InputFit[print_trigger][2]
             X2 = InputFit[print_trigger][3]
             X3 = InputFit[print_trigger][4]
-            sigma = InputFit[print_trigger][5]*3#Display 3 sigma band to show outliers more clearly
+            sigma = InputFit[print_trigger][5]/math.sqrt(num_ls)*3#Display 3 sigma band to show outliers more clearly
             X0err= InputFit[print_trigger][7]
             ##print print_trigger," X0err=",X0err
             #print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
