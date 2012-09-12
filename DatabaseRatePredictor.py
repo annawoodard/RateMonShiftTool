@@ -1017,14 +1017,18 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             gr1.Draw("APZ")
             if not do_fit:
                 gr3.Draw("P3")
+                
             if do_fit:
-                f1a.Draw("same")
-                try:
-                    f1b.Draw("same")
+                f1d.Draw("same")
+                if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-1)):
                     f1c.Draw("same")
-                    f1d.Draw("same")
-                except:
-                    True
+
+                elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1)):
+                    f1b.Draw("same")
+
+                else:
+                    f1a.Draw("same")
+                
             c1.Update()
             if save_root:
                 myfile = TFile( RootFile, 'UPDATE' )
