@@ -3,11 +3,11 @@
 
 runList=runList.txt
 TriggerList=monitorlist_Sept_Core_2012.list
-firstFitRun=191800
-lastFitRun=191859
-fitFile=Fits/2012/Fit_HLT_NoV_10LS_Run${firstFitRun}to${lastFitRun}.pkl
-fitRootFile=HLT_10LS_delivered_vs_rate_Run${firstFitRun}-${lastFitRun}.root
-JSONFile=Cert_190456-191859_8TeV_PromptReco_Collisions12_JSON.txt
+firstFitRun=202305
+lastFitRun=203002
+fitFile=Fits/2012/Fit_HLT_NoV_10LS_Run${firstFitRun}to${lastFitRun}.pkl #Contains fit parameters to make predictions
+fitRootFile=HLT_10LS_delivered_vs_rate_Run${firstFitRun}-${lastFitRun}.root #Contains fit curves to look at
+JSONFile=Cert_190456-202305_8TeV_PromptReco_Collisions12_JSON.txt #Latest golden json to be use in making fit file
 
 if [ $# -ge 1 ]; then
     runList=${1}
