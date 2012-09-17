@@ -1,6 +1,11 @@
 //This script will take all the rate comparison plots from a 
 //root file and print them into a single pdf for easy viewing
-//Usage: root -b -l -q 'dumpToPDF.C("infile.root")'  
+//Usage: root -b -l -q 'dumpToPDF.C+("infile.root", "fitName")'  
+
+#include <iostream>
+#include "TFile.h"
+#include "TCanvas.h"
+#include "TKey.h"
 
 void
 dumpToPDF(string inName, string fitName){
@@ -20,7 +25,10 @@ dumpToPDF(string inName, string fitName){
   int nplots = fin->GetNkeys(); 
   int nfits = fFit->GetNkeys(); 
   printf("nplots: %i, nfits: %i\n", nplots, nfits);
-  assert(nplots == nfits);
+  if(nplots != nfits){
+    cout<<" PDF output will be wrong since different number of triggers in fit and current run"<<endl;
+    abort();
+  }
   TList* plots = fin->GetListOfKeys();  
   TList* fits  = fFit->GetListOfKeys();
   for(int i=0; i<nplots; ++i){
