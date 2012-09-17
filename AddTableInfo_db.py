@@ -30,7 +30,8 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         if set(parser.InstLumiByLS.values()) == set([None]):
             write(colored("\n\nLUMI INFORMATION NOT BEING SENT!\n",'red',attrs=['reverse']))
             write(colored("Check with Shift Leader if this is expected\n",'red',attrs=['reverse']))
-            write(colored("If not, call Lumi DOC\n\n\n",'red',attrs=['reverse']))
+            write(colored("If not, HFLUMI needs to be red-recycled\n\n\n",'red',attrs=['reverse']))
+            write(colored("If in doubt, call Lumi DOC\n\n\n",'red',attrs=['reverse']))
             #return
                                                                                                                                                                                                                                                                     
     try:
