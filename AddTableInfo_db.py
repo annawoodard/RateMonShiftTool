@@ -25,7 +25,14 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
     else:
         print "no lumisections to monitor"
         return
-    
+  ## check if lumi is being filled
+    if parser.LastLSParsed > 4:
+        if set(parser.InstLumiByLS.values()) == set([None]):
+            write(colored("LUMI INFORMATION NOT BEING SENT!\n",'red',attrs=['reverse']))
+            write(colored("Check with Shift Leader if this is expected\n",'red',attrs=['reverse']))
+            write(colored("If not, call Lumi DOC\n",'red',attrs=['reverse']))
+            return
+                                                                                                                                                                                                                                                                    
     try:
         #print "trying v3"
         lograte=parser.GetTriggerRatesByLS("HLT_LogMonitor_v3")
