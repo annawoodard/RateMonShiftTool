@@ -32,6 +32,7 @@ class RateMonConfig:
         self.MaxLogMonRate=10
         self.DefWarnOnSigmaDiff=1
         self.DefShowSigmaAndPercDiff=0
+        self.DoL1=0
         
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -127,6 +128,8 @@ class RateMonConfig:
                 self.MaxLogMonRate=float(arg)
             elif par=="WarnOnSigmaDiff":
                 self.DefWarnOnSigmaDiff=float(arg)
+            elif par=="DoL1":
+                self.DoL1=int(arg)
             else:
                 print "Invalid Option : "+strippedLine
         f.close()

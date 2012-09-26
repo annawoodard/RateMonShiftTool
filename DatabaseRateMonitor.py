@@ -405,6 +405,10 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     [HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols] = HeadParser.GetAvLumiInfo(HeadLumiRange)
     ##[HeadUnprescaledRates, HeadTotalPrescales, HeadL1Prescales, HeadTriggerRates] = HeadParser.UpdateRun(HeadLumiRange)
     HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
+    L1RatesALL=HeadParser.GetL1RatesALL(HeadLumiRange)
+    for L1seed in L1RatesALL.iterkeys():
+        HeadUnprescaledRates[L1seed]=L1RatesALL[L1seed]
+        
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
     deadtimebeamactive=HeadParser.GetDeadTimeBeamActive(HeadLumiRange)
     try:
@@ -434,10 +438,25 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         
         for trigger in Config.MonitorList:
             trig_list.append(StripVersion(trigger))
+        if Config.DoL1:
+            L1HLTseeds=HeadParser.GetL1HLTseeds()
+            for HLTkey in trig_list:
+                if "L1" in HLTkey:
+                    continue
+                else:
+                    try:
+                        for L1seed in L1HLTseeds[HLTkey]:
+                            if L1seed not in trig_list:
+                                trig_list.append(L1seed)
+                    except:
+                        pass    
         for trigger in FitInput.iterkeys():
+            print trigger
             FitInput[StripVersion(trigger)]=FitInput.pop(trigger)
         for trigger in HeadUnprescaledRates:
             HeadUnprescaledRates[StripVersion(trigger)]=HeadUnprescaledRates.pop(trigger)
+        print trig_list
+        
     else:
         trig_list=Config.MonitorList
         
