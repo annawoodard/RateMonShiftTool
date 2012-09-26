@@ -122,7 +122,8 @@ def main():
         do_inst=False
         TMDerr=False
         wp_bool=False
-        all_triggers=False        
+        all_triggers=False
+        DoL1=True
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
             if o == "--makeFits":
@@ -342,9 +343,11 @@ def main():
         for k in SubSystemOff.iterkeys():
             print k,"=",SubSystemOff[k],"   ",
         print " "
-
+        
         ########  END PARAMETERS - CALL FUNCTIONS ##########
-        [Rates,LumiPageInfo]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers)
+        [Rates,LumiPageInfo, L1_trig_list]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1)
+        if DoL1:
+            trig_list=L1_trig_list
         rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers)
 
     except KeyboardInterrupt:
@@ -353,7 +356,7 @@ def main():
 
 
 
-def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion,all_triggers):
+def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1):
     
     Rates = {}
     LumiPageInfo={}
@@ -466,7 +469,19 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 RefLumiArray = RefParser.GetLumiInfo() ##Gets array of all existing LS and their lumi info
                 RefLumiRange = []
                 RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit
-
+                if DoL1:
+                    L1HLTseeds=RefParser.GetL1HLTseeds()
+                    for HLTkey in trig_list:
+                        #print name
+                        if "L1" in HLTkey:
+                            continue
+                        else:
+                            try:
+                                for L1seed in L1HLTseeds[HLTkey]:
+                                    if L1seed not in trig_list:
+                                        trig_list.append(L1seed)
+                            except:
+                                pass
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
                     ##cheap way of getting PSCol None-->0
                     if RefLumiArray[0][iterator] not in range(1,9):
@@ -498,11 +513,16 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             counter += 1
                     nls = LSRange[nls][-1]+1
 
+                
+                
                 #print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
                 for nls in sorted(LSRange.iterkeys()):
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
+                    
+                    #L1Rate=RefParser.GetDeadTimeBeamActive(LSRange[nls])
 
                     ## Clumsy way to append Stream A. Should choose correct method for calculating stream a based on ps column used in data taking.
+
                     if ('HLT_Stream_A' in trig_list) or all_triggers:
                         config = RateMonConfig(os.path.abspath(os.path.dirname(sys.argv[0])))
                         config.ReadCFG()
@@ -510,10 +530,19 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         core_a_rates = stream_mon.getStreamACoreRatesByLS(RefParser,LSRange[nls],config).values()
                         avg_core_a_rate = sum(core_a_rates)/len(LSRange[nls])
                         TriggerRates['HLT_Stream_A'] = [1,1,avg_core_a_rate,avg_core_a_rate]
+                    
+                    if DoL1:
+                        L1RatesALL=RefParser.GetL1RatesALL(LSRange[nls])
+                        
+                        for L1seed in L1RatesALL.iterkeys():
+                            TriggerRates[L1seed]=L1RatesALL[L1seed]
+                            
 
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
                     deadtimebeamactive=RefParser.GetDeadTimeBeamActive(LSRange[nls])
 
+                    
+                    
                     physics = 1
                     active = 1
                     psi = 99
@@ -535,16 +564,18 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                     LumiPageInfo[nls]=MoreLumiMulti
 
                     for key in TriggerRates:
+                        
                         if NoVersion:
                             name = StripVersion(key)
                         else:
                             name=key
+                            
                         if not name in trig_list:
                             if all_triggers:
                                 trig_list.append(name)
                             else:
                                 continue
-                         
+                        
                         if not Rates.has_key(name):
                             Rates[name] = {}
                             Rates[name]["run"] = []
@@ -599,8 +630,9 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
     pickle.dump(LumiPageInfo,LumiOutput, 2)
     LumiOutput.close()
     
-    
-    return [Rates,LumiPageInfo]
+    #for trig in Rates.iterkeys():
+    #    print trig, Rates[trig]
+    return [Rates,LumiPageInfo,trig_list]
 
 def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst, TMDerr,wp_bool,all_triggers):
     min_run = min(run_list)
@@ -658,6 +690,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
     
 
     for print_trigger in sorted(Rates):
+        
         ##Limits Rates[] to runs in run_list
         NewTrigger = {}
         
@@ -676,12 +709,12 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     NewTrigger[key].append(Rates[print_trigger][key][iterator])
         Rates[print_trigger] = NewTrigger
         
-        
+        #print print_trigger, Rates[print_trigger]
         meanrawrate = sum(Rates[print_trigger]["rawrate"])/len(Rates[print_trigger]["rawrate"])
         
         if not trig_name in print_trigger:
-            print "failed",trig_name, print_trigger
-            continue
+            #print "failed does not contain HLT",trig_name, print_trigger
+            pass
         
         if meanrawrate < min_rate:
             continue
@@ -848,7 +881,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 
                 if (print_info and num_ls==1 and (fabs(rawrate_fit_t[-1]-rawrate_t[-1])>2.5*sqrt(sum(Rates[print_trigger]["rawrate"])/len(Rates[print_trigger]["rawrate"])))):
                     pass
-                    ###print '%-60s has a bad prediction, run=%-10s LS=%-4s' % (print_trigger, Rates[print_trigger]["run"][iterator], Rates[print_trigger]["ls"][iterator])
+                    ###print '%-50s has a bad prediction, run=%-10s LS=%-4s' % (print_trigger, Rates[print_trigger]["run"][iterator], Rates[print_trigger]["ls"][iterator])
 
             else: ##If the data point does not pass the data_clean filter
                 #print "not passed", iterator, ls_t[-1], rawrate_fit_t[-1]
@@ -934,7 +967,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 ##                     #print str(print_trigger)+" f1a Chi2 = "+str(10*f1a.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1a.GetNDF()))+", f1b Chi2 = "+str(10*f1b.GetChisquare()*math.sqrt(len(VY))/(math.sqrt(sum(VY))*num_ls*f1b.GetNDF()))
 ##                     #print "X0 = "+str(f1b.GetParameter(0))+" X1 = "+str(f1b.GetParameter(1))+" X2 = "+str(f1b.GetParameter(2))+" X3 = "+str(f1b.GetParameter(3))
 ##                     if (first_trigger):
-##                         print '%-60s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
+##                         print '%-50s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
                         
 ##                         first_trigger=False
                     
@@ -954,9 +987,9 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     
 
                     ## if (f1c.GetChisquare()/f1c.GetNDF() < f1b.GetChisquare()/f1b.GetNDF() and f1c.GetChisquare()/f1c.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
-##                         print '%-60s expo % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1c.GetParameter(0), f1c.GetParError(0), f1c.GetParameter(1), f1c.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1c.GetChisquare(), f1c.GetNDF(), f1c.GetChisquare()/f1c.GetNDF())
+##                         print '%-50s expo % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1c.GetParameter(0), f1c.GetParError(0), f1c.GetParameter(1), f1c.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1c.GetChisquare(), f1c.GetNDF(), f1c.GetChisquare()/f1c.GetNDF())
 ##                     elif (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()):
-##                         print '%-60s cube % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParError(0), f1b.GetParameter(1), f1b.GetParError(1), f1b.GetParameter(2), f1b.GetParError(2), f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
+##                         print '%-50s cube % .2f+/-%.2f   % .2e+/-%.1e   % .2e+/-%.1e   % .2e+/-%.1e   %7.2f   %4.0f   %5.3f ' % (print_trigger, f1b.GetParameter(0), f1b.GetParError(0), f1b.GetParameter(1), f1b.GetParError(1), f1b.GetParameter(2), f1b.GetParError(2), f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare(), f1b.GetNDF(), f1b.GetChisquare()/f1b.GetNDF())
 ##                     else:
                     
 #                print f1a.GetChisquare()/f1a.GetNDF(), f1b.GetChisquare()/f1b.GetNDF(), f1c.GetChisquare()/f1c.GetNDF() 
@@ -976,10 +1009,10 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 gr1.Fit("f1a","Q","rob=0.80")
 
                 if (first_trigger):
-                        print '%-60s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
+                        print '%-50s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
                         first_trigger=False
                 try:
-                    print '%-60s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
+                    print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
                 except:
                     pass
                 
@@ -989,14 +1022,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 continue
             try:
                 if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-1)):
-                    print '%-60s | expo | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c.GetChisquare()/f1c.GetNDF())
+                    print '%-50s | expo | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c.GetChisquare()/f1c.GetNDF())
                     f1c.SetLineColor(1)                    
                     priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)                    
                     sigma = CalcSigma(VX, VY, f1c)*math.sqrt(num_ls)                    
                     OutputFit[print_trigger] = ["expo", f1c.GetParameter(0) , f1c.GetParameter(1) , f1c.GetParameter(2) , f1c.GetParameter(3) , sigma , meanrawrate, f1c.GetParError(0) , f1c.GetParError(1) , f1c.GetParError(2) , f1c.GetParError(3)]
 
                 elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1)):
-                    print '%-60s | cube | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b.GetChisquare()/f1b.GetNDF())
+                    print '%-50s | cube | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b.GetChisquare()/f1b.GetNDF())
                     f1b.SetLineColor(1)
                     priot(wp_bool,print_trigger,meanps,f1d,f1b,"cubic",av_rte)
                     sigma = CalcSigma(VX, VY, f1b)*math.sqrt(num_ls)                                        
@@ -1004,7 +1037,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 
                 else:
 
-                    print '%-60s | quad | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())                    
+                    print '%-50s | quad | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())                    
                     f1a.SetLineColor(1)
                     priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
                     sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
@@ -1019,16 +1052,22 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 gr3.Draw("P3")
                 
             if do_fit:
-                f1d.Draw("same")
-                if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-1)):
-                    f1c.Draw("same")
 
-                elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1)):
-                    f1b.Draw("same")
-
-                else:
-                    f1a.Draw("same")
                 
+                try:
+                    if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-1)):
+                    
+                        f1c.Draw("same")
+                    elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1)):
+
+                        f1b.Draw("same")
+                    else:
+                        f1a.Draw("same")
+                        
+                    f1d.Draw("same")
+                except:
+                    True
+
             c1.Update()
             if save_root:
                 myfile = TFile( RootFile, 'UPDATE' )
@@ -1054,14 +1093,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 
     if print_table:
         print "The expo fit is of the form p0+p1*e^(p2*x), poly is p0+(p1/10^3)*x+(p2/10^6)*x^2+(p3/10^9)*x^3, where x is Deliv. Lumi."
-        print '%60s%10s%10s%10s%10s%10s%10s%10s' % ("Trig", "fit", "p0", "p1", "p2", "p3", "Chi2", "Av raw")
+        print '%50s%10s%10s%10s%10s%10s%10s%10s' % ("Trig", "fit", "p0", "p1", "p2", "p3", "Chi2", "Av raw")
         for print_trigger in OutputFit:
             _trigger = (print_trigger[:56] + '...') if len(print_trigger) > 59 else print_trigger
             try:
                 if OutputFit[print_trigger][0] == "poly":
-                    print '%60s%10s%10s%10s%10s%10s%10s' % (_trigger, OutputFit[print_trigger][0], round(OutputFit[print_trigger][1],3), round(OutputFit[print_trigger][2],6)*1000, round(OutputFit[print_trigger][3],9)*1000000, round(OutputFit[print_trigger][4],12)*1000000000, round(OutputFit[print_trigger][5],2), round(OutputFit[print_trigger][6],3))
+                    print '%50s%10s%10s%10s%10s%10s%10s' % (_trigger, OutputFit[print_trigger][0], round(OutputFit[print_trigger][1],3), round(OutputFit[print_trigger][2],6)*1000, round(OutputFit[print_trigger][3],9)*1000000, round(OutputFit[print_trigger][4],12)*1000000000, round(OutputFit[print_trigger][5],2), round(OutputFit[print_trigger][6],3))
                 else:
-                    print '%60s%10s%10s%10s%10s%10s%10s' % (_trigger, OutputFit[print_trigger][0], OutputFit[print_trigger][1], OutputFit[print_trigger][2], OutputFit[print_trigger][3], OutputFit[print_trigger][4], round(OutputFit[print_trigger][5],2), round(OutputFit[print_trigger][6],3))
+                    print '%50s%10s%10s%10s%10s%10s%10s' % (_trigger, OutputFit[print_trigger][0], OutputFit[print_trigger][1], OutputFit[print_trigger][2], OutputFit[print_trigger][3], OutputFit[print_trigger][4], round(OutputFit[print_trigger][5],2), round(OutputFit[print_trigger][6],3))
             except:
                 print str(print_trigger)+" is somehow broken"
     return RootFile
@@ -1312,7 +1351,7 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         #print LS, "True"
         if (print_info and num_ls==1 and (realvalue <0.4*prediction or realvalue>2.5*prediction)):
             pass
-            ##print '%-60s%10s%10s%10s%10s%10s%10s%10s%15s%20s' % (print_trigger,"Passed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed)
+            ##print '%-50s%10s%10s%10s%10s%10s%10s%10s%15s%20s' % (print_trigger,"Passed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed)
         
         return True
     else:

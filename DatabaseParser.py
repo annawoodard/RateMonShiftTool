@@ -110,7 +110,7 @@ class DatabaseParser:
 
         ##-- Defined in CorrectForPrescaleChange --##
         self.CorrectedPSInfo = []  ##Returns
-
+        
         ##-- In the current Parser.py philosophy, only RunNumber is set globally
         ##    - LS range is set from the outside for each individual function
         #self.FirstLS = -1
@@ -264,7 +264,7 @@ class DatabaseParser:
                 ps = avps
                 
             TriggerRates[name] = [avps,ps,rate/n,psrate/n]
-        
+                    
         return TriggerRates
 
     def GetAvgTrigRateInLSRange(self,triggerName,LSRange):
@@ -424,9 +424,34 @@ class DatabaseParser:
                 self.LastLSParsed=ls
 
         
+        
         self.MoreLumiInfo ={'b1pres':self.B1Pres,'b2pres':self.B2Pres,'b1stab':self.B1Stab,'b2stab':self.B2Stab,'ebp':self.EBP,'ebm':self.EBM,'eep':self.EEP,'eem':self.EEM,'hbhea':self.HBHEA,'hbheb':self.HBHEB,'hbhec':self.HBHEC,'hf':self.HF,'rpc':self.RPC,'dt0':self.DT0,'dtp':self.DTP,'dtm':self.DTM,'cscp':self.CSCP,'cscm':self.CSCM,'tob':self.TOB,'tibtid':self.TIBTID,'tecp':self.TECP,'tecm':self.TECM,'bpix':self.BPIX,'fpix':self.FPIX,'esp':self.ESP,'esm':self.ESM}
                 
         return self.MoreLumiInfo
+
+
+    def GetL1HLTseeds(self):
+        #print self.HLTSeed
+        L1HLTseeds={}
+        for HLTkey in self.HLTSeed.iterkeys():
+            #print HLTkey, self.HLTSeed[HLTkey]
+            
+            dummy=str(self.HLTSeed[HLTkey])
+            
+            if dummy.find(" OR ") == -1:
+                dummylist=[]
+                dummylist.append(dummy)
+                L1HLTseeds[StripVersion(HLTkey)]=dummylist
+                continue  # Not an OR of seeds
+            seedList = dummy.split(" OR ")
+            #print seedList
+            L1HLTseeds[StripVersion(HLTkey)]=seedList
+            if len(seedList)==1:
+                print "error: zero length L1 seed"
+                continue #shouldn't get here
+        #print L1HLTseeds
+        
+        return L1HLTseeds
         
     def GetDeadTimeBeamActive(self,LSRange):
         sqlquery=""" select FRACTION
@@ -882,13 +907,102 @@ class DatabaseParser:
         return UnprescaledRates
 
     def GetTotalL1Rates(self):
-        query = "SELECT LUMISEGMENTNR, L1ASPHYSICS/23.3 FROM CMS_WBM.LEVEL1_TRIGGER_CONDITIONS WHERE RUNNUMBER=%s" % self.RunNumber
+        query = "SELECT RUNNUMBER, LUMISEGMENTNR, L1ASPHYSICS/23.3 FROM CMS_WBM.LEVEL1_TRIGGER_CONDITIONS WHERE RUNNUMBER=%s" % self.RunNumber
         self.curs.execute(query)
         L1Rate = {}
         for LS,rate in self.curs.fetchall():
             psi = self.PSColumnByLS.get(LS,0)
             lumi = self.InstLumiByLS.get(LS,0)
             L1Rate[LS] = [rate,psi,lumi]
+        return L1Rate
+
+    def GetL1RatesALL(self,LSRange):
+
+        
+        #sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, RATE_HZ, SCALER_INDEX FROM CMS_GT_MON.V_SCALERS_TCS_TRIGGER WHERE RUN_NUMBER=%s AND LUMI_SECTION IN %s and SCALER_INDEX=9"
+
+        ##sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, RATE_HZ, SCALER_INDEX FROM CMS_GT_MON.V_SCALERS_FDL_ALGO WHERE RUN_NUMBER=%s AND LUMI_SECTION IN %s and SCALER_INDEX IN (9,13, 71)"
+
+        sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, RATE_HZ, SCALER_INDEX FROM CMS_GT_MON.V_SCALERS_FDL_ALGO WHERE RUN_NUMBER=%s AND LUMI_SECTION IN %s"
+        
+        LSRangeSTR = str(LSRange)
+        LSRangeSTR = LSRangeSTR.replace("[","(")
+        LSRangeSTR = LSRangeSTR.replace("]",")")
+        
+        query= sqlquery %(self.RunNumber,LSRangeSTR)
+        self.curs.execute(query)
+        L1RateAll=self.curs.fetchall()
+        L1RatesBits={}
+        ###initialize dict of L1 bits
+        for L1seed in sorted(self.L1IndexNameMap.iterkeys()):
+            L1RatesBits[self.L1IndexNameMap[L1seed]]=0
+            
+        ###sum dict of L1 bits 
+        for line in L1RateAll:
+            #if line[3] in self.L1IndexNameMap: ##do not fill if empty L1 key
+            try:
+                L1RatesBits[line[3]]=line[2]+L1RatesBits[line[3]]
+            except:
+                pass
+                #print "not filling bit",line[3]
+        ###divide by number of LS
+        for name in self.L1IndexNameMap.iterkeys():
+            L1RatesBits[self.L1IndexNameMap[name]]=L1RatesBits[self.L1IndexNameMap[name]]/len(LSRange)
+            
+        ###total L1 PS table
+        L1PSdict={}
+        counter=0
+        for line in self.L1PrescaleTable:
+            L1PSdict[counter]=line
+            counter=counter+1
+        for LS in LSRange:    
+            self.PSColumnByLS[LS]    
+
+        ###av ps dict
+        L1PSbits={}    
+        for bit in L1PSdict.iterkeys():
+            L1PSbits[bit]=0
+        for bit in L1PSdict.iterkeys():
+            for LS in LSRange:
+                L1PSbits[bit]=L1PSbits[bit]+L1PSdict[bit][self.PSColumnByLS[LS]]
+        for bit in L1PSdict.iterkeys():
+            L1PSbits[bit]=L1PSbits[bit]/len(LSRange)
+        
+        ###convert dict of L1 bits to dict of L1 names        
+        L1RatesNames={}
+        for name in self.L1IndexNameMap.iterkeys():
+            dummy=[]
+            dummy.append(L1PSbits[self.L1IndexNameMap[name]])
+            dummy.append(L1PSbits[self.L1IndexNameMap[name]])
+            dummy.append(L1RatesBits[self.L1IndexNameMap[name]])
+            dummy.append(L1RatesBits[self.L1IndexNameMap[name]]*L1PSbits[self.L1IndexNameMap[name]])
+            L1RatesNames[name+'_v1']=dummy
+           
+        return L1RatesNames
+
+    
+
+    def GetL1Rates(self,LSRange):
+
+        sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, SCALER_NAME, RATE_HZ FROM CMS_GT_MON.V_SCALERS_TCS_TRIGGER WHERE RUN_NUMBER=%s and SCALER_NAME='L1AsPhysics' and LUMI_SECTION in %s"
+         
+        LSRangeSTR = str(LSRange)
+        LSRangeSTR = LSRangeSTR.replace("[","(")
+        LSRangeSTR = LSRangeSTR.replace("]",")")
+                           
+        query=sqlquery %(self.RunNumber, LSRangeSTR)
+
+        #print query
+        self.curs.execute(query)
+
+        L1Rate=self.curs.fetchall()
+
+        for line in L1Rate:
+            #print line
+            pass
+
+        
+        
         return L1Rate
     
     def AssemblePrescaleValues(self): ##Depends on output from ParseLumiPage and ParseTriggerModePage
