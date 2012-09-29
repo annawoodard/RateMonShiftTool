@@ -72,8 +72,9 @@ def main():
 
     if len(failed)!=0: print "\nLIST OF FAILED ANALYSES:"
     for analysis in failed:
-        print analyzer.ProblemDescriptions[analysis]+":  "+str(analyzer.Results[analysis])
-        
+        print analyzer.ProblemDescriptions[analysis]+":  "
+        for line in analyzer.Results[analysis]: print line
+        print ""
 
 if __name__=='__main__':
     main()

@@ -39,6 +39,8 @@ class MenuAnalyzer:
         self.ModuleList=[]
         self.ESModuleList=[]
         self.eventContent={}
+        self.ParkingTriggers=[]
+        self.NotParkingTriggers=[]
 
         self.AnalysisList=[]
         
@@ -52,7 +54,9 @@ class MenuAnalyzer:
             'checkExpress' : self.checkExpress,
             'checkNameFormats' :self.checkNameFormats,
             'checkEventContent':self.checkEventContent,
-            'checkL1Unmask':self.checkL1Unmask
+            'checkL1Unmask':self.checkL1Unmask,
+            'checkDQMStream':self.checkDQMStream,
+            'checkStreamB':self.checkStreamB
             }
         self.ProblemDescriptions = {
             'moduleLength':'Modules too long',
@@ -62,7 +66,9 @@ class MenuAnalyzer:
             'checkExpress' : 'Invalid or missing express stream/PD',
             'checkNameFormats' : 'Invalid PD or path name format',
             'checkEventContent' : 'Invalid Event Content',
-            'checkL1Unmask' : 'L1 Unmask Module in Menu'
+            'checkL1Unmask' : 'L1 Unmask Module in Menu',
+            'checkDQMStream' : 'Check that the DQM stream contains correct trigger',
+            'checkStreamB' : 'Check all parking triggers in stream B'
             }
 
         self.T0REGEXP = { ## These are the regexps that T0 uses to access things
@@ -94,12 +100,12 @@ class MenuAnalyzer:
         self.GetESModules(cursor)
         self.GetStreamsPathsPDs(cursor)
         self.GetEventContent(cursor)
+        self.findParkingTriggers()
         for analysis in self.AnalysisList: 
             if not self.AnalysisMap.has_key(analysis):
                 print "ERROR: Analysis %s not defined" % (analysis,)
                 continue
             self.AnalysisMap[analysis]()
-            
         
 
     def checkModuleLength(self):
@@ -176,7 +182,38 @@ class MenuAnalyzer:
         if 'L1GtTriggerMaskTechTrigTrivialProducer' in self.ESModuleList:
             self.Results['checkL1Unmask'].append('L1GtTriggerMaskTechTrigTrivialProducer')
 
-        
+
+    def findParkingPDs(self):
+        ParkingPDs=[]
+        NotParkingPDs=[]
+        for PD in self.perStreamPDList["A"]: # look at PDs only in stream A
+            if PD.find("Parked")!=-1: #look for PDs with Parked in the name
+                ParkingPDs.append(PD)
+            else:
+                NotParkingPDs.append(PD)
+        return (ParkingPDs,NotParkingPDs)
+
+    def findParkingTriggers(self):
+        ParkingPDs,NotParkingPDs = self.findParkingPDs()
+        for PD in NotParkingPDs:
+            for trig in self.perPDPathList[PD]: self.NotParkingTriggers.append(trig) # first append ALL triggers from the not in parking PDs
+        for PD in ParkingPDs:
+            for trig in self.perPDPathList[PD]:
+                if not trig in self.NotParkingTriggers: self.ParkingTriggers.append(trig) # get triggers that don't show up in the non-parking PDs
+                
+
+    def checkDQMStream(self):
+        self.Results['checkDQMStream']=[]
+        for trig in self.NotParkingTriggers:
+            if not trig in self.perPDPathList["OnlineMonitor"]: self.Results['checkDQMStream'].append("NotInDQM::%s"%trig)
+        for trig in self.ParkingTriggers:
+            if trig in self.perPDPathList["OnlineMonitor"]: self.Results['checkDQMStream'].append("ParkingTriggerInDQM::%s"%trig)
+
+    def checkStreamB(self):
+        self.Results['checkStreamB']=[]
+        for trig in self.ParkingTriggers:
+            if not trig in self.perPDPathList["ParkingMonitor"]: self.Results['checkStreamB'].append("ParkingTriggerNotInStreamB::%s" %trig)
+            
     def GetModules(self,cursor):
         sqlquery ="""  
         SELECT I.NAME,E.NAME,D.NAME,I.ISENDPATH
