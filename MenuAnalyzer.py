@@ -205,6 +205,7 @@ class MenuAnalyzer:
     def checkDQMStream(self):
         self.Results['checkDQMStream']=[]
         for trig in self.NotParkingTriggers:
+            if trig.find("LogMonitor")!=-1: continue
             if not trig in self.perPDPathList["OnlineMonitor"]: self.Results['checkDQMStream'].append("NotInDQM::%s"%trig)
         for trig in self.ParkingTriggers:
             if trig in self.perPDPathList["OnlineMonitor"]: self.Results['checkDQMStream'].append("ParkingTriggerInDQM::%s"%trig)
