@@ -161,14 +161,13 @@ class MenuAnalyzer:
 
     def checkNameFormats(self):
         self.Results['checkNameFormats']=[]
-        for PD in self.perPDPathList.iterkeys():
+        for PD,path in self.perPDPathList.iteritems():
             if not self.T0REGEXP['RXDATASET'].match(PD):
                 for k,v in self.perStreamPDList.iteritems():
                     if PD in v:
-                        self.Results['checkNameFormats'].append(k+"::"+PD)
+                        self.Results['checkNameFormats'].append(k+"::"+PD+"::"+str(path))
                         break
-                
-                self.Results['checkNameFormats'].append('NO STREAM::'+PD)
+                self.Results['checkNameFormats'].append('NO STREAM::'+PD+"::"+str(path))
         for path in self.perPathModuleList.iterkeys():
             if not self.T0REGEXP['RXSAFEPATH'].match(path):
                 self.Results['checkNameFormats'].append(path)
