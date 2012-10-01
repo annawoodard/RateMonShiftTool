@@ -100,6 +100,16 @@ class MenuAnalyzer:
         self.GetESModules(cursor)
         self.GetStreamsPathsPDs(cursor)
         self.GetEventContent(cursor)
+        isError = False
+        if len(self.perStreamPDList) == 0:
+            print "FATAL ERROR: Cannot find any streams in this menu"
+            isError=True
+        if len(self.perPDPathList) ==0:
+            print "FATAL ERROR: Cannot find any PDs in this menu"
+            isError=True
+        if isError:
+            print "ABORTING"
+            sys.exit()
         self.findParkingTriggers()
         for analysis in self.AnalysisList: 
             if not self.AnalysisMap.has_key(analysis):
