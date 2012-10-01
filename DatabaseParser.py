@@ -178,12 +178,12 @@ class DatabaseParser:
                     #psi = self.PSColumnByLS[1]
                 #if not psi:
                 except:
-                    print "HLT in: Cannot figure out PSI for LS "+str(StartLS)+"  setting to 0"
+                    print "HLT in: Cannot figure out PSI for LS "+str(StartLS)+"  setting to 3"
                     print "The value of LSRange[0] is:"
                     print str(LS)
-                    psi = 0
+                    psi = 3
                 if psi is None:
-                    psi=0
+                    psi=3
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     ##print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
@@ -212,12 +212,12 @@ class DatabaseParser:
                     #psi = self.PSColumnByLS[1]
                 #if not psi:
                 except:
-                    print "HLT out: Cannot figure out PSI for index "+str(on)+" setting to 0"
+                    print "HLT out: Cannot figure out PSI for index "+str(on)+" setting to 3"
                     print "The value of LSRange[on] is:"
                     print str(LS)
-                    psi = 0
+                    psi = 3
                 if psi is None:
-                    psi=0
+                    psi=3
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
@@ -362,7 +362,10 @@ class DatabaseParser:
         
         pastLSCol=-1
         for run,ls,psi,inst,live,dlive,dt,dcs,phys,active in self.curs.fetchall():
-            self.PSColumnByLS[ls]=psi
+            if psi is None:
+                self.PSColumnByLS[ls]=3
+            else:
+                self.PSColumnByLS[ls]=psi
             self.InstLumiByLS[ls]=inst
             self.LiveLumiByLS[ls]=live
             self.DeliveredLumiByLS[ls]=dlive
@@ -840,8 +843,8 @@ class DatabaseParser:
         for index in LSRange:
             psi = self.PSColumnByLS[index]
             if not psi:
-                #print "L1: Cannot figure out PSI for LS "+str(index)+"  setting to 0"
-                psi = 0
+                print "L1: Cannot figure out PSI for LS "+str(index)+"  setting to 3"
+                psi = 3
             for algo in range(self.nAlgoBits):
                 AvgL1Prescales[algo]+=self.L1PrescaleTable[algo][psi]
         for i in range(len(AvgL1Prescales)):
