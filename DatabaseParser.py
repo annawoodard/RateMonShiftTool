@@ -110,7 +110,7 @@ class DatabaseParser:
 
         ##-- Defined in CorrectForPrescaleChange --##
         self.CorrectedPSInfo = []  ##Returns
-        
+
         ##-- In the current Parser.py philosophy, only RunNumber is set globally
         ##    - LS range is set from the outside for each individual function
         #self.FirstLS = -1
@@ -183,7 +183,8 @@ class DatabaseParser:
                     print str(LS)
                     psi = 3
                 if psi is None:
-                    psi=3
+                    psi = self.LastKnownPSI()
+                    print "Database returned null value for the prescale index. Setting to last known value: "+str(psi)                    
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     ##print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
@@ -208,16 +209,14 @@ class DatabaseParser:
                 [ops,orate,opsrate,on] = TriggerRates[name]
                 try:
                     psi = self.PSColumnByLS[LSRange[on]]
-                #except:
-                    #psi = self.PSColumnByLS[1]
-                #if not psi:
                 except:
                     print "HLT out: Cannot figure out PSI for index "+str(on)+" setting to 3"
                     print "The value of LSRange[on] is:"
                     print str(LS)
                     psi = 3
                 if psi is None:
-                    psi=3
+                    psi = self.LastKnownPSI()
+                    print "Database returned null value for the prescale index. Setting to last known value: "+str(psi)                                        
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
@@ -264,43 +263,10 @@ class DatabaseParser:
                 ps = avps
                 
             TriggerRates[name] = [avps,ps,rate/n,psrate/n]
-                    
+        
+        
         return TriggerRates
 
-    def GetAvgTrigRateInLSRange(self,triggerName,LSRange):
-        sqlquery = """SELECT A.PACCEPT
-        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
-        WHERE RUNNUMBER=%s AND B.NAME = \'%s\' AND A.PATHID = B.PATHID AND A.LSNUMBER IN %s
-        """
-
-        LSRangeSTR = str(LSRange)
-        LSRangeSTR = LSRangeSTR.replace("[","(")
-        LSRangeSTR = LSRangeSTR.replace("]",")")
-
-        query = sqlquery % (self.RunNumber,triggerName,LSRangeSTR)
-        self.curs.execute(query)
-        avg_rate = sum([counts[0] for counts in self.curs.fetchall()])/ (23.3 * len(LSRange))
-
-        return avg_rate
-
-    def GetTrigRatesInLSRange(self,triggerName,LSRange):
-        sqlquery = """SELECT A.LSNUMBER, A.PACCEPT
-        FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
-        WHERE RUNNUMBER=%s AND B.NAME = \'%s\' AND A.PATHID = B.PATHID AND A.LSNUMBER IN %s
-        ORDER BY A.LSNUMBER
-        """
-
-        LSRangeSTR = str(LSRange)
-        LSRangeSTR = LSRangeSTR.replace("[","(")
-        LSRangeSTR = LSRangeSTR.replace("]",")")
-
-        query = sqlquery % (self.RunNumber,triggerName,LSRangeSTR)
-        self.curs.execute(query)
-        r={}
-        for ls,accept in  self.curs.fetchall():
-            r[ls] = accept/23.3
-        return r
-    
     def GetTriggerRatesByLS(self,triggerName):
         sqlquery = """SELECT A.LSNUMBER, A.PACCEPT
         FROM CMS_RUNINFO.HLT_SUPERVISOR_TRIGGERPATHS A, CMS_HLT.PATHS B
@@ -317,37 +283,6 @@ class DatabaseParser:
         for hltName in self.HLTSeed:
             self.HLTRatesByLS[hltName] = self.GetTriggerRatesByLS(hltName)
 
-    def GetPSColumnsInLSRange(self,LSRange):
-        sqlquery="""SELECT LUMI_SECTION,PRESCALE_INDEX FROM
-        CMS_GT_MON.LUMI_SECTIONS B WHERE B.RUN_NUMBER=%s AND B.LUMI_SECTION IN %s"""        
-
-        LSRangeSTR = str(LSRange)
-        LSRangeSTR = LSRangeSTR.replace("[","(")
-        LSRangeSTR = LSRangeSTR.replace("]",")")
-        query = sqlquery % (self.RunNumber,LSRangeSTR)
-        self.curs.execute(query)
-
-        ps_columns={}
-        for ls, ps_index in self.curs.fetchall():
-            ps_columns[ls] = ps_index
-
-        return ps_columns
-
-    def GetAvDeliveredLumi(self,LSRange):
-        sqlquery="""SELECT DELIVLUMI FROM
-        CMS_RUNTIME_LOGGER.LUMI_SECTIONS A WHERE A.RUNNUMBER=%s AND A.LUMISECTION IN %s"""        
-
-        LSRangeSTR = str(LSRange)
-        LSRangeSTR = LSRangeSTR.replace("[","(")
-        LSRangeSTR = LSRangeSTR.replace("]",")")
-        query = sqlquery % (self.RunNumber,LSRangeSTR)
-        self.curs.execute(query)
-
-        delivered = [val[0] for val in self.curs.fetchall()]
-        avg_delivered = sum(delivered)/len(LSRange)
-
-        return avg_delivered
-
     def GetLumiInfo(self):
         
         sqlquery="""SELECT RUNNUMBER,LUMISECTION,PRESCALE_INDEX,INSTLUMI,LIVELUMI,DELIVLUMI,DEADTIME
@@ -362,17 +297,20 @@ class DatabaseParser:
         
         pastLSCol=-1
         for run,ls,psi,inst,live,dlive,dt,dcs,phys,active in self.curs.fetchall():
-            if psi is None:
-                self.PSColumnByLS[ls]=3
-            else:
-                self.PSColumnByLS[ls]=psi
             self.InstLumiByLS[ls]=inst
             self.LiveLumiByLS[ls]=live
             self.DeliveredLumiByLS[ls]=dlive
             self.DeadTime[ls]=dt
             self.Physics[ls]=phys
             self.Active[ls]=active
-            
+
+            if psi is None:
+                psi = self.LastKnownPSI()
+                self.PSColumnByLS[ls]=psi
+                print "Database returned null value for the prescale index. Setting to last known value: "+str(psi)
+            else:
+                self.PSColumnByLS[ls]=psi
+                
             if pastLSCol!=-1 and ls!=pastLSCol:
                 self.PSColumnChanges.append([ls,psi])
             pastLSCol=ls
@@ -381,6 +319,14 @@ class DatabaseParser:
         self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime, self.Physics, self.Active]
 
         return self.LumiInfo
+
+    def GetLastKnownPSI(self):
+        psi = 3
+        for ls in reversed(self.PSColumnByLS.keys()):
+            if self.PSColumnByLS[ls] is not None:
+                psi = self.PSColumnByLS[ls]
+                break
+        return psi
 
     def GetMoreLumiInfo(self):
         sqlquery="""SELECT RUNNUMBER,LUMISECTION,BEAM1_PRESENT, BEAM2_PRESENT, BEAM1_STABLE, BEAM2_STABLE, EBP_READY,EBM_READY,EEP_READY,EEM_READY,HBHEA_READY,HBHEB_READY,HBHEC_READY,HF_READY,RPC_READY,DT0_READY,DTP_READY,DTM_READY,CSCP_READY,CSCM_READY,TOB_READY,TIBTID_READY,TECP_READY,TECM_READY,BPIX_READY,FPIX_READY,ESP_READY,ESM_READY
@@ -427,34 +373,9 @@ class DatabaseParser:
                 self.LastLSParsed=ls
 
         
-        
         self.MoreLumiInfo ={'b1pres':self.B1Pres,'b2pres':self.B2Pres,'b1stab':self.B1Stab,'b2stab':self.B2Stab,'ebp':self.EBP,'ebm':self.EBM,'eep':self.EEP,'eem':self.EEM,'hbhea':self.HBHEA,'hbheb':self.HBHEB,'hbhec':self.HBHEC,'hf':self.HF,'rpc':self.RPC,'dt0':self.DT0,'dtp':self.DTP,'dtm':self.DTM,'cscp':self.CSCP,'cscm':self.CSCM,'tob':self.TOB,'tibtid':self.TIBTID,'tecp':self.TECP,'tecm':self.TECM,'bpix':self.BPIX,'fpix':self.FPIX,'esp':self.ESP,'esm':self.ESM}
                 
         return self.MoreLumiInfo
-
-
-    def GetL1HLTseeds(self):
-        #print self.HLTSeed
-        L1HLTseeds={}
-        for HLTkey in self.HLTSeed.iterkeys():
-            #print HLTkey, self.HLTSeed[HLTkey]
-            
-            dummy=str(self.HLTSeed[HLTkey])
-            
-            if dummy.find(" OR ") == -1:
-                dummylist=[]
-                dummylist.append(dummy)
-                L1HLTseeds[StripVersion(HLTkey)]=dummylist
-                continue  # Not an OR of seeds
-            seedList = dummy.split(" OR ")
-            #print seedList
-            L1HLTseeds[StripVersion(HLTkey)]=seedList
-            if len(seedList)==1:
-                print "error: zero length L1 seed"
-                continue #shouldn't get here
-        #print L1HLTseeds
-        
-        return L1HLTseeds
         
     def GetDeadTimeBeamActive(self,LSRange):
         sqlquery=""" select FRACTION
@@ -910,102 +831,13 @@ class DatabaseParser:
         return UnprescaledRates
 
     def GetTotalL1Rates(self):
-        query = "SELECT RUNNUMBER, LUMISEGMENTNR, L1ASPHYSICS/23.3 FROM CMS_WBM.LEVEL1_TRIGGER_CONDITIONS WHERE RUNNUMBER=%s" % self.RunNumber
+        query = "SELECT LUMISEGMENTNR, L1ASPHYSICS/23.3 FROM CMS_WBM.LEVEL1_TRIGGER_CONDITIONS WHERE RUNNUMBER=%s" % self.RunNumber
         self.curs.execute(query)
         L1Rate = {}
         for LS,rate in self.curs.fetchall():
-            psi = self.PSColumnByLS.get(LS,0)
+            psi = self.PSColumnByLS.get(LS,3)
             lumi = self.InstLumiByLS.get(LS,0)
             L1Rate[LS] = [rate,psi,lumi]
-        return L1Rate
-
-    def GetL1RatesALL(self,LSRange):
-
-        
-        #sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, RATE_HZ, SCALER_INDEX FROM CMS_GT_MON.V_SCALERS_TCS_TRIGGER WHERE RUN_NUMBER=%s AND LUMI_SECTION IN %s and SCALER_INDEX=9"
-
-        ##sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, RATE_HZ, SCALER_INDEX FROM CMS_GT_MON.V_SCALERS_FDL_ALGO WHERE RUN_NUMBER=%s AND LUMI_SECTION IN %s and SCALER_INDEX IN (9,13, 71)"
-
-        sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, RATE_HZ, SCALER_INDEX FROM CMS_GT_MON.V_SCALERS_FDL_ALGO WHERE RUN_NUMBER=%s AND LUMI_SECTION IN %s"
-        
-        LSRangeSTR = str(LSRange)
-        LSRangeSTR = LSRangeSTR.replace("[","(")
-        LSRangeSTR = LSRangeSTR.replace("]",")")
-        
-        query= sqlquery %(self.RunNumber,LSRangeSTR)
-        self.curs.execute(query)
-        L1RateAll=self.curs.fetchall()
-        L1RatesBits={}
-        ###initialize dict of L1 bits
-        for L1seed in sorted(self.L1IndexNameMap.iterkeys()):
-            L1RatesBits[self.L1IndexNameMap[L1seed]]=0
-            
-        ###sum dict of L1 bits 
-        for line in L1RateAll:
-            #if line[3] in self.L1IndexNameMap: ##do not fill if empty L1 key
-            try:
-                L1RatesBits[line[3]]=line[2]+L1RatesBits[line[3]]
-            except:
-                pass
-                #print "not filling bit",line[3]
-        ###divide by number of LS
-        for name in self.L1IndexNameMap.iterkeys():
-            L1RatesBits[self.L1IndexNameMap[name]]=L1RatesBits[self.L1IndexNameMap[name]]/len(LSRange)
-            
-        ###total L1 PS table
-        L1PSdict={}
-        counter=0
-        for line in self.L1PrescaleTable:
-            L1PSdict[counter]=line
-            counter=counter+1
-        for LS in LSRange:    
-            self.PSColumnByLS[LS]    
-
-        ###av ps dict
-        L1PSbits={}    
-        for bit in L1PSdict.iterkeys():
-            L1PSbits[bit]=0
-        for bit in L1PSdict.iterkeys():
-            for LS in LSRange:
-                L1PSbits[bit]=L1PSbits[bit]+L1PSdict[bit][self.PSColumnByLS[LS]]
-        for bit in L1PSdict.iterkeys():
-            L1PSbits[bit]=L1PSbits[bit]/len(LSRange)
-        
-        ###convert dict of L1 bits to dict of L1 names        
-        L1RatesNames={}
-        for name in self.L1IndexNameMap.iterkeys():
-            dummy=[]
-            dummy.append(L1PSbits[self.L1IndexNameMap[name]])
-            dummy.append(L1PSbits[self.L1IndexNameMap[name]])
-            dummy.append(L1RatesBits[self.L1IndexNameMap[name]])
-            dummy.append(L1RatesBits[self.L1IndexNameMap[name]]*L1PSbits[self.L1IndexNameMap[name]])
-            L1RatesNames[name+'_v1']=dummy
-           
-        return L1RatesNames
-
-    
-
-    def GetL1Rates(self,LSRange):
-
-        sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, SCALER_NAME, RATE_HZ FROM CMS_GT_MON.V_SCALERS_TCS_TRIGGER WHERE RUN_NUMBER=%s and SCALER_NAME='L1AsPhysics' and LUMI_SECTION in %s"
-         
-        LSRangeSTR = str(LSRange)
-        LSRangeSTR = LSRangeSTR.replace("[","(")
-        LSRangeSTR = LSRangeSTR.replace("]",")")
-                           
-        query=sqlquery %(self.RunNumber, LSRangeSTR)
-
-        #print query
-        self.curs.execute(query)
-
-        L1Rate=self.curs.fetchall()
-
-        for line in L1Rate:
-            #print line
-            pass
-
-        
-        
         return L1Rate
     
     def AssemblePrescaleValues(self): ##Depends on output from ParseLumiPage and ParseTriggerModePage
@@ -1265,7 +1097,6 @@ def GetLatestRunNumber(runNo=9999999,newRun=False):
     SELECT TIER0_TRANSFER TIER0 FROM CMS_WBM.RUNSUMMARY WHERE RUNNUMBER = %d
     """ % r
     curs.execute(Tier0xferQuery)
-    tier0=1
     try:
         tier0, = curs.fetchone()
                     
