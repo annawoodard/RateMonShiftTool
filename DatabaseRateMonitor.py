@@ -451,12 +451,10 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                     except:
                         pass    
         for trigger in FitInput.iterkeys():
-            print trigger
             FitInput[StripVersion(trigger)]=FitInput.pop(trigger)
         for trigger in HeadUnprescaledRates:
             HeadUnprescaledRates[StripVersion(trigger)]=HeadUnprescaledRates.pop(trigger)
-        print trig_list
-        
+                
     else:
         trig_list=Config.MonitorList
         

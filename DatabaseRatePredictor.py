@@ -123,7 +123,7 @@ def main():
         TMDerr=False
         wp_bool=False
         all_triggers=False
-        DoL1=True
+        DoL1=False
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
             if o == "--makeFits":

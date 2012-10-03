@@ -26,7 +26,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         print "no lumisections to monitor"
         return
   ## check if lumi is being filled
-    if parser.LastLSParsed > 4:
+    if parser.LastLSParsed > 4 and isCol:
         if set(parser.InstLumiByLS.values()) == set([None]):
             write(colored("\n\nLUMI INFORMATION NOT BEING SENT!\n",'red',attrs=['reverse']))
             write(colored("Check with Shift Leader if this is expected\n",'red',attrs=['reverse']))
