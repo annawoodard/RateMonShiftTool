@@ -292,7 +292,7 @@ def main():
                 LastGoodLS=HeadParser.GetLastLS(isCol)
                 ##print "Last Good=",LastGoodLS, tempLastGoodLS
                 if LastGoodLS==tempLastGoodLS:
-                    write(bcolors.FAIL)
+                    write(bcolors.OKBLUE)
                     print "Trying to get new Run"
                     write(bcolors.ENDC+"\n")
                 else:
