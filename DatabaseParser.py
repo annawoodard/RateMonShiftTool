@@ -217,7 +217,7 @@ class DatabaseParser:
                     print str(LS)
                     psi = 0
                 if psi is None:
-                    psi=0
+                    psi=3
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
