@@ -61,7 +61,7 @@ def main():
         pickYear()
         
         try:
-            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear","inst","TMDerr","write","AllTriggers"])
+            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear","inst","TMDerr","write","AllTriggers","UsePSCol="])
             
         except getopt.GetoptError, err:
             print str(err)
@@ -117,13 +117,14 @@ def main():
         trig_list = []
         max_dt=-1.0
         subsys=-1.0
-        NoVersion=False
+        NoVersion=True
         linear=False
         do_inst=False
         TMDerr=False
         wp_bool=False
         all_triggers=False
         DoL1=False
+        UsePSCol=-1
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
             if o == "--makeFits":
@@ -168,7 +169,9 @@ def main():
             elif o=="--write":
                 wp_bool=True
             elif o=="--AllTriggers":
-                all_triggers=True                
+                all_triggers=True
+            elif o=="--UsePSCol":
+                UsePSCol=int(a)
             elif o == "--TriggerList":
                 try:
                     f = open(a)
@@ -345,7 +348,7 @@ def main():
         print " "
         
         ########  END PARAMETERS - CALL FUNCTIONS ##########
-        [Rates,LumiPageInfo, L1_trig_list]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1)
+        [Rates,LumiPageInfo, L1_trig_list]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol)
         if DoL1:
             trig_list=L1_trig_list
         rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers)
@@ -356,7 +359,7 @@ def main():
 
 
 
-def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1):
+def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol):
     
     Rates = {}
     LumiPageInfo={}
@@ -487,7 +490,11 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                     if RefLumiArray[0][iterator] not in range(1,9):
                         RefLumiArray[0][iterator]=0
                         
-                    
+                    if not UsePSCol==-1:
+                        if not RefLumiArray[0][iterator]==UsePSCol:
+                            print "skipping LS",iterator
+                            continue
+
                     if not physics_active_psi or (RefLumiArray[5][iterator] == 1 and RefLumiArray[6][iterator] == 1 and RefMoreLumiArray["b1pres"][iterator]==1 and RefMoreLumiArray["b2pres"][iterator]==1 and RefMoreLumiArray["b1stab"][iterator] and RefMoreLumiArray["b2stab"][iterator]==1):
                         if not JSON or RefRunNum in JSON:
                             if not JSON or iterator in JSON[RefRunNum]:
@@ -931,14 +938,6 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         if do_fit:
             if "rate" in varY and not linear:
                 
-                f1a=0
-                f1a = TF1("f1a","pol2",0,8000)
-                f1a.SetLineColor(4)
-                f1a.SetLineWidth(2)
-                #f1a.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
-                #f1a.SetParLimits(1,0,2.0*max(VY)/(max(VX)*max(VX)))
-                gr1.Fit("f1a","QN","rob=0.90")
-
 
                 f1d=0
                 f1d = TF1("f1d","pol1",0,8000)#linear
@@ -947,6 +946,19 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 #f1a.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
                 #f1a.SetParLimits(1,0,2.0*max(VY)/(max(VX)*max(VX)))
                 gr1.Fit("f1d","QN","rob=0.90")     
+
+
+                f1a=0
+                f1a = TF1("f1a","pol2",0,8000)
+                f1a.SetParameters(f1d.GetParameter(0),f1d.GetParameter(1),0)
+                f1a.SetLineColor(6)
+                f1a.SetLineWidth(2)
+                #f1a.SetParLimits(0,0,0.2*(sum(VY)/len(VY))+0.8*min(VY))
+                #f1a.SetParLimits(1,0,2.0*max(VY)/(max(VX)*max(VX)))
+                gr1.Fit("f1a","QN","rob=0.90")
+
+
+                
                                 
                 f1b = 0
                 f1c = 0
@@ -1012,24 +1024,26 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                         print '%-50s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
                         first_trigger=False
                 try:
-                    print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
+                    print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a.GetChisquare()/f1a.GetNDF())
                 except:
                     pass
-                
+        chioffset=0.0        
         if print_table or save_fits:
             if not do_fit:
                 print "Can't have save_fits = True and do_fit = False"
                 continue
+                        
             try:
-                if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-1)):
-                    print '%-50s | expo | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c.GetChisquare()/f1c.GetNDF())
+                ##if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-chioffset) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-chioffset)):
+                if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-chioffset) and (f1c.GetChisquare()/f1c.GetNDF() < f1b.GetChisquare()/f1b.GetNDF())):
+                    print '%-50s | expo | % .2f | +/-%.1f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c.GetChisquare()/f1c.GetNDF())
                     f1c.SetLineColor(1)                    
                     priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)                    
                     sigma = CalcSigma(VX, VY, f1c)*math.sqrt(num_ls)                    
                     OutputFit[print_trigger] = ["expo", f1c.GetParameter(0) , f1c.GetParameter(1) , f1c.GetParameter(2) , f1c.GetParameter(3) , sigma , meanrawrate, f1c.GetParError(0) , f1c.GetParError(1) , f1c.GetParError(2) , f1c.GetParError(3)]
 
-                elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1)):
-                    print '%-50s | cube | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b.GetChisquare()/f1b.GetNDF())
+                elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-chioffset)):
+                    print '%-50s | cube | % .2f | +/-%.1f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b.GetChisquare()/f1b.GetNDF())
                     f1b.SetLineColor(1)
                     priot(wp_bool,print_trigger,meanps,f1d,f1b,"cubic",av_rte)
                     sigma = CalcSigma(VX, VY, f1b)*math.sqrt(num_ls)                                        
@@ -1037,7 +1051,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 
                 else:
 
-                    print '%-50s | quad | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.2f |   %4.0f |   %5.3f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())                    
+                    print '%-50s | quad | % .2f | +/-%.1f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())                    
                     f1a.SetLineColor(1)
                     priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
                     sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
@@ -1055,10 +1069,9 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 
                 
                 try:
-                    if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-1)):
-                    
+                    if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-chioffset) and (f1c.GetChisquare()/f1c.GetNDF() < f1b.GetChisquare()/f1b.GetNDF())):
                         f1c.Draw("same")
-                    elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-1)):
+                    elif (f1b.GetChisquare()/f1b.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-chioffset)):
 
                         f1b.Draw("same")
                     else:
