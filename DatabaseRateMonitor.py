@@ -405,9 +405,10 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     [HeadAvInstLumi,HeadAvLiveLumi,HeadAvDeliveredLumi,HeadAvDeadTime,HeadPSCols] = HeadParser.GetAvLumiInfo(HeadLumiRange)
     ##[HeadUnprescaledRates, HeadTotalPrescales, HeadL1Prescales, HeadTriggerRates] = HeadParser.UpdateRun(HeadLumiRange)
     HeadUnprescaledRates = HeadParser.UpdateRun(HeadLumiRange)
-    L1RatesALL=HeadParser.GetL1RatesALL(HeadLumiRange)
-    for L1seed in L1RatesALL.iterkeys():
-        HeadUnprescaledRates[L1seed]=L1RatesALL[L1seed]
+    if Config.DoL1:
+        L1RatesALL=HeadParser.GetL1RatesALL(HeadLumiRange)
+        for L1seed in L1RatesALL.iterkeys():
+            HeadUnprescaledRates[L1seed]=L1RatesALL[L1seed]
         
     [PSColumnByLS,InstLumiByLS,DeliveredLumiByLS,LiveLumiByLS,DeadTimeByLS,PhysicsByLS,ActiveByLS] = HeadParser.LumiInfo
     deadtimebeamactive=HeadParser.GetDeadTimeBeamActive(HeadLumiRange)
