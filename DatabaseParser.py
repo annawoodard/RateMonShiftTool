@@ -362,6 +362,9 @@ class DatabaseParser:
         
         pastLSCol=-1
         for run,ls,psi,inst,live,dlive,dt,dcs,phys,active in self.curs.fetchall():
+            if psi is None:
+                psi = GetLastKnownPSIndex(self.PSColumnByLS)
+
             self.PSColumnByLS[ls]=psi
             self.InstLumiByLS[ls]=inst
             self.LiveLumiByLS[ls]=live
@@ -1296,3 +1299,11 @@ def StripVersion(name):
     if re.match('.*_v[0-9]+',name):
         name = name[:name.rfind('_')]
     return name
+
+def GetLastKnownPSIndex(psindex_dict):
+    psi = 3
+    for ls in reversed(psindex_dict.keys()):
+        if psindex_dict[ls] is not None:
+            psi = psindex_dict[ls]
+            break
+    return psi
