@@ -772,14 +772,18 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t] = MakePlotArrays()
 
         if not do_fit:
-                                
-            FitType = InputFit[print_trigger][0]
-            X0 = InputFit[print_trigger][1]
-            X1 = InputFit[print_trigger][2]
-            X2 = InputFit[print_trigger][3]
-            X3 = InputFit[print_trigger][4]
-            sigma = InputFit[print_trigger][5]/math.sqrt(num_ls)*3#Display 3 sigma band to show outliers more clearly
-            X0err= InputFit[print_trigger][7]
+            try:
+                FitType = InputFit[print_trigger][0]
+                X0 = InputFit[print_trigger][1]
+                X1 = InputFit[print_trigger][2]
+                X2 = InputFit[print_trigger][3]
+                X3 = InputFit[print_trigger][4]
+                sigma = InputFit[print_trigger][5]/math.sqrt(num_ls)*3#Display 3 sigma band to show outliers more clearly
+                X0err= InputFit[print_trigger][7]
+            except:
+                print 'No fit found for '+print_trigger+'. Continuing without making plots for this trigger...'
+                continue
+            
             ##print print_trigger," X0err=",X0err
             #print str(print_trigger)+"  "+str(FitType)+"  "+str(X0)+"  "+str(X1)+"  "+str(X2)+"  "+str(X3)
             #if (first_trigger):
