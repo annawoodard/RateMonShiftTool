@@ -110,12 +110,13 @@ class DatabaseParser:
 
         ##-- Defined in CorrectForPrescaleChange --##
         self.CorrectedPSInfo = []  ##Returns
+        self.HLTPrescaleTable={}
         
         ##-- In the current Parser.py philosophy, only RunNumber is set globally
         ##    - LS range is set from the outside for each individual function
         #self.FirstLS = -1
         #self.LastLS = -1
-
+        
     def GetRunInfo(self):
         ## This query gets the L1_HLT Key (A), the associated HLT Key (B) and the Config number for that key (C)
         KeyQuery = """
@@ -125,7 +126,7 @@ class DatabaseParser:
         """ % (self.RunNumber,)
         try:
             self.curs.execute(KeyQuery)
-            self.L1_HLT_Key,self.HLT_Key,self.GTRS_Key,self.TSC_Key,self.ConfigId,self.GT_Key = self.curs.fetchone()        
+            self.L1_HLT_Key,self.HLT_Key,self.GTRS_Key,self.TSC_Key,self.ConfigId,self.GT_Key = self.curs.fetchone()
         except:
             ##print "Unable to get L1 and HLT keys for this run"
             pass
@@ -135,6 +136,7 @@ class DatabaseParser:
         pass
 
     def GetHLTRates(self,LSRange):
+        self.GetHLTPrescaleMatrix()
         
         sqlquery = """SELECT SUM(A.L1PASS),SUM(A.PSPASS),SUM(A.PACCEPT)
         ,SUM(A.PEXCEPT), A.LSNUMBER, (SELECT L.NAME FROM CMS_HLT.PATHS L WHERE L.PATHID=A.PATHID) PATHNAME 
@@ -165,18 +167,10 @@ class DatabaseParser:
             
             rate = HLTPass/23.3
             hltps = 0
-            
-            if PSPass:
-                hltps = float(L1Pass)/PSPass
-                                
-            if not TriggerRates.has_key(name):
-                
+
+            if not TriggerRates.has_key(name):                
                 try:
                     psi = self.PSColumnByLS[LS]
-                    ##print "psi=",psi
-                #except:
-                    #psi = self.PSColumnByLS[1]
-                #if not psi:
                 except:
                     print "HLT in: Cannot figure out PSI for LS "+str(StartLS)+"  setting to 0"
                     print "The value of LSRange[0] is:"
@@ -184,15 +178,16 @@ class DatabaseParser:
                     psi = 0
                 if psi is None:
                     psi=0
+                if self.HLTPrescaleTable.has_key(name):
+                    hltps = self.HLTPrescaleTable[name][psi]
+                else:
+                    if PSPass:
+                        hltps = float(L1Pass)/PSPass
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
-                    ##print "name=",name, "self.HLTSeed[name]=",self.HLTSeed[name],"psi=",psi,
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
-                    ##print "zero ",LSRange[0], self.PSColumnByLS[LS]
                     AvL1Prescales = self.CalculateAvL1Prescales([LS])
                     l1ps = self.UnwindORSeed(self.HLTSeed[name],AvL1Prescales)
-                    #l1ps = 1
-                    #print "L1IndexNameMap has no key for "+str(self.HLTSeed[name])
 
                 ps = l1ps*hltps
                 
@@ -203,14 +198,10 @@ class DatabaseParser:
                 TriggerRates[name]= [ps,rate,psrate,1]
                 LSUsed[LS]=True
                 
-            else:
-                
+            else:                
                 [ops,orate,opsrate,on] = TriggerRates[name]
                 try:
                     psi = self.PSColumnByLS[LSRange[on]]
-                #except:
-                    #psi = self.PSColumnByLS[1]
-                #if not psi:
                 except:
                     print "HLT out: Cannot figure out PSI for index "+str(on)+" setting to 0"
                     print "The value of LSRange[on] is:"
@@ -218,14 +209,16 @@ class DatabaseParser:
                     psi = 0
                 if psi is None:
                     psi=3
+                if self.HLTPrescaleTable.has_key(name):
+                    hltps = self.HLTPrescaleTable[name][psi]
+                else:
+                    if PSPass:
+                        hltps = float(L1Pass)/PSPass
                 if self.L1IndexNameMap.has_key(self.HLTSeed[name]):
                     l1ps = self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
                 else:
-                    ##print "on ",
                     AvL1Prescales = self.CalculateAvL1Prescales([LS])
                     l1ps = self.UnwindORSeed(self.HLTSeed[name],AvL1Prescales)
-                    #l1ps = 1
-                    #print "L1IndexNameMap has no key for "+str(self.HLTSeed[name])
 
                 ps = l1ps*hltps
                 #if ps < 1: ###want PS=0 too!
@@ -639,92 +632,87 @@ class DatabaseParser:
         #print name
         return -1
 
-    def GetHLTPrescaleMatrix(self,cursor):
-        ##NOT WORKING 1/19/2012
-        return
-        SequencePathQuery ="""
-        SELECT F.SEQUENCENB,J.VALUE TRIGGERNAME
-        FROM CMS_HLT.CONFIGURATIONSERVICEASSOC A
-        , CMS_HLT.SERVICES B
-        , CMS_HLT.SERVICETEMPLATES C
-        , CMS_HLT.SUPERIDVECPARAMSETASSOC D
-        , CMS_HLT.VECPARAMETERSETS E
-        , CMS_HLT.SUPERIDPARAMSETASSOC F
-        , CMS_HLT.PARAMETERSETS G
-        , CMS_HLT.SUPERIDPARAMETERASSOC H
-        , CMS_HLT.PARAMETERS I
-        , CMS_HLT.STRINGPARAMVALUES J
-        WHERE A.CONFIGID= %d
-        AND A.SERVICEID=B.SUPERID
-        AND B.TEMPLATEID=C.SUPERID
-        AND C.NAME='PrescaleService'
-        AND B.SUPERID=D.SUPERID
-        AND D.VPSETID=E.SUPERID
-        AND E.NAME='prescaleTable'
-        AND D.VPSETID=F.SUPERID
-        AND F.PSETID=G.SUPERID
-        AND G.SUPERID=H.SUPERID
-        AND I.PARAMID=H.PARAMID
-        AND I.NAME='pathName'
+    def GetHLTPrescaleMatrix(self):
+        tmp_curs = ConnectDB('hlt')
+        configIDQuery = "SELECT CONFIGID FROM CMS_HLT.CONFIGURATIONS WHERE CONFIGDESCRIPTOR='%s'" % (self.HLT_Key)
+        tmp_curs.execute(configIDQuery)                                                                                                                                                
+        ConfigId, = tmp_curs.fetchone()
+
+        SequencePathQuery ="""                                                                                                                                                       
+        SELECT F.SEQUENCENB,J.VALUE TRIGGERNAME                                                                                                                                      
+        FROM CMS_HLT.CONFIGURATIONSERVICEASSOC A                                                                                                                                     
+        , CMS_HLT.SERVICES B                                                                                                                                                         
+        , CMS_HLT.SERVICETEMPLATES C                                                                                                                                                 
+        , CMS_HLT.SUPERIDVECPARAMSETASSOC D                                                                                                                                          
+        , CMS_HLT.VECPARAMETERSETS E                                                                                                                                                 
+        , CMS_HLT.SUPERIDPARAMSETASSOC F                                                                                                                                             
+        , CMS_HLT.PARAMETERSETS G                                                                                                                                                    
+        , CMS_HLT.SUPERIDPARAMETERASSOC H                                                                                                                                            
+        , CMS_HLT.PARAMETERS I                                                                                                                                                       
+        , CMS_HLT.STRINGPARAMVALUES J                                                                                                                                                
+        WHERE A.CONFIGID=%d                                                                                                                                                         
+        AND A.SERVICEID=B.SUPERID                                                                                                                                                    
+        AND B.TEMPLATEID=C.SUPERID                                                                                                                                                   
+        AND C.NAME='PrescaleService'                                                                                                                                                 
+        AND B.SUPERID=D.SUPERID                                                                                                                                                      
+        AND D.VPSETID=E.SUPERID                                                                                                                                                      
+        AND E.NAME='prescaleTable'                                                                                                                                                   
+        AND D.VPSETID=F.SUPERID                                                                                                                                                      
+        AND F.PSETID=G.SUPERID                                                                                                                                                       
+        AND G.SUPERID=H.SUPERID                                                                                                                                                      
+        AND I.PARAMID=H.PARAMID                                                                                                                                                      
+        AND I.NAME='pathName'                                                                                                                                                        
         AND J.PARAMID=H.PARAMID
-        ORDER BY F.SEQUENCENB
-        """ % (self.ConfigId,)
+        ORDER BY F.SEQUENCENB                                                                                                                                                        
+        """ % (ConfigId,)
 
-        cursor.execute(SequencePathQuery)
-        self.HLTSequenceMap = [0]*len(self.HLTList)
-        for seq,name in cursor.fetchall():
-            name = name.lstrip('"').rstrip('"')
-            try:
-                self.HLTSequenceMap[self.GetHLTIndex(name)]=seq
-            except:
-                print "couldn't find "+name
+        tmp_curs.execute(SequencePathQuery)                                                                                                                                            
+        HLTSequenceMap = {}                                                                                                                                                          
+        for seq,name in tmp_curs.fetchall():                                                                                                                                           
+            name = name.lstrip('"').rstrip('"')                                                                                                                                      
+            HLTSequenceMap[seq]=name                                                                                                                                                 
 
-        for i,seq in enumerate(self.HLTSequenceMap):
-            if seq==0:
-                print self.HLTList[i]
-            
-        SequencePrescaleQuery="""
-        SELECT F.SEQUENCENB,J.SEQUENCENB,J.VALUE
-        FROM CMS_HLT.CONFIGURATIONSERVICEASSOC A
-        , CMS_HLT.SERVICES B
-        , CMS_HLT.SERVICETEMPLATES C
-        , CMS_HLT.SUPERIDVECPARAMSETASSOC D
-        , CMS_HLT.VECPARAMETERSETS E
-        , CMS_HLT.SUPERIDPARAMSETASSOC F
-        , CMS_HLT.PARAMETERSETS G
-        , CMS_HLT.SUPERIDPARAMETERASSOC H
-        , CMS_HLT.PARAMETERS I
-        , CMS_HLT.VUINT32PARAMVALUES J
-        WHERE A.CONFIGID=%d 
-        AND A.SERVICEID=B.SUPERID
-        AND B.TEMPLATEID=C.SUPERID
+        SequencePrescaleQuery="""                                                                                                                                                    
+        SELECT F.SEQUENCENB,J.SEQUENCENB,J.VALUE                                                                                                                                     
+        FROM CMS_HLT.CONFIGURATIONSERVICEASSOC A                                                                                                                                     
+        , CMS_HLT.SERVICES B                                                                                                                                                         
+        , CMS_HLT.SERVICETEMPLATES C                                                                                                                                                 
+        , CMS_HLT.SUPERIDVECPARAMSETASSOC D                                                                                                                                          
+        , CMS_HLT.VECPARAMETERSETS E                                                                                                                                                 
+        , CMS_HLT.SUPERIDPARAMSETASSOC F                                                                                                                                             
+        , CMS_HLT.PARAMETERSETS G                                                                                                                                                    
+        , CMS_HLT.SUPERIDPARAMETERASSOC H                                                                                                                                            
+        , CMS_HLT.PARAMETERS I                                                                                                                                                       
+        , CMS_HLT.VUINT32PARAMVALUES J                                                                                                                                               
+        WHERE A.CONFIGID=%d                                                                                                                                                          
+        AND A.SERVICEID=B.SUPERID                                                                                                                                                    
+        AND B.TEMPLATEID=C.SUPERID                                                                                                                                                   
         AND C.NAME='PrescaleService'
-        AND B.SUPERID=D.SUPERID
-        AND D.VPSETID=E.SUPERID
-        AND E.NAME='prescaleTable'
-        AND D.VPSETID=F.SUPERID
-        AND F.PSETID=G.SUPERID
-        AND G.SUPERID=H.SUPERID
-        AND I.PARAMID=H.PARAMID
-        AND I.NAME='prescales'
-        AND J.PARAMID=H.PARAMID
-        ORDER BY F.SEQUENCENB,J.SEQUENCENB
-        """ % (self.ConfigId,)
+        AND B.SUPERID=D.SUPERID                                                                                                                                                       
+        AND D.VPSETID=E.SUPERID                                                                                                                                                       
+        AND E.NAME='prescaleTable'                                                                                                                                                    
+        AND D.VPSETID=F.SUPERID                                                                                                                                                       
+        AND F.PSETID=G.SUPERID                                                                                                                                                        
+        AND G.SUPERID=H.SUPERID                                                                                                                                                       
+        AND I.PARAMID=H.PARAMID                                                                                                                                                       
+        AND I.NAME='prescales'                                                                                                                                                        
+        AND J.PARAMID=H.PARAMID                                                                                                                                                       
+        ORDER BY F.SEQUENCENB,J.SEQUENCENB                                                                                                                                            
+        """ % (ConfigId,)                                                                                                                                                             
 
-        #print self.HLTSequenceMap
-        cursor.execute(SequencePrescaleQuery)
-        self.HLTPrescaleTable=[ [] ]*len(self.HLTList)
-        lastIndex=-1
-        lastSeq=-1
-        row = []
-        for seq,index,val in cursor.fetchall():
-            if lastIndex!=index-1:
-                self.HLTPrescaleTable[self.HLTSequenceMap.index(lastSeq)].append(row)
-                row=[]
-            lastSeq=seq
-            lastIndex=index
+        tmp_curs.execute(SequencePrescaleQuery)                                                                                                                                         
+        lastIndex=-1                                                                                                                                                                  
+        lastSeq=-1                                                                                                                                                                    
+        row = []                                                                                                                                                                      
+        for seq,index,val in tmp_curs.fetchall():                                                                                                                                       
+            if lastIndex!=index-1:                                                                                                                                                    
+                self.HLTPrescaleTable[HLTSequenceMap[seq-1]] = row                                                                                                                         
+                row=[]                                                                                                                                                                
+            lastSeq=seq                                                                                                                                                               
+            lastIndex=index                                                                                                                                                           
             row.append(val)
             
+
     def GetHLTSeeds(self):
         ## This is a rather delicate query, but it works!
         ## Essentially get a list of paths associated with the config, then find the module of type HLTLevel1GTSeed associated with the path
