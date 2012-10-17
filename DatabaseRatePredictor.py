@@ -330,7 +330,7 @@ def main():
             print_table = False
             data_clean = True
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            plot_properties = [["ls", "rawrate", False, True, False,fitFile]]
+            plot_properties = [["ls", "rawrate", False, True, False,fitFile]]            
             ## rate is calculated as: (measured rate, deadtime corrected) * prescale [prediction not dt corrected]
             ## rawrate is calculated as: measured rate [prediction is dt corrected]
 
@@ -903,7 +903,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
 
         AllPlotArrays = [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t]
         
-        [VX, VXE, VY, VYE, VF, VFE] = GetVXVY(plot_properties, fit_file, AllPlotArrays)
+        [VX, VXE, x_label, VY, VYE, y_label, VF, VFE] = GetVXVY(plot_properties, fit_file, AllPlotArrays)
         
         if save_root or save_png:
             c1 = TCanvas(str(varX),str(varY))
@@ -915,8 +915,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             print "No lumisections with events for", print_trigger, "probably due to v high deadtime"
             continue
         gr1.SetName("Graph_"+str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX))
-        gr1.GetXaxis().SetTitle(varX)
-        gr1.GetYaxis().SetTitle(varY)
+        gr1.GetXaxis().SetTitle(x_label)
+        gr1.GetYaxis().SetTitle(y_label)
         gr1.SetTitle(str(print_trigger))
         gr1.SetMinimum(0)
         gr1.SetMaximum(1.2*max(VY))
@@ -1195,95 +1195,119 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
         if varX == "run":
             VX = run_t
             VXE = run_t_e
+            x_label = "Run Number"
         elif varX == "ls":
             VX = ls_t
             VXE = e_ls_t
+            x_label = "Lumisection"
         elif varX == "ps":
             VX = ps_t
             VXE = e_ps_t
+            x_label = "Prescale"
         elif varX == "inst":
             VX = inst_t
             VXE = e_inst_t
+            x_label = "Instantaneous Luminosity [Hz/cm^{2}]"
         elif varX == "live":
             VX = live_t
             VXE = e_live_t
+            x_label = "Instantaneous Luminosity [Hz/cm^{2}]"            
         elif varX == "delivered":
             VX = delivered_t
             VXE = e_delivered_t
+            x_label = "Instantaneous Luminosity [Hz/cm^{2}]"            
         elif varX == "deadtime":
             VX = deadtime_t
             VXE = e_deadtime_t
+            x_label = "Deadtime"
         elif varX == "rawrate":
             VX = rawrate_t
             VXE = e_rawrate_t
+            x_label = "Raw Rate [Hz]"
         elif varX == "rate":
             VX = rate_t
             VXE = e_rate_t
+            x_label = "Rate [Hz]"
         elif varX == "rawxsec":
             VX = rawxsec_t
             VXE = e_rawxsec_t
+            x_label = "Raw Cross Section [cm^{2}/10^{30}]"
         elif varX == "xsec":
             VX = xsec_t
             VXE = e_xsec_t
+            x_label = "Raw Cross Section [cm^{2}/10^{30}]"            
         elif varX == "psi":
             VX = psi_t
             VXE = e_psi_t
+            x_label = "Prescale Index"
         else:
             print "No valid variable entered for X"
             continue
         if varY == "run":
             VY = run_t
             VYE = run_t_e
+            y_label = "Run Number"
         elif varY == "ls":
             VY = ls_t
             VYE = e_ls_t
+            y_label = "Lumisection"
         elif varY == "ps":
             VY = ps_t
             VYE = e_ps_t
+            y_label = "Prescale"
         elif varY == "inst":
             VY = inst_t
             VYE = e_inst_t
+            y_label = "Instantaneous Luminosity [Hz/cm^{2}]"            
         elif varY == "live":
             VY = live_t
             VYE = e_live_t
+            y_label = "Instantaneous Luminosity [Hz/cm^{2}]"                        
         elif varY == "delivered":
             VY = delivered_t
             VYE = e_delivered_t
+            y_label = "Instantaneous Luminosity [Hz/cm^{2}]"                        
         elif varY == "deadtime":
             VY = deadtime_t
             VYE = e_deadtime_t
+            y_label = "Deadtime"
         elif varY == "rawrate":
             VY = rawrate_t
             VYE = e_rawrate_t
+            y_label = "Raw Rate [Hz]"
             if fit_file:
                 VF = rawrate_fit_t
                 VFE = e_rawrate_fit_t
         elif varY == "rate":
             VY = rate_t
             VYE = e_rate_t
+            y_label = "Rate [Hz]"            
             if fit_file:
                 VF = rate_fit_t
                 VFE = e_rate_fit_t
         elif varY == "rawxsec":
             VY = rawxsec_t
             VYE = e_rawxsec_t
+            y_label = "Raw Cross Section [cm^{2}/10^{30}]"
             if fit_file:
                 VF = rawxsec_fit_t
                 VFE = e_rawxsec_fit_t
         elif varY == "xsec":
             VY = xsec_t
             VYE = e_xsec_t
+            y_label = "Cross Section [cm^{2}/10^{30}]"            
             if fit_file:
                 VF = xsec_fit_t
                 VFE = e_xsec_fit_t
         elif varY == "psi":
             VY = psi_t
             VYE = e_psi_t
+            y_label = "Prescale Index"
         else:
             print "No valid variable entered for Y"
             continue
 
-    return [VX, VXE, VY, VYE, VF, VFE]
+    return [VX, VXE, x_label, VY, VYE, y_label, VF, VFE]
 
 def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff, max_dt, print_info, trig_list):
     it_offset=0
