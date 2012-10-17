@@ -1207,15 +1207,15 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
         elif varX == "inst":
             VX = inst_t
             VXE = e_inst_t
-            x_label = "Instantaneous Luminosity [Hz/cm^{2}]"
+            x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"
         elif varX == "live":
             VX = live_t
             VXE = e_live_t
-            x_label = "Instantaneous Luminosity [Hz/cm^{2}]"            
+            x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"            
         elif varX == "delivered":
             VX = delivered_t
             VXE = e_delivered_t
-            x_label = "Instantaneous Luminosity [Hz/cm^{2}]"            
+            x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"                        
         elif varX == "deadtime":
             VX = deadtime_t
             VXE = e_deadtime_t
