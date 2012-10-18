@@ -1036,8 +1036,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             if not do_fit:
                 print "Can't have save_fits = True and do_fit = False"
                 continue
-                        
-            try:
+            if "rate" in varY and not linear:            
+            ##try:
                 ##if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-chioffset) and (f1b.GetChisquare()/f1b.GetNDF() < f1a.GetChisquare()/f1a.GetNDF()-chioffset)):
                 if (f1c.GetChisquare()/f1c.GetNDF() < (f1a.GetChisquare()/f1a.GetNDF()-chioffset) and (f1c.GetChisquare()/f1c.GetNDF() < f1b.GetChisquare()/f1b.GetNDF())):
                     print '%-50s | expo | % .2f | +/-%.1f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c.GetChisquare()/f1c.GetNDF())
@@ -1061,8 +1061,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
                     OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
                     
-            except ZeroDivisionError:
-                print "No NDF for",print_trigger,"skipping"
+            ##except ZeroDivisionError:
+            ##    print "No NDF for",print_trigger,"skipping"
+            else:
+                print '%-50s | quad | % .2f | +/-%.1f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a.GetChisquare()/f1a.GetNDF())                    
+                f1a.SetLineColor(1)
+                #priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
+                sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
+                OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
  
         if save_root or save_png:
             gr1.Draw("APZ")
@@ -1207,15 +1213,27 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
         elif varX == "inst":
             VX = inst_t
             VXE = e_inst_t
+<<<<<<< DatabaseRatePredictor.py
+            x_label = "Instantaneous Luminosity"
+=======
             x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"
+>>>>>>> 1.64
         elif varX == "live":
             VX = live_t
             VXE = e_live_t
+<<<<<<< DatabaseRatePredictor.py
+            x_label = "Instantaneous Luminosity"            
+=======
             x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"            
+>>>>>>> 1.64
         elif varX == "delivered":
             VX = delivered_t
             VXE = e_delivered_t
+<<<<<<< DatabaseRatePredictor.py
+            x_label = "Instantaneous Luminosity"            
+=======
             x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"                        
+>>>>>>> 1.64
         elif varX == "deadtime":
             VX = deadtime_t
             VXE = e_deadtime_t
@@ -1231,11 +1249,11 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
         elif varX == "rawxsec":
             VX = rawxsec_t
             VXE = e_rawxsec_t
-            x_label = "Raw Cross Section [cm^{2}/10^{30}]"
+            x_label = "Cross Section"
         elif varX == "xsec":
             VX = xsec_t
             VXE = e_xsec_t
-            x_label = "Raw Cross Section [cm^{2}/10^{30}]"            
+            x_label = "Cross Section"            
         elif varX == "psi":
             VX = psi_t
             VXE = e_psi_t
@@ -1258,15 +1276,15 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
         elif varY == "inst":
             VY = inst_t
             VYE = e_inst_t
-            y_label = "Instantaneous Luminosity [Hz/cm^{2}]"            
+            y_label = "Instantaneous Luminosity"            
         elif varY == "live":
             VY = live_t
             VYE = e_live_t
-            y_label = "Instantaneous Luminosity [Hz/cm^{2}]"                        
+            y_label = "Instantaneous Luminosity"                        
         elif varY == "delivered":
             VY = delivered_t
             VYE = e_delivered_t
-            y_label = "Instantaneous Luminosity [Hz/cm^{2}]"                        
+            y_label = "Instantaneous Luminosity"                        
         elif varY == "deadtime":
             VY = deadtime_t
             VYE = e_deadtime_t
@@ -1288,14 +1306,14 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
         elif varY == "rawxsec":
             VY = rawxsec_t
             VYE = e_rawxsec_t
-            y_label = "Raw Cross Section [cm^{2}/10^{30}]"
+            y_label = "Cross Section"
             if fit_file:
                 VF = rawxsec_fit_t
                 VFE = e_rawxsec_fit_t
         elif varY == "xsec":
             VY = xsec_t
             VYE = e_xsec_t
-            y_label = "Cross Section [cm^{2}/10^{30}]"            
+            y_label = "Cross Section"            
             if fit_file:
                 VF = xsec_fit_t
                 VFE = e_xsec_fit_t

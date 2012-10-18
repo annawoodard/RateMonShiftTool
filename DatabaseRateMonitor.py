@@ -602,7 +602,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     for warning in Warn:
         if warning==True:
             write(bcolors.WARNING)
-            print "If any trigger remains red for 3 minutes, CALL HLT DOC"
+            print "If any trigger remains red for 5 minutes, Please consult the shift crew and if needed contact relevant experts"
             print "More instructions at https://twiki.cern.ch/twiki/bin/view/CMS/TriggerShiftHLTGuide"
             write(bcolors.ENDC+"\n")
             break

@@ -12,6 +12,8 @@ NHighStreamA = 0
 NHighExpress = 0
 
 def MoreTableInfo(parser,LumiRange,config,isCol=True):
+    global NHighStreamA
+    global NHighExpress
     print "Monitoring Run %d" % (parser.RunNumber,)
     localtime = time.asctime( time.localtime(time.time()) )
     print "Local current time :", localtime

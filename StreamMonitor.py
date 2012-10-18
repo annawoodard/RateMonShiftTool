@@ -31,23 +31,23 @@ class StreamMonitor:
         else:
             bad_stream_a = False
         
-        if in_coll:
-            try:
-                pkl_file = open(config.FitFileName, 'rb')
-                fit_input = pickle.load(pkl_file)
+        ## if in_coll:
+##             try:
+##                 pkl_file = open(config.FitFileName, 'rb')
+##                 fit_input = pickle.load(pkl_file)
 
-                pred_stream_a = fit_input['HLT_Stream_A'][1]+fit_input['HLT_Stream_A'][2]*av_inst_lumi+fit_input['HLT_Stream_A'][3]*av_inst_lumi*av_inst_lumi
-                sigma = fit_input['HLT_Stream_A'][5]
+##                 pred_stream_a = fit_input['HLT_Stream_A'][1]+fit_input['HLT_Stream_A'][2]*av_inst_lumi+fit_input['HLT_Stream_A'][3]*av_inst_lumi*av_inst_lumi
+##                 sigma = fit_input['HLT_Stream_A'][5]
  
-                per_diff = (curr_stream_a - pred_stream_a)/pred_stream_a * 100
-                sigma_diff = (curr_stream_a - pred_stream_a)/sigma
+##                 per_diff = (curr_stream_a - pred_stream_a)/pred_stream_a * 100
+##                 sigma_diff = (curr_stream_a - pred_stream_a)/sigma
 
-                if abs(sigma_diff) > config.DefAllowRateSigmaDiff*2 and config.DefWarnOnSigmaDiff:
-                    bad_stream_a = True
-                if abs(per_diff) > config.DefAllowRatePercDiff and not config.DefWarnOnSigmaDiff:
-                    bad_stream_a = True
+##                 if abs(sigma_diff) > config.DefAllowRateSigmaDiff*2 and config.DefWarnOnSigmaDiff:
+##                     bad_stream_a = True
+##                 if abs(per_diff) > config.DefAllowRatePercDiff and not config.DefWarnOnSigmaDiff:
+##                     bad_stream_a = True
 
-            except:  #No fit for stream a; if one is desired, run DatabaseRatePredictor.py with a trigger list including 'HLT_Stream_A'
-                pass
+##             except:  #No fit for stream a; if one is desired, run DatabaseRatePredictor.py with a trigger list including 'HLT_Stream_A'
+##                 pass
 
         return bad_stream_a
