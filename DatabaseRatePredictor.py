@@ -1213,27 +1213,15 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays):
         elif varX == "inst":
             VX = inst_t
             VXE = e_inst_t
-<<<<<<< DatabaseRatePredictor.py
             x_label = "Instantaneous Luminosity"
-=======
-            x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"
->>>>>>> 1.64
         elif varX == "live":
             VX = live_t
             VXE = e_live_t
-<<<<<<< DatabaseRatePredictor.py
             x_label = "Instantaneous Luminosity"            
-=======
-            x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"            
->>>>>>> 1.64
         elif varX == "delivered":
             VX = delivered_t
             VXE = e_delivered_t
-<<<<<<< DatabaseRatePredictor.py
             x_label = "Instantaneous Luminosity"            
-=======
-            x_label = "Instantaneous Luminosity [10^{30} Hz/cm^{2}]"                        
->>>>>>> 1.64
         elif varX == "deadtime":
             VX = deadtime_t
             VXE = e_deadtime_t
