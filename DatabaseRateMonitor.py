@@ -9,7 +9,12 @@ import getopt
 import time
 from StreamMonitor import *
 from colors import *
-from TablePrint import *
+try:
+    from TablePrint import *
+except ImportError:
+    sys.stderr.write("Exception of environment variables. try:\nsource set.sh\n")
+    sys.exit(2)
+    
 from AddTableInfo_db import MoreTableInfo
 from math import *
 from DatabaseParser import *

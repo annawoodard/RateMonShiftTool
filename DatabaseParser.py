@@ -1152,7 +1152,11 @@ class DatabaseParser:
 def ConnectDB(user='trg'):
     try:
         host = os.uname()[1]
-        offline = 1 if host.startswith('lxplus') else 0
+        #offline = 1 if host.startswith('lxplus') else 0
+        if host.startswith('lxplus'):
+            offline=1
+        else:
+            offline=0
     except:
         print "Please setup database parsing:\nsource set.sh"
     ##print offline
