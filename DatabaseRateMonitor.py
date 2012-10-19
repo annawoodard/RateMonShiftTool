@@ -434,7 +434,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         pkl_file.close()
     except:
         RefRatesInput={}
-        print "Didn't open ref file"
+        #print "Didn't open ref file"
 
 
     trig_list=Config.MonitorList
