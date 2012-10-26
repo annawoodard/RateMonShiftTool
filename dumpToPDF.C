@@ -11,7 +11,6 @@ void
 dumpToPDF(string inName, string fitName){
   TFile *fin = TFile::Open(inName.c_str(), "read"); assert(fin);
 
-
   string outName = inName;
   outName.replace(outName.find(".root"), 5, ".pdf");
 
@@ -27,13 +26,20 @@ dumpToPDF(string inName, string fitName){
   printf("nplots: %i, nfits: %i\n", nplots, nfits);
   if(nplots != nfits){
     cout<<" PDF output will be wrong since different number of triggers in fit and current run"<<endl;
-    abort();
+    if (nplots > nfits) {
+      cout<<"Quitting"<<endl;
+      abort(); 
+    }
   }
   TList* plots = fin->GetListOfKeys();  
   TList* fits  = fFit->GetListOfKeys();
+  int offset = 0; //Assumes nfits >= nplots
+  std::string inPlotName = "";
+  std::string inFitName = "";
   for(int i=0; i<nplots; ++i){
+
     TKey* plot = (TKey*) plots->At(i);
-    TKey* fit = (TKey*) fits->At(i);//assume they're in the same order for now
+    TKey* fit = (TKey*) fits->At(i+offset);//assume they're in the same order for now
 
     if(!fin->GetKey(plot->GetName())){
       cout<<"Didn't find "<<plot<<". Removing."<<endl;
@@ -43,6 +49,23 @@ dumpToPDF(string inName, string fitName){
       cout<<"Didn't find "<<fit<<". Removing."<<endl;
       abort();
     }
+    inPlotName = plot->GetName();
+    inFitName = fit->GetName();
+    inFitName.erase(inFitName.length()-17,inFitName.length());//Removes "rate_vs_delivered" from string
+
+    //std::cout << inPlotName << "  " << inFitName << std::endl;
+    while ((std::string::npos != inPlotName.find(inFitName)) == 0) { //While plot and fit names don't match
+      offset += 1;
+      fit = (TKey*) fits->At(i+offset);
+      if(!fFit->GetKey(fit->GetName())){
+	cout<<"Didn't find "<<fit<<". Removing."<<endl;
+	abort();
+      }
+      inFitName = fit->GetName();
+      inFitName.erase(inFitName.length()-17,inFitName.length());
+      //std::cout << inFitName << std::endl;
+    }
+      
     TCanvas* c = new TCanvas();
     c->Divide(1,2);
 
