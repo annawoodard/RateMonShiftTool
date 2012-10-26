@@ -71,7 +71,13 @@ def priot(wp_bool,print_trigger,meanps,f1,f2,fit_type,av):
         x1 = f1.GetParameter(1)
         linear = x0 + x1*lumi
 
-        if fit_type  == "quad":
+        if fit_type  == "line":
+            z0 = f2.GetParameter(0)
+            z1 = f2.GetParameter(1)
+            z2 = 0
+            z3 = 0
+            fit = z0 + z1*lumi
+        elif fit_type  == "quad":
             z0 = f2.GetParameter(0)
             z1 = f2.GetParameter(1)
             z2 = f2.GetParameter(2)
