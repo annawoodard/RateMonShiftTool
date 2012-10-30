@@ -1337,7 +1337,7 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
             
         if print_info:
             if (iterator==0 and print_trigger==trig_list[0]):
-                print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Status", "Run", "LS", "Physics", "Active", "Deadtime", " MaxDeadTime", " Passed all subsystems?", " List of Subsystems failed")
+                print '%10s%10s%10s%10s%10s%10s%10s%15s%20s%15s' % ("Status", "Run", "LS", "Physics", "Active", "Deadtime", " MaxDeadTime", " Passed all subsystems?", " List of Subsystems", " Spike killing")
             
         ## if SubSystemOff["All"]:
 ##             for keys in LumiPageInfo[LS]:
@@ -1397,7 +1397,10 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         return True
     else:
         if (print_info and print_trigger==trig_list[0] and num_ls==1):
-            print '%10s%10s%10s%10s%10s%10s%10s%15s%20s' % ("Failed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed)
+            prediction_match=True
+            if (realvalue >0.6*prediction and realvalue<1.5*prediction):
+                prediction_match=False
+            print '%10s%10s%10s%10s%10s%10s%10s%15s%20s%15s' % ("Failed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed, prediction_match )
         
         return False
 
