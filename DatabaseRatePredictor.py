@@ -111,7 +111,7 @@ def main():
         TMDerr=False
         wp_bool=False
         all_triggers=False
-        DoL1=True
+        DoL1=False
         UsePSCol=-1
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
@@ -781,15 +781,20 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             #realvalue = Rates[print_trigger]["xsec"][iterator]
 
             ##New Spike-killer: gets average of nearest 4 LS
-            if (iterator > 2 and iterator+2 < len(Rates[print_trigger]["rate"])): ##2 LS before, 2 after
-                prediction = (Rates[print_trigger]["rate"][iterator-2]+Rates[print_trigger]["rate"][iterator-1]+Rates[print_trigger]["rate"][iterator+1]+Rates[print_trigger]["rate"][iterator+2])/4.0
-            elif (iterator > 2 and len(Rates[print_trigger]["rate"]) > 4 ): ##4 LS before
-                prediction = (Rates[print_trigger]["rate"][iterator-4]+Rates[print_trigger]["rate"][iterator-3]+Rates[print_trigger]["rate"][iterator-2]+Rates[print_trigger]["rate"][iterator-1])/4.0
-            elif (iterator+2 < len(Rates[print_trigger]["rate"]) and len(Rates[print_trigger]["rate"]) > 4 ): ##4 LS after
-                prediction = (Rates[print_trigger]["rate"][iterator+1]+Rates[print_trigger]["rate"][iterator+2]+Rates[print_trigger]["rate"][iterator+3]+Rates[print_trigger]["rate"][iterator+4])/4.0
-            else:
+            try:
+                if (iterator > 2 and iterator+2 < len(Rates[print_trigger]["rate"])): ##2 LS before, 2 after
+                    prediction = (Rates[print_trigger]["rate"][iterator-2]+Rates[print_trigger]["rate"][iterator-1]+Rates[print_trigger]["rate"][iterator+1]+Rates[print_trigger]["rate"][iterator+2])/4.0
+                elif (iterator > 2 and len(Rates[print_trigger]["rate"]) > 4 ): ##4 LS before
+                    prediction = (Rates[print_trigger]["rate"][iterator-4]+Rates[print_trigger]["rate"][iterator-3]+Rates[print_trigger]["rate"][iterator-2]+Rates[print_trigger]["rate"][iterator-1])/4.0
+                elif (iterator+2 < len(Rates[print_trigger]["rate"]) and len(Rates[print_trigger]["rate"]) > 4 ): ##4 LS after
+                    prediction = (Rates[print_trigger]["rate"][iterator+1]+Rates[print_trigger]["rate"][iterator+2]+Rates[print_trigger]["rate"][iterator+3]+Rates[print_trigger]["rate"][iterator+4])/4.0
+                else:
+                    prediction = Rates[print_trigger]["rate"][iterator]
+                realvalue = Rates[print_trigger]["rate"][iterator]
+            except:
+                print "Error calculating prediction. Setting rates to defaults."
                 prediction = Rates[print_trigger]["rate"][iterator]
-            realvalue = Rates[print_trigger]["rate"][iterator]
+                #realvalue = Rates[print_trigger]["rate"][iterator]
             
             if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff,max_dt,print_info, trig_list):
                 
