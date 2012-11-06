@@ -161,14 +161,18 @@ class RateMonConfig:
         
         try:
             sigma = Input[TrigName][5]
+        except:
+            print "sigma fail", TrigName
+            sigma=10.0
+        try:    
             if Input[TrigName][0] == "poly":
                 return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma]
             else:
                 return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), sigma]
         except:
-            RefRun = True
-            #print "EXCEPT ERR"
-
+            ##RefRun = True
+            print "EXCEPT ERR"
+            exit(2)
         if RefRun:
             num_compare = 0
             pred_rate = 0

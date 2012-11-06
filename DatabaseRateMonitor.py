@@ -471,7 +471,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             if HeadName not in FitInput.keys() and not ListIgnoredPaths and not ShowAllBadRates:
                 continue           
 
-        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
+        masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero","HLT_BeamHalo"]
         masked_trig = False
         for mask in masked_triggers:
             if str(mask) in HeadName:

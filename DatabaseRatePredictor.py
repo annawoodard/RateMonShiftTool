@@ -111,7 +111,7 @@ def main():
         TMDerr=False
         wp_bool=False
         all_triggers=False
-        DoL1=False
+        DoL1=True
         UsePSCol=-1
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
@@ -314,7 +314,7 @@ def main():
             print_table = False
             data_clean = True
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            plot_properties = [["ls", "rawrate", False, True, False,fitFile]]            
+            plot_properties = [["ls", "rate", False, True, False,fitFile]]            
             ## rate is calculated as: (measured rate, deadtime corrected) * prescale [prediction not dt corrected]
             ## rawrate is calculated as: measured rate [prediction is dt corrected]
 
@@ -905,7 +905,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         except:
             print "No lumisections with events for", print_trigger, " probably high deadtime or low raw rate (prescaled)"
             continue
-        if(len(VX)<20):
+        if(len(VX)<20 and do_fit) :
             print "Less than 20 data points for ", print_trigger, " probably high deadtime or low raw rate (prescaled)"
             continue
         gr1.SetName("Graph_"+str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX))
@@ -989,7 +989,11 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     f1b.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
                     f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX))) ##Reasonable bounds
                     gr1.Fit("f1b","QN","rob=0.90")
-                    f1b_Chi2 = f1b.GetChisquare()/f1b.GetNDF()
+                    try:
+                        f1b_Chi2 = f1b.GetChisquare()/f1b.GetNDF()
+                    except ZeroDivisionError:
+                        f1b_Chi2=10.0
+                        print "Zero ndf for ",print_trigger
                     f1b_BadMinimum = (f1b.GetMinimumX(5,7905,10)>2000 and f1b.GetMinimumX(5,7905,10)<7000)
                     
                     
@@ -1027,7 +1031,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a_Chi2)
                 except:
                     pass
-        chioffset=0.9 ##chioffset now a fraction; must be 10% better to use expo rather than quad, quad rather than line        
+        chioffset=1.0 ##chioffset now a fraction; must be 10% better to use expo rather than quad, quad rather than line        
         if print_table or save_fits:
             if not do_fit:
                 print "Can't have save_fits = True and do_fit = False"
@@ -1035,14 +1039,14 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             if "rate" in varY and not linear:            
             ##try:
                 ##if (f1c_Chi2 < (f1a_Chi2)*chioffset and (f1b_Chi2 < f1a_Chi2)*chioffset):
-                if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and ((f1c_Chi2 < f1b_Chi2) or f1b_BadMinimum) and f1c_Chi2 < (f1d_Chi2*chioffset) and not f1c_BadMinimum and len(VX)>40):
+                if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and ((f1c_Chi2 < f1b_Chi2) or f1b_BadMinimum) and f1c_Chi2 < (f1d_Chi2*chioffset) and not f1c_BadMinimum and len(VX)>1):
                     print '%-50s | expo | % .2f | +/-%.1f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c_Chi2)
                     f1c.SetLineColor(1)                    
                     priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)                    
                     sigma = CalcSigma(VX, VY, f1c)*math.sqrt(num_ls)                    
                     OutputFit[print_trigger] = ["expo", f1c.GetParameter(0) , f1c.GetParameter(1) , f1c.GetParameter(2) , f1c.GetParameter(3) , sigma , meanrawrate, f1c.GetParError(0) , f1c.GetParError(1) , f1c.GetParError(2) , f1c.GetParError(3)]
 
-                elif ((f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and f1b_Chi2 < (f1d_Chi2*chioffset) and not f1b_BadMinimum and len(VX)>40):
+                elif ((f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and f1b_Chi2 < (f1d_Chi2*chioffset) and not f1b_BadMinimum and len(VX)>1):
                     print '%-50s | cube | % .2f | +/-%.1f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b_Chi2)
                     f1b.SetLineColor(1)
                     priot(wp_bool,print_trigger,meanps,f1d,f1b,"cubic",av_rte)
