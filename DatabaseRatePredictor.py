@@ -494,7 +494,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             LSRange[nls].append(iterator)
                             counter += 1
                     nls = LSRange[nls][-1]+1
-
+                ###checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes   
                 #print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
                 for nls in sorted(LSRange.iterkeys()):
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
@@ -1446,6 +1446,65 @@ def checkLS(Rates, PageLumiInfo,trig_list):
     return False
 
 
+def checkL1seedChangeALLPScols(trig_list,HLTL1PS):
+    L1PSchangedic={}
+    nps=0
+    for HLTkey in trig_list:
+        if HLTkey=='HLT_Stream_A':
+            continue
+        #print HLTkey
+        try:
+            dict=HLTL1PS[StripVersion(HLTkey)]
+            #print "dict=",dict
+        except:
+            #print HLTkey, StripVersion(HLTkey)
+            exit(2)
+        HLTL1dummy={}
+        for L1seed in dict.iterkeys():
+            #print L1seed
+            dummyL1seedlist=[]
+            #print dict[L1seed]
+            dummy=dict[L1seed]
+            L1seedchangedummy=[]
+            L1fulldummy=[]
+            nps=len(dict[L1seed])
+            #print "nps=",nps
+            for PScol in range(0,len(dict[L1seed])):
+                PScoldummy=PScol+1
+                if PScoldummy>(len(dict)-1):
+                    PScoldummy=len(dict)-1
+                #print PScol, PScoldummy, dummy[PScol]    
+                
+                if dummy[PScol]==dummy[PScoldummy]:
+                    L1seedchangedummy.append(PScol)
+                else:
+                    L1seedchangedummy.append(PScol)
+                    for ps in L1seedchangedummy:
+                        L1fulldummy.append(L1seedchangedummy)
+                    #print "L1seed change ", L1seedchangedummy, "full=",L1fulldummy
+                    L1seedchangedummy=[]
+            for ps in L1seedchangedummy:        
+                L1fulldummy.append(L1seedchangedummy)        
+            #print "L1full=",L1fulldummy
+            HLTL1dummy[L1seed]=L1fulldummy
+        #print HLTL1dummy
+        HLTL1_seedchanges=commonL1PS(HLTL1dummy,nps)
+        print HLTkey, HLTL1_seedchanges
+        
+def commonL1PS(HLTL1dummy, nps):
+### find commmon elements in L1 seeds
+    HLTL1_seedchanges=[]
+    for PScol in range(0,nps):
+        
+        L1seedslist=HLTL1dummy.keys()
+        L1tupletmp=set(tuple(HLTL1dummy[L1seedslist.pop()][PScol]))        
+        while len(L1seedslist)>0:
+            L1tupletmp2=set(tuple(HLTL1dummy[L1seedslist.pop()][PScol]))
+            L1tupletmp=L1tupletmp & L1tupletmp2
+        if list(tuple(L1tupletmp)) not in HLTL1_seedchanges:       
+            HLTL1_seedchanges.append(list(tuple(L1tupletmp)))    
+        #print HLTL1_seedchanges
+    return HLTL1_seedchanges
 
 
 if __name__=='__main__':
