@@ -114,10 +114,10 @@ def GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,doPrint):
     L1Prescales = GetL1AlgoPrescales(curs,GTRS_Key)
 
     FullPrescales = {}
-    formatString = "%-60s%-40s%90s%80s%80s"
+    formatString = "hlt path: %s\nl1t seed: %s\ntotal p.: %s\nhlt pre.: %s\nl1t pre.: %s\n"
     if doPrint:
         print "List of triggers with non-sequential prescales:"
-        print formatString % ("HLT Name","L1 Name","Total","HLT","L1",)
+        #print formatString % ("HLT Name","L1 Name","Total","HLT","L1",)
     for HLTName,L1Seeds in HLTSeed.iteritems():
         if HLTName.startswith('AlCa'): ## the results don't make sense for AlCa paths
             continue
