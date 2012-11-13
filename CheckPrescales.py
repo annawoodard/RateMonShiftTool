@@ -3,6 +3,7 @@
 import sys
 import os
 import getopt
+import copy
 
 from DatabaseParser import ConnectDB
 
@@ -113,7 +114,7 @@ def GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,doPrint):
     L1Prescales = GetL1AlgoPrescales(curs,GTRS_Key)
 
     FullPrescales = {}
-    formatString = "%55s%30s%45s%45s%45s"
+    formatString = "%-60s%-40s%90s%80s%80s"
     if doPrint:
         print "List of triggers with non-sequential prescales:"
         print formatString % ("HLT Name","L1 Name","Total","HLT","L1",)
@@ -131,7 +132,7 @@ def GetPrescaleTable(HLT_Key,GT_Key,GTRS_Key,PSColsToIgnore,doPrint):
                 print "WARNING: %s uses non-existant L1 seed: %s" % (HLTName,seed,)
             tmp = L1Prescales[L1Names[seed]]
             if len(thisL1PS)==0:
-                thisL1PS = tmp ## just set it for the first one
+                thisL1PS = copy.copy(tmp) ## just set it for the first one
             else:
                 for i,a,b in zip(range(len(tmp)),thisL1PS,tmp):
                     if b<a:
