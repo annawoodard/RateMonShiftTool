@@ -100,7 +100,8 @@ def priot(wp_bool,print_trigger,meanps,f1,f2,fit_type,av):
         psdiff = diff/meanps
         linearChiSqNDOF = f1.GetChisquare()/f1.GetNDF()
         fitChiSqNDOF = f2.GetChisquare()/f2.GetNDF()
-        metric = diff/av
+        metric = diff/linear
+#        metric = diff/av        
         
         if priot.has_been_called==False:
             f2 = open('nonlinear.csv',"wb")

@@ -19,7 +19,7 @@ class RateMonConfig:
         self.MonitorSlope=[]
         self.MonitorQuad=[]
         self.L1Predictions=[]
-        self.MonitorOnly=0
+        self.ListIgnoredPaths=0
         self.MonTargetLumi=0
         self.FindL1Zeros=0
         self.LSWindow=-1
@@ -33,6 +33,7 @@ class RateMonConfig:
         self.DefWarnOnSigmaDiff=1
         self.DefShowSigmaAndPercDiff=0
         self.DoL1=0
+        self.DefaultMaxBadRatesToShow=500
         
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -102,8 +103,8 @@ class RateMonConfig:
                         print "Cannot parse Forbidden Cols parameter"
             elif par=="L1CrossSection":
                 self.L1Predictions = self.ReadList(arg)
-            elif par =="MonitorOnlyListed":
-                self.MonitorOnly=int(arg)
+            elif par =="ListIgnoredPaths":
+                self.ListIgnoredPaths=int(arg)
             elif par=="MonitorTargetLumi":
                 self.MonTargetLumi=float(arg)
             elif par=="FindL1Zeros":
@@ -130,6 +131,8 @@ class RateMonConfig:
                 self.DefWarnOnSigmaDiff=float(arg)
             elif par=="DoL1":
                 self.DoL1=int(arg)
+            elif par=="DefaultMaxBadRatesToShow":
+                self.DefaultMaxBadRatesToShow=int(arg)
             else:
                 print "Invalid Option : "+strippedLine
         f.close()
@@ -141,38 +144,31 @@ class RateMonConfig:
             return False
         return True
 
-##     def GetExpectedRate(self,TrigName,lumi):
-##         for trig,intercept,slope,quad in zip(self.MonitorList,self.MonitorIntercept,self.MonitorSlope,self.MonitorQuad):
-##             if trig==TrigName:
-##                 #print "mon list",self.MonitorList
-##                 if lumi:
-##                     return intercept + lumi*slope/1000 + lumi*lumi*quad/1000000
-##                 else:
-##                     return intercept + 3000*slope/1000 + 3000*3000*quad/1000000
-##         return -1
-
     def GetExpectedRate(self,TrigName,Input,Rates,live,delivered,deadtime):
         RefRun = False
         #replaced live/delivered with deadtimebeamactive
         if self.NoVersion:
             TrigName=StripVersion(TrigName)
         if TrigName not in Input.keys():
-            return 0
-        
+            return [0.0,0.0,"No prediction (fit missing)"]
+
         try:
             sigma = Input[TrigName][5]
         except:
-            print "sigma fail", TrigName
-            sigma=10.0
+            if Input[TrigName][0] == "fit failed":
+                return [0.0,0.0,"No prediction (fit missing)"]
+            else:
+                return [0.0,0.0,"Exception error"]
+
         try:    
             if Input[TrigName][0] == "poly":
-                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma]
-            else:
-                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), sigma]
+                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma,""]
+            elif Input[TrigName][0] == "expo":
+                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), sigma,""]
         except:
             ##RefRun = True
-            print "EXCEPT ERR"
-            exit(2)
+            return [0.0,0.0,"Exception error"]
+
         if RefRun:
             num_compare = 0
             pred_rate = 0
