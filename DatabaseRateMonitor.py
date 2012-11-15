@@ -87,7 +87,7 @@ def main():
     FirstLS           = 9999
     NumLS             = -10
     IgnoreThreshold   = Config.DefAllowIgnoreThresh
-    ListIgnoredPaths  = False
+    ListIgnoredPaths  = Config.ListIgnoredPaths
     PrintLumi         = False
     RefRunNum         = int(Config.ReferenceRun)
     ShowPSTriggers    = True
@@ -96,12 +96,8 @@ def main():
     SortBy            = "rate"
     ShifterMode       = int(Config.ShifterMode) # get this from the config, but can be overridden by other options
     ShowAllBadRates   = False
+    MaxBadRates       = Config.DefaultMaxBadRatesToShow
     
-   ##  if int(Config.ShifterMode):
-##         print "ShifterMode!!"
-##     else:
-##         print "ExpertMode"
-
     if Config.LSWindow > 0:
         NumLS = -1*Config.LSWindow
 
@@ -319,7 +315,7 @@ def main():
                                 print "Some lumisections have been skipped. Averaging over most recent sequential lumisections..."
                                 sequential_chunk = getSequential(HeadLumiRange)
                                 HeadLumiRange = sequential_chunk                                
-                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates)
+                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates,MaxBadRates)
                             if FindL1Zeros:
                                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config)
                         else:
@@ -376,8 +372,6 @@ def main():
                     isGood=0
                     isCol=0
                     print "failed"
-                
-                
 
             else:
                 try:
@@ -402,7 +396,7 @@ def main():
         print "Quitting. Peace Out."
 
             
-def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates):
+def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates,MaxBadRates):
     Data   = []
     Warn   = []
     IgnoredRates=[]
@@ -483,9 +477,8 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
         
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
-
             PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive)
-            VC = ""
+            VC = PSCorrectedExpectedRate[2]
 
             try:
                 ExpectedRate = round((PSCorrectedExpectedRate[0] / HeadUnprescaledRates[HeadName][1]),2)
@@ -497,6 +490,8 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                 SigmaDiff = 0.0
                 if HeadUnprescaledRates[HeadName][1] != 0:
                     VC="No prediction"
+                else:
+                    VC="Path prescaled to 0"
 
             if ExpectedRate > 0:
                 PerDiff = int(round( (TriggerRate-ExpectedRate)/ExpectedRate,2 )*100)
@@ -506,12 +501,13 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             if sigma > 0: 
                 SigmaDiff = round( (TriggerRate - ExpectedRate)/sigma, 2)
             else:
-                SigmaDiff =-999 #Zero sigma means that when there were no rates for this trigger when the fit was made
+                SigmaDiff = 0.0 #Zero sigma means that when there were no rates for this trigger when the fit was made
 
             if TriggerRate < IgnoreThreshold and (ExpectedRate < IgnoreThreshold and ExpectedRate!=0):
                 continue
 
-            Data.append([HeadName, TriggerRate, ExpectedRate, PerDiff, SigmaDiff, round(HeadUnprescaledRates[HeadName][1],1),VC])
+            
+            Data.append([HeadName, TriggerRate, ExpectedRate, PerDiff, SigmaDiff, round(HeadUnprescaledRates[HeadName][1],0),VC])
 
         else:  ## Use a reference run
             ## cheap trick to only get triggers in list when in shifter mode
@@ -549,7 +545,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                 continue
 
             VC = ""
-            Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,SigmaDiff,round((HeadUnprescaledRates[HeadName][1]),1),VC])    
+            Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,SigmaDiff,round((HeadUnprescaledRates[HeadName][1]),0),VC])    
 
     SortedData = []
     if SortBy == "":
@@ -571,38 +567,50 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     #check for triggers above the warning threshold
     Warn=[]
     core_data=[]
+    nBadRates = 0
     for entry in SortedData:
         bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff)
         if entry[0] in trig_list or ListIgnoredPaths:
             core_data.append(entry)
-            if bad_rate:
+            if bad_rate and nBadRates < MaxBadRates:
                 Warn.append(True)
+                nBadRates += 1
             else:
                 Warn.append(False)
         else:
-            if bad_rate and ShowAllBadRates:
+            if bad_rate and ShowAllBadRates and nBadRates < MaxBadRates:
                 core_data.append(entry)
                 Warn.append(True)
+                nBadRates += 1
+
+    for index,entry in enumerate(core_data):#Dont show 0s if we don't actually have a prediction; it's confusing
+        if entry[6] == "No prediction (fit missing)":
+            core_data[index] = [entry[0],entry[1],"--","--","--",entry[5],entry[6]]
 
     if ShowSigmaAndPercDiff == 1:
         Header = ["Trigger Name", "Actual", "Expected","% Diff","Deviation", "Cur PS", "Comments"]
         table_data=core_data
-        PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,20],Warn)
+        PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,30],Warn)
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'
     elif WarnOnSigmaDiff == 1:
         Header = ["Trigger Name", "Actual", "Expected","Deviation", "Cur PS", "Comments"]
         table_data = [[col[0], col[1], col[2], col[4], col[5], col[6]] for col in core_data]
-        PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,20],Warn)
+        PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,30],Warn)
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'
     else:
         Header = ["Trigger Name", "Actual", "Expected", "% Diff", "Cur PS", "Comments"]
         table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in core_data]
-        PrettyPrintTable(Header,table_data,[80,10,10,10,10,20],Warn)
+        PrettyPrintTable(Header,table_data,[80,10,10,10,10,30],Warn)
 
     if writeb:
-        prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,20],Header,core_data,Warn)
+        prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,30],Header,core_data,Warn)
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config,True)
+
+    if nBadRates == MaxBadRates:
+        write(bcolors.WARNING)
+        print "The number of paths with rates outside limits exceeds the maximum number to display; only the first %i with the highest rate are shown above." % (MaxBadRates)
+        write(bcolors.ENDC+"\n")                        
 
     for warning in Warn:
         if warning==True:
