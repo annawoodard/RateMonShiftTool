@@ -496,7 +496,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             LSRange[nls].append(iterator)
                             counter += 1
                     nls = LSRange[nls][-1]+1
-                checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes   
+                HLTL1_seedchanges=checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes   
                 #print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
                 for nls in sorted(LSRange.iterkeys()):
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
@@ -1457,18 +1457,22 @@ def checkLS(Rates, PageLumiInfo,trig_list):
 
 
 def checkL1seedChangeALLPScols(trig_list,HLTL1PS):
-    L1PSchangedic={}
+    
     nps=0
+    HLTL1_seedchanges={}
+    
     for HLTkey in trig_list:
         if HLTkey=='HLT_Stream_A':
             continue
-        #print HLTkey
+        print HLTkey
         try:
             dict=HLTL1PS[StripVersion(HLTkey)]
             #print "dict=",dict
         except:
             #print HLTkey, StripVersion(HLTkey)
+            print "exception, in getting dict"
             exit(2)
+            
         HLTL1dummy={}
         for L1seed in dict.iterkeys():
             #print L1seed
@@ -1498,8 +1502,10 @@ def checkL1seedChangeALLPScols(trig_list,HLTL1PS):
             #print "L1full=",L1fulldummy
             HLTL1dummy[L1seed]=L1fulldummy
         #print HLTL1dummy
-        HLTL1_seedchanges=commonL1PS(HLTL1dummy,nps)
-        print HLTkey, HLTL1_seedchanges
+        HLTL1_seedchanges[HLTkey]=commonL1PS(HLTL1dummy,nps)
+        print HLTkey, HLTL1_seedchanges[HLTkey]
+    return HLTL1_seedchanges
+        
         
 def commonL1PS(HLTL1dummy, nps):
 ### find commmon elements in L1 seeds
