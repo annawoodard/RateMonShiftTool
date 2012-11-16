@@ -335,7 +335,7 @@ def main():
         [Rates,LumiPageInfo, L1_trig_list]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol)
         if DoL1:
             trig_list=L1_trig_list
-        ##rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers)
+        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers)
 
     except KeyboardInterrupt:
         print "Wait... come back..."
@@ -568,7 +568,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             Rates[name]["physics"] = []
                             Rates[name]["active"] = []
                             Rates[name]["psi"] = []
-
+                            Rates[name]["L1seedchange"]=[]
                         [avps, ps, rate, psrate] = TriggerRates[key]
                         Rates[name]["run"].append(RefRunNum)
                         Rates[name]["ls"].append(nls)
@@ -578,6 +578,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         Rates[name]["delivered_lumi"].append(delivered)
                         Rates[name]["deadtime"].append(deadtimebeamactive)
                         Rates[name]["rawrate"].append(rate)
+                        Rates[name]["L1seedchange"].append(HLTL1_seedchanges[name])
                         if live == 0:
                             Rates[name]["rate"].append(0.0)
                             Rates[name]["rawxsec"].append(0.0)
@@ -939,97 +940,98 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             gr3.SetFillStyle(3003)
             
         if do_fit:
-            if "rate" in varY and not linear:
-                f1d=0
-                f1d = TF1("f1d","pol1",0,8000)#linear
-                f1d.SetParameters(0.01,min(sum(VY)/sum(VX),sloperate)) ##Set Y-intercept near 0, slope either mean_rate/mean_lumi or est. slope (may be negative)
-                f1d.SetLineColor(4)
-                f1d.SetLineWidth(2)
-                if nlow>0:
-                    f1d.SetParLimits(0,0,1.5*lowrate/nlow) ##Keep Y-intercept in range of low-lumi rate points
-                else:
-                    f1d.SetParLimits(0,0,1.5*sum(VY)/len(VY))
-                if (sloperate > 0):
-                    if (sloperate > 0.5*sum(VY)/sum(VX)): ##Slope is substantially positive
-                        f1d.SetParLimits(1,min(0.5*sloperate,0.5*sum(VY)/sum(VX)),1.5*sum(VY)/sum(VX)) 
-                    else: ##Slope is somewhat positive or flat
-                        f1d.SetParLimits(1,-0.1*sloperate,1.5*sum(VY)/sum(VX))
-                else: ##Slope is negative or flat 
-                    f1d.SetParLimits(1,1.5*sloperate,-0.1*sloperate)
-                gr1.Fit("f1d","QN","rob=0.90")
-                f1d_Chi2 = f1d.GetChisquare()/f1d.GetNDF()
+            [f1a,f1b,f1c,f1d,first_trigger,f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]= Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate)
+            ## if "rate" in varY and not linear:
+##                 f1d=0
+##                 f1d = TF1("f1d","pol1",0,8000)#linear
+##                 f1d.SetParameters(0.01,min(sum(VY)/sum(VX),sloperate)) ##Set Y-intercept near 0, slope either mean_rate/mean_lumi or est. slope (may be negative)
+##                 f1d.SetLineColor(4)
+##                 f1d.SetLineWidth(2)
+##                 if nlow>0:
+##                     f1d.SetParLimits(0,0,1.5*lowrate/nlow) ##Keep Y-intercept in range of low-lumi rate points
+##                 else:
+##                     f1d.SetParLimits(0,0,1.5*sum(VY)/len(VY))
+##                 if (sloperate > 0):
+##                     if (sloperate > 0.5*sum(VY)/sum(VX)): ##Slope is substantially positive
+##                         f1d.SetParLimits(1,min(0.5*sloperate,0.5*sum(VY)/sum(VX)),1.5*sum(VY)/sum(VX)) 
+##                     else: ##Slope is somewhat positive or flat
+##                         f1d.SetParLimits(1,-0.1*sloperate,1.5*sum(VY)/sum(VX))
+##                 else: ##Slope is negative or flat 
+##                     f1d.SetParLimits(1,1.5*sloperate,-0.1*sloperate)
+##                 gr1.Fit("f1d","QN","rob=0.90")
+##                 f1d_Chi2 = f1d.GetChisquare()/f1d.GetNDF()
 
-                f1a=0
-                f1a = TF1("f1a","pol2",0,8000)#quadratic
-                f1a.SetParameters(f1d.GetParameter(0),f1d.GetParameter(1),0) ##Initial values from linear fit
-                f1a.SetLineColor(6)
-                f1a.SetLineWidth(2)
-                if nlow>0 and sloperate < 0.5*sum(VY)/sum(VX): ##Slope is not substantially positive
-                    f1a.SetParLimits(0,0,1.5*lowrate/nlow) ##Keep Y-intercept in range of low-lumi rate points
-                else:
-                    f1a.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY))) ##Keep Y-intercept reasonably low
-                f1a.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
-                f1a.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
-                gr1.Fit("f1a","QN","rob=0.90")
-                f1a_Chi2 = f1a.GetChisquare()/f1a.GetNDF()
-                f1a_BadMinimum = (f1a.GetMinimumX(5,7905,10)>2000 and f1a.GetMinimumX(5,7905,10)<7000) ##Don't allow minimum between 2000 and 7000
+##                 f1a=0
+##                 f1a = TF1("f1a","pol2",0,8000)#quadratic
+##                 f1a.SetParameters(f1d.GetParameter(0),f1d.GetParameter(1),0) ##Initial values from linear fit
+##                 f1a.SetLineColor(6)
+##                 f1a.SetLineWidth(2)
+##                 if nlow>0 and sloperate < 0.5*sum(VY)/sum(VX): ##Slope is not substantially positive
+##                     f1a.SetParLimits(0,0,1.5*lowrate/nlow) ##Keep Y-intercept in range of low-lumi rate points
+##                 else:
+##                     f1a.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY))) ##Keep Y-intercept reasonably low
+##                 f1a.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
+##                 f1a.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
+##                 gr1.Fit("f1a","QN","rob=0.90")
+##                 f1a_Chi2 = f1a.GetChisquare()/f1a.GetNDF()
+##                 f1a_BadMinimum = (f1a.GetMinimumX(5,7905,10)>2000 and f1a.GetMinimumX(5,7905,10)<7000) ##Don't allow minimum between 2000 and 7000
 
-                f1b = 0
-                f1c = 0
-                meanps = median(Rates[print_trigger]["ps"])
-                av_rte = mean(VY)
+##                 f1b = 0
+##                 f1c = 0
+##                 meanps = median(Rates[print_trigger]["ps"])
+##                 av_rte = mean(VY)
                 
-                if True:
-                    f1b = TF1("f1b","pol3",0,8000)#cubic
-                    f1b.SetParameters(f1a.GetParameter(0),f1a.GetParameter(1),f1a.GetParameter(2),0) ##Initial values from quadratic fit
-                    f1b.SetLineColor(2)
-                    f1b.SetLineWidth(2)
-                    f1b.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY))) ##Keep Y-intercept reasonably low
-                    f1b.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
-                    f1b.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
-                    f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX))) ##Reasonable bounds
-                    gr1.Fit("f1b","QN","rob=0.90")
-                    try:
-                        f1b_Chi2 = f1b.GetChisquare()/f1b.GetNDF()
-                    except ZeroDivisionError:
-                        f1b_Chi2=10.0
-                        print "Zero ndf for ",print_trigger
+##                 if True:
+##                     f1b = TF1("f1b","pol3",0,8000)#cubic
+##                     f1b.SetParameters(f1a.GetParameter(0),f1a.GetParameter(1),f1a.GetParameter(2),0) ##Initial values from quadratic fit
+##                     f1b.SetLineColor(2)
+##                     f1b.SetLineWidth(2)
+##                     f1b.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY))) ##Keep Y-intercept reasonably low
+##                     f1b.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
+##                     f1b.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
+##                     f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX))) ##Reasonable bounds
+##                     gr1.Fit("f1b","QN","rob=0.90")
+##                     try:
+##                         f1b_Chi2 = f1b.GetChisquare()/f1b.GetNDF()
+##                     except ZeroDivisionError:
+##                         f1b_Chi2=10.0
+##                         print "Zero ndf for ",print_trigger
                         
-                    f1b_BadMinimum = (f1b.GetMinimumX(5,7905,10)>2000 and f1b.GetMinimumX(5,7905,10)<7000)                
-                    f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
-                    f1c.SetLineColor(3)
-                    f1c.SetLineWidth(2)
-                    #f1c.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY)))
-                    f1c.SetParLimits(0,0,max(min(VY),0.01*sum(VY)/len(VY))) ##Exponential fits should start low
-                    f1c.SetParLimits(1,max(VY)/math.exp(15.0),max(VY)/math.exp(2.0))
-                    f1c.SetParLimits(2,0.0,0.0000000001)
-                    f1c.SetParLimits(3,2.0/max(VX),15.0/max(VX))
-                    gr1.Fit("f1c","QN","rob=0.90")
-                    f1c_Chi2 = f1c.GetChisquare()/f1c.GetNDF()
-                    f1c_BadMinimum = ((f1c.GetMinimumX(5,7905,10)>2000 and f1c.GetMinimumX(5,7905,10)<7000)) or f1c.GetMaximum(min(VX),max(VX),10)/max(VY) > 2.0
-                    ##Some fits are so exponential, the graph ends early and returns a false low Chi2 value
+##                     f1b_BadMinimum = (f1b.GetMinimumX(5,7905,10)>2000 and f1b.GetMinimumX(5,7905,10)<7000)                
+##                     f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
+##                     f1c.SetLineColor(3)
+##                     f1c.SetLineWidth(2)
+##                     #f1c.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY)))
+##                     f1c.SetParLimits(0,0,max(min(VY),0.01*sum(VY)/len(VY))) ##Exponential fits should start low
+##                     f1c.SetParLimits(1,max(VY)/math.exp(15.0),max(VY)/math.exp(2.0))
+##                     f1c.SetParLimits(2,0.0,0.0000000001)
+##                     f1c.SetParLimits(3,2.0/max(VX),15.0/max(VX))
+##                     gr1.Fit("f1c","QN","rob=0.90")
+##                     f1c_Chi2 = f1c.GetChisquare()/f1c.GetNDF()
+##                     f1c_BadMinimum = ((f1c.GetMinimumX(5,7905,10)>2000 and f1c.GetMinimumX(5,7905,10)<7000)) or f1c.GetMaximum(min(VX),max(VX),10)/max(VY) > 2.0
+##                     ##Some fits are so exponential, the graph ends early and returns a false low Chi2 value
                     
-            else: ##If this is not a rate plot
-                f1a = TF1("f1a","pol1",0,8000)
-                f1a.SetLineColor(4)
-                f1a.SetLineWidth(2)
-                if "xsec" in varY:
-                    f1a.SetParLimits(0,0,meanxsec*1.5)
-                    if slopexsec > 0:
-                        f1a.SetParLimits(1,0,max(VY)/max(VX))
-                    else:
-                        f1a.SetParLimits(1,2*slopexsec,-2*slopexsec)
-                else:
-                    f1a.SetParLimits(0,-1000,1000)
-                gr1.Fit("f1a","Q","rob=0.80")
+##             else: ##If this is not a rate plot
+##                 f1a = TF1("f1a","pol1",0,8000)
+##                 f1a.SetLineColor(4)
+##                 f1a.SetLineWidth(2)
+##                 if "xsec" in varY:
+##                     f1a.SetParLimits(0,0,meanxsec*1.5)
+##                     if slopexsec > 0:
+##                         f1a.SetParLimits(1,0,max(VY)/max(VX))
+##                     else:
+##                         f1a.SetParLimits(1,2*slopexsec,-2*slopexsec)
+##                 else:
+##                     f1a.SetParLimits(0,-1000,1000)
+##                 gr1.Fit("f1a","Q","rob=0.80")
 
-                if (first_trigger):
-                        print '%-50s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
-                        first_trigger=False
-                try:
-                    print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a_Chi2)
-                except:
-                    pass
+##                 if (first_trigger):
+##                         print '%-50s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
+##                         first_trigger=False
+##                 try:
+##                     print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a_Chi2)
+##                 except:
+##                     pass
                 
         chioffset=1.0 ##chioffset now a fraction; must be 10% better to use expo rather than quad, quad rather than line
         width = max([len(trigger_name) for trigger_name in trig_list])
@@ -1522,7 +1524,99 @@ def commonL1PS(HLTL1dummy, nps):
         #print HLTL1_seedchanges
     return HLTL1_seedchanges
 
+def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate):
+    if "rate" in varY and not linear:
+        f1d=0
+        f1d = TF1("f1d","pol1",0,8000)#linear
+        f1d.SetParameters(0.01,min(sum(VY)/sum(VX),sloperate)) ##Set Y-intercept near 0, slope either mean_rate/mean_lumi or est. slope (may be negative)
+        f1d.SetLineColor(4)
+        f1d.SetLineWidth(2)
+        if nlow>0:
+            f1d.SetParLimits(0,0,1.5*lowrate/nlow) ##Keep Y-intercept in range of low-lumi rate points
+        else:
+            f1d.SetParLimits(0,0,1.5*sum(VY)/len(VY))
+        if (sloperate > 0):
+            if (sloperate > 0.5*sum(VY)/sum(VX)): ##Slope is substantially positive
+                f1d.SetParLimits(1,min(0.5*sloperate,0.5*sum(VY)/sum(VX)),1.5*sum(VY)/sum(VX)) 
+            else: ##Slope is somewhat positive or flat
+                f1d.SetParLimits(1,-0.1*sloperate,1.5*sum(VY)/sum(VX))
+        else: ##Slope is negative or flat 
+            f1d.SetParLimits(1,1.5*sloperate,-0.1*sloperate)
+        gr1.Fit("f1d","QN","rob=0.90")
+        f1d_Chi2 = f1d.GetChisquare()/f1d.GetNDF()
+        
+        f1a=0
+        f1a = TF1("f1a","pol2",0,8000)#quadratic
+        f1a.SetParameters(f1d.GetParameter(0),f1d.GetParameter(1),0) ##Initial values from linear fit
+        f1a.SetLineColor(6)
+        f1a.SetLineWidth(2)
+        if nlow>0 and sloperate < 0.5*sum(VY)/sum(VX): ##Slope is not substantially positive
+            f1a.SetParLimits(0,0,1.5*lowrate/nlow) ##Keep Y-intercept in range of low-lumi rate points
+        else:
+            f1a.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY))) ##Keep Y-intercept reasonably low
+        f1a.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
+        f1a.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
+        gr1.Fit("f1a","QN","rob=0.90")
+        f1a_Chi2 = f1a.GetChisquare()/f1a.GetNDF()
+        f1a_BadMinimum = (f1a.GetMinimumX(5,7905,10)>2000 and f1a.GetMinimumX(5,7905,10)<7000) ##Don't allow minimum between 2000 and 7000
+        
+        f1b = 0
+        f1c = 0
+        meanps = median(Rates[print_trigger]["ps"])
+        av_rte = mean(VY)
+        
+        if True:
+            f1b = TF1("f1b","pol3",0,8000)#cubic
+            f1b.SetParameters(f1a.GetParameter(0),f1a.GetParameter(1),f1a.GetParameter(2),0) ##Initial values from quadratic fit
+            f1b.SetLineColor(2)
+            f1b.SetLineWidth(2)
+            f1b.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY))) ##Keep Y-intercept reasonably low
+            f1b.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
+            f1b.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
+            f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX))) ##Reasonable bounds
+            gr1.Fit("f1b","QN","rob=0.90")
+            try:
+                f1b_Chi2 = f1b.GetChisquare()/f1b.GetNDF()
+            except ZeroDivisionError:
+                f1b_Chi2=10.0
+                print "Zero ndf for ",print_trigger
+                        
+            f1b_BadMinimum = (f1b.GetMinimumX(5,7905,10)>2000 and f1b.GetMinimumX(5,7905,10)<7000)                
+            f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
+            f1c.SetLineColor(3)
+            f1c.SetLineWidth(2)
+            #f1c.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY)))
+            f1c.SetParLimits(0,0,max(min(VY),0.01*sum(VY)/len(VY))) ##Exponential fits should start low
+            f1c.SetParLimits(1,max(VY)/math.exp(15.0),max(VY)/math.exp(2.0))
+            f1c.SetParLimits(2,0.0,0.0000000001)
+            f1c.SetParLimits(3,2.0/max(VX),15.0/max(VX))
+            gr1.Fit("f1c","QN","rob=0.90")
+            f1c_Chi2 = f1c.GetChisquare()/f1c.GetNDF()
+            f1c_BadMinimum = ((f1c.GetMinimumX(5,7905,10)>2000 and f1c.GetMinimumX(5,7905,10)<7000)) or f1c.GetMaximum(min(VX),max(VX),10)/max(VY) > 2.0
+            ##Some fits are so exponential, the graph ends early and returns a false low Chi2 value
+                    
+        else: ##If this is not a rate plot
+            f1a = TF1("f1a","pol1",0,8000)
+            f1a.SetLineColor(4)
+            f1a.SetLineWidth(2)
+            if "xsec" in varY:
+                f1a.SetParLimits(0,0,meanxsec*1.5)
+                if slopexsec > 0:
+                    f1a.SetParLimits(1,0,max(VY)/max(VX))
+                else:
+                    f1a.SetParLimits(1,2*slopexsec,-2*slopexsec)
+            else:
+                f1a.SetParLimits(0,-1000,1000)
+            gr1.Fit("f1a","Q","rob=0.80")
 
+            if (first_trigger):
+                print '%-50s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
+                first_trigger=False
+            try:
+                print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a_Chi2)
+            except:
+                pass
+    return [f1a,f1b,f1c,f1d,first_trigger,f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]        
 if __name__=='__main__':
     global thisyear
     main()
