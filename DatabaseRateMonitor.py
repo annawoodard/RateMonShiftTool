@@ -485,6 +485,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                 sigma = PSCorrectedExpectedRate[1]/(sqrt(len(HeadLumiRange))* HeadUnprescaledRates[HeadName][1])
 
             except:
+                sigma = 0.0
                 ExpectedRate = 0.0 ##This means we don't have a prediction for this trigger
                 PerDiff = 0.0
                 SigmaDiff = 0.0
