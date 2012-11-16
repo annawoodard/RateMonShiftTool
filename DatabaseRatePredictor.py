@@ -940,84 +940,18 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             gr3.SetFillStyle(3003)
             
         elif do_fit:
+            gr3 = TGraphErrors(len(VX), VX, VY, VXE, VYE)
             [f1a,f1b,f1c,f1d,first_trigger]= Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate)
-        else:
-            print "do_fit not set."
-            exit(2)
+        
                 
         chioffset=1.0 ##chioffset now a fraction; must be 10% better to use expo rather than quad, quad rather than line
         width = max([len(trigger_name) for trigger_name in trig_list])
         if print_table or save_fits:
             [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]=more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
-            
-            
-            
             [OutputFit,first_trigger]=output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,first_trigger,Rates,width,chioffset,wp_bool,num_ls,meanrawrate,OutputFit)
-            #######
-            ## if "rate" in varY and not linear:
-##                 if first_trigger:
-##                     print '\n%-*s | TYPE | %-8s | %-11s |  %-7s | %-10s |  %-7s | %-10s | %-8s | %-10s | %-6s | %-4s |%-7s|' % (width,"TRIGGER", "X0","X0 ERROR","X1","X1 ERROR","X2","X2 ERROR","X3","X3 ERROR","CHI^2","DOF","CHI2/DOF")
-##                     first_trigger = False
-                    
-##                 if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and ((f1c_Chi2 < f1b_Chi2) or f1b_BadMinimum) and f1c_Chi2 < (f1d_Chi2*chioffset) and not f1c_BadMinimum and len(VX)>1):
-##                     print '%-*s | expo | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c_Chi2)
-##                     f1c.SetLineColor(1)                    
-##                     priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)                    
-##                     sigma = CalcSigma(VX, VY, f1c)*math.sqrt(num_ls)                    
-##                     OutputFit[print_trigger] = ["expo", f1c.GetParameter(0) , f1c.GetParameter(1) , f1c.GetParameter(2) , f1c.GetParameter(3) , sigma , meanrawrate, f1c.GetParError(0) , f1c.GetParError(1) , f1c.GetParError(2) , f1c.GetParError(3)]
+            
+        c1=DrawSave(f1a, f1b,f1c, f1d, chioffset,VX,VY,print_trigger,Rates,gr1,gr3,save_root,RootFile,save_png,do_fit,c1)    
 
-##                 elif ((f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and f1b_Chi2 < (f1d_Chi2*chioffset) and not f1b_BadMinimum and len(VX)>1):
-##                     print '%-*s | cube | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b_Chi2)
-##                     f1b.SetLineColor(1)
-##                     priot(wp_bool,print_trigger,meanps,f1d,f1b,"cubic",av_rte)
-##                     sigma = CalcSigma(VX, VY, f1b)*math.sqrt(num_ls)                                        
-##                     OutputFit[print_trigger] = ["poly", f1b.GetParameter(0) , f1b.GetParameter(1) , f1b.GetParameter(2) , f1b.GetParameter(3) , sigma , meanrawrate, f1b.GetParError(0) , f1b.GetParError(1) , f1b.GetParError(2) , f1b.GetParError(3)]
-
-##                 elif (f1a_Chi2 < (f1d_Chi2*chioffset)):
-##                     print '%-*s | quad | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a_Chi2)                    
-##                     f1a.SetLineColor(1)
-##                     priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
-##                     sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
-##                     OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
-
-##                 else:
-##                     print '%-*s | line | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1d.GetParameter(0) , f1d.GetParError(0) , f1d.GetParameter(1) , f1d.GetParError(1) , 0                  , 0                  , 0                  , 0                 , f1d.GetChisquare() , f1d.GetNDF() , f1d_Chi2)                    
-##                     f1d.SetLineColor(1)
-##                     priot(wp_bool,print_trigger,meanps,f1d,f1d,"line",av_rte)
-##                     sigma = CalcSigma(VX, VY, f1d)*math.sqrt(num_ls)
-##                     OutputFit[print_trigger] = ["poly", f1d.GetParameter(0) , f1d.GetParameter(1) , 0.0 , 0.0 , sigma , meanrawrate, f1d.GetParError(0) , f1d.GetParError(1) , 0.0 , 0.0]
-##             else:
-##                 print '%-*s | quad | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a_Chi2)                    
-##                 f1a.SetLineColor(1)
-##                 #priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
-##                 sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
-##                 OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
- 
-        if save_root or save_png:
-            gr1.Draw("APZ")
-            if not do_fit:
-                gr3.Draw("P3")
-                
-            if do_fit:
-                try:
-                    if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum ) and (f1c_Chi2 < f1b_Chi2 or f1b_BadMinimum ) and not f1c_BadMinimum ):
-                        f1c.Draw("same")
-                    elif ( (f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and not f1b_BadMinimum):
-                        f1b.Draw("same")
-                    else:
-                        f1a.Draw("same")
-                        
-                    f1d.Draw("same")
-                except:
-                    True
-
-            c1.Update()
-            if save_root:
-                myfile = TFile( RootFile, 'UPDATE' )
-                c1.Write()
-                myfile.Close()
-            if save_png:
-                c1.SaveAs(str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX)+".png")
 
     if len(failed_paths) > 0:
         if save_fits:
@@ -1042,18 +976,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         FitOutputFile.close()
         print "Output fit file is "+str(fit_file)
 
-    if print_table:
-        print "The expo fit is of the form p0+p1*e^(p2*x), poly is p0+(p1/10^3)*x+(p2/10^6)*x^2+(p3/10^9)*x^3, where x is Deliv. Lumi."
-        print '%50s%10s%10s%10s%10s%10s%10s%10s' % ("Trig", "fit", "p0", "p1", "p2", "p3", "Chi2", "Av raw")
-        for print_trigger in OutputFit:
-            _trigger = (print_trigger[:56] + '...') if len(print_trigger) > 59 else print_trigger
-            try:
-                if OutputFit[print_trigger][0] == "poly":
-                    print '%50s%10s%10s%10s%10s%10s%10s' % (_trigger, OutputFit[print_trigger][0], round(OutputFit[print_trigger][1],3), round(OutputFit[print_trigger][2],6)*1000, round(OutputFit[print_trigger][3],9)*1000000, round(OutputFit[print_trigger][4],12)*1000000000, round(OutputFit[print_trigger][5],2), round(OutputFit[print_trigger][6],3))
-                else:
-                    print '%50s%10s%10s%10s%10s%10s%10s' % (_trigger, OutputFit[print_trigger][0], OutputFit[print_trigger][1], OutputFit[print_trigger][2], OutputFit[print_trigger][3], OutputFit[print_trigger][4], round(OutputFit[print_trigger][5],2), round(OutputFit[print_trigger][6],3))
-            except:
-                print str(print_trigger)+" is somehow broken"
+    
     return RootFile
 
   ############# SUPPORTING FUNCTIONS ################
@@ -1598,6 +1521,34 @@ def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,me
     OutputFit[print_trigger] = [graph_fit_type, graph1.GetParameter(0) , graph1.GetParameter(1) , graph1.GetParameter(2) ,graph1.GetParameter(3) , sigma , meanrawrate, graph1.GetParError(0) , graph1.GetParError(1) , graph1.GetParError(2) , graph1.GetParError(3)]
     return [graph1,OutputFit]
 
+
+def DrawSave(f1a, f1b,f1c, f1d, chioffset,VX,VY,print_trigger,Rates,gr1,gr3,save_root,RootFile,save_png,do_fit,c1):
+    [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]=more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
+    gr1.Draw("APZ")
+    if not do_fit:
+        gr3.Draw("P3")
+                
+    if do_fit:
+        try:
+            if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum ) and (f1c_Chi2 < f1b_Chi2 or f1b_BadMinimum ) and not f1c_BadMinimum ):
+                f1c.Draw("same")
+            elif ( (f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and not f1b_BadMinimum):
+                f1b.Draw("same")
+            else:
+                f1a.Draw("same")
+                
+                f1d.Draw("same")
+        except:
+            True
+
+    c1.Update()
+    if save_root:
+        myfile = TFile( RootFile, 'UPDATE' )
+        c1.Write()
+        myfile.Close()
+    if save_png:
+        c1.SaveAs(str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX)+".png")
+    return c1    
     
 if __name__=='__main__':
     global thisyear
