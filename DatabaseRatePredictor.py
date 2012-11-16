@@ -330,18 +330,18 @@ def main():
         for k in SubSystemOff.iterkeys():
             print k,"=",SubSystemOff[k],"   ",
         print " "
-        
+        L1SeedChangeFit=True
         ########  END PARAMETERS - CALL FUNCTIONS ##########
-        [Rates,LumiPageInfo, L1_trig_list]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol)
+        [Rates,LumiPageInfo, L1_trig_list]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol,L1SeedChangeFit)
         if DoL1:
             trig_list=L1_trig_list
-        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers)
+        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers,L1SeedChangeFit)
 
     except KeyboardInterrupt:
         print "Wait... come back..."
 
 
-def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol):
+def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol,L1SeedChangeFit):
     
     Rates = {}
     LumiPageInfo={}
@@ -609,7 +609,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
     #    print trig, Rates[trig]
     return [Rates,LumiPageInfo,trig_list]
 
-def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst, TMDerr,wp_bool,all_triggers):
+def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst, TMDerr,wp_bool,all_triggers,L1SeedChangeFit):
     min_run = min(run_list)
     max_run = max(run_list)
 
@@ -697,7 +697,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         if masked_trig:
             continue
         
-        OutputFit[print_trigger] = {}
+        
 
         lowlumi = 0
         meanlumi_init = median(Rates[print_trigger]["live_lumi"])
@@ -939,149 +939,59 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             gr3.SetFillColor(4)
             gr3.SetFillStyle(3003)
             
-        if do_fit:
-            [f1a,f1b,f1c,f1d,first_trigger,f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]= Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate)
-            ## if "rate" in varY and not linear:
-##                 f1d=0
-##                 f1d = TF1("f1d","pol1",0,8000)#linear
-##                 f1d.SetParameters(0.01,min(sum(VY)/sum(VX),sloperate)) ##Set Y-intercept near 0, slope either mean_rate/mean_lumi or est. slope (may be negative)
-##                 f1d.SetLineColor(4)
-##                 f1d.SetLineWidth(2)
-##                 if nlow>0:
-##                     f1d.SetParLimits(0,0,1.5*lowrate/nlow) ##Keep Y-intercept in range of low-lumi rate points
-##                 else:
-##                     f1d.SetParLimits(0,0,1.5*sum(VY)/len(VY))
-##                 if (sloperate > 0):
-##                     if (sloperate > 0.5*sum(VY)/sum(VX)): ##Slope is substantially positive
-##                         f1d.SetParLimits(1,min(0.5*sloperate,0.5*sum(VY)/sum(VX)),1.5*sum(VY)/sum(VX)) 
-##                     else: ##Slope is somewhat positive or flat
-##                         f1d.SetParLimits(1,-0.1*sloperate,1.5*sum(VY)/sum(VX))
-##                 else: ##Slope is negative or flat 
-##                     f1d.SetParLimits(1,1.5*sloperate,-0.1*sloperate)
-##                 gr1.Fit("f1d","QN","rob=0.90")
-##                 f1d_Chi2 = f1d.GetChisquare()/f1d.GetNDF()
-
-##                 f1a=0
-##                 f1a = TF1("f1a","pol2",0,8000)#quadratic
-##                 f1a.SetParameters(f1d.GetParameter(0),f1d.GetParameter(1),0) ##Initial values from linear fit
-##                 f1a.SetLineColor(6)
-##                 f1a.SetLineWidth(2)
-##                 if nlow>0 and sloperate < 0.5*sum(VY)/sum(VX): ##Slope is not substantially positive
-##                     f1a.SetParLimits(0,0,1.5*lowrate/nlow) ##Keep Y-intercept in range of low-lumi rate points
-##                 else:
-##                     f1a.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY))) ##Keep Y-intercept reasonably low
-##                 f1a.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
-##                 f1a.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
-##                 gr1.Fit("f1a","QN","rob=0.90")
-##                 f1a_Chi2 = f1a.GetChisquare()/f1a.GetNDF()
-##                 f1a_BadMinimum = (f1a.GetMinimumX(5,7905,10)>2000 and f1a.GetMinimumX(5,7905,10)<7000) ##Don't allow minimum between 2000 and 7000
-
-##                 f1b = 0
-##                 f1c = 0
-##                 meanps = median(Rates[print_trigger]["ps"])
-##                 av_rte = mean(VY)
-                
-##                 if True:
-##                     f1b = TF1("f1b","pol3",0,8000)#cubic
-##                     f1b.SetParameters(f1a.GetParameter(0),f1a.GetParameter(1),f1a.GetParameter(2),0) ##Initial values from quadratic fit
-##                     f1b.SetLineColor(2)
-##                     f1b.SetLineWidth(2)
-##                     f1b.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY))) ##Keep Y-intercept reasonably low
-##                     f1b.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
-##                     f1b.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
-##                     f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX))) ##Reasonable bounds
-##                     gr1.Fit("f1b","QN","rob=0.90")
-##                     try:
-##                         f1b_Chi2 = f1b.GetChisquare()/f1b.GetNDF()
-##                     except ZeroDivisionError:
-##                         f1b_Chi2=10.0
-##                         print "Zero ndf for ",print_trigger
-                        
-##                     f1b_BadMinimum = (f1b.GetMinimumX(5,7905,10)>2000 and f1b.GetMinimumX(5,7905,10)<7000)                
-##                     f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
-##                     f1c.SetLineColor(3)
-##                     f1c.SetLineWidth(2)
-##                     #f1c.SetParLimits(0,0,max(min(VY),0.3*sum(VY)/len(VY)))
-##                     f1c.SetParLimits(0,0,max(min(VY),0.01*sum(VY)/len(VY))) ##Exponential fits should start low
-##                     f1c.SetParLimits(1,max(VY)/math.exp(15.0),max(VY)/math.exp(2.0))
-##                     f1c.SetParLimits(2,0.0,0.0000000001)
-##                     f1c.SetParLimits(3,2.0/max(VX),15.0/max(VX))
-##                     gr1.Fit("f1c","QN","rob=0.90")
-##                     f1c_Chi2 = f1c.GetChisquare()/f1c.GetNDF()
-##                     f1c_BadMinimum = ((f1c.GetMinimumX(5,7905,10)>2000 and f1c.GetMinimumX(5,7905,10)<7000)) or f1c.GetMaximum(min(VX),max(VX),10)/max(VY) > 2.0
-##                     ##Some fits are so exponential, the graph ends early and returns a false low Chi2 value
-                    
-##             else: ##If this is not a rate plot
-##                 f1a = TF1("f1a","pol1",0,8000)
-##                 f1a.SetLineColor(4)
-##                 f1a.SetLineWidth(2)
-##                 if "xsec" in varY:
-##                     f1a.SetParLimits(0,0,meanxsec*1.5)
-##                     if slopexsec > 0:
-##                         f1a.SetParLimits(1,0,max(VY)/max(VX))
-##                     else:
-##                         f1a.SetParLimits(1,2*slopexsec,-2*slopexsec)
-##                 else:
-##                     f1a.SetParLimits(0,-1000,1000)
-##                 gr1.Fit("f1a","Q","rob=0.80")
-
-##                 if (first_trigger):
-##                         print '%-50s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
-##                         first_trigger=False
-##                 try:
-##                     print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a_Chi2)
-##                 except:
-##                     pass
+        elif do_fit:
+            [f1a,f1b,f1c,f1d,first_trigger]= Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate)
+        else:
+            print "do_fit not set."
+            exit(2)
                 
         chioffset=1.0 ##chioffset now a fraction; must be 10% better to use expo rather than quad, quad rather than line
         width = max([len(trigger_name) for trigger_name in trig_list])
         if print_table or save_fits:
-            if not do_fit:
-                print "Can't have save_fits = True and do_fit = False"
-                continue
-            if min([f1a_Chi2,f1b_Chi2,f1c_Chi2,f1d_Chi2]) > 500:#require a minimum chi^2/nDOF of 500
-                failure_comment = "There were events for this path in the runs specified during the creation of the fit file, but the fit failed to converge"
-                failed_paths.append([print_trigger,failure_comment])
-                OutputFit[print_trigger] = ["fit failed",failure_comment]
-                continue
-            if "rate" in varY and not linear:
-                if first_trigger:
-                    print '\n%-*s | TYPE | %-8s | %-11s |  %-7s | %-10s |  %-7s | %-10s | %-8s | %-10s | %-6s | %-4s |%-7s|' % (width,"TRIGGER", "X0","X0 ERROR","X1","X1 ERROR","X2","X2 ERROR","X3","X3 ERROR","CHI^2","DOF","CHI2/DOF")
-                    first_trigger = False
+            [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]=more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
+            
+            
+            
+            [OutputFit,first_trigger]=output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,first_trigger,Rates,width,chioffset,wp_bool,num_ls,meanrawrate,OutputFit)
+            #######
+            ## if "rate" in varY and not linear:
+##                 if first_trigger:
+##                     print '\n%-*s | TYPE | %-8s | %-11s |  %-7s | %-10s |  %-7s | %-10s | %-8s | %-10s | %-6s | %-4s |%-7s|' % (width,"TRIGGER", "X0","X0 ERROR","X1","X1 ERROR","X2","X2 ERROR","X3","X3 ERROR","CHI^2","DOF","CHI2/DOF")
+##                     first_trigger = False
                     
-                if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and ((f1c_Chi2 < f1b_Chi2) or f1b_BadMinimum) and f1c_Chi2 < (f1d_Chi2*chioffset) and not f1c_BadMinimum and len(VX)>1):
-                    print '%-*s | expo | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c_Chi2)
-                    f1c.SetLineColor(1)                    
-                    priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)                    
-                    sigma = CalcSigma(VX, VY, f1c)*math.sqrt(num_ls)                    
-                    OutputFit[print_trigger] = ["expo", f1c.GetParameter(0) , f1c.GetParameter(1) , f1c.GetParameter(2) , f1c.GetParameter(3) , sigma , meanrawrate, f1c.GetParError(0) , f1c.GetParError(1) , f1c.GetParError(2) , f1c.GetParError(3)]
+##                 if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and ((f1c_Chi2 < f1b_Chi2) or f1b_BadMinimum) and f1c_Chi2 < (f1d_Chi2*chioffset) and not f1c_BadMinimum and len(VX)>1):
+##                     print '%-*s | expo | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1c.GetParameter(0) , f1c.GetParError(0) , f1c.GetParameter(1) , f1c.GetParError(1) , f1c.GetParameter(2), f1c.GetParError(2) ,f1c.GetParameter(3), f1c.GetParError(3) ,f1c.GetChisquare() , f1c.GetNDF() , f1c_Chi2)
+##                     f1c.SetLineColor(1)                    
+##                     priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)                    
+##                     sigma = CalcSigma(VX, VY, f1c)*math.sqrt(num_ls)                    
+##                     OutputFit[print_trigger] = ["expo", f1c.GetParameter(0) , f1c.GetParameter(1) , f1c.GetParameter(2) , f1c.GetParameter(3) , sigma , meanrawrate, f1c.GetParError(0) , f1c.GetParError(1) , f1c.GetParError(2) , f1c.GetParError(3)]
 
-                elif ((f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and f1b_Chi2 < (f1d_Chi2*chioffset) and not f1b_BadMinimum and len(VX)>1):
-                    print '%-*s | cube | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b_Chi2)
-                    f1b.SetLineColor(1)
-                    priot(wp_bool,print_trigger,meanps,f1d,f1b,"cubic",av_rte)
-                    sigma = CalcSigma(VX, VY, f1b)*math.sqrt(num_ls)                                        
-                    OutputFit[print_trigger] = ["poly", f1b.GetParameter(0) , f1b.GetParameter(1) , f1b.GetParameter(2) , f1b.GetParameter(3) , sigma , meanrawrate, f1b.GetParError(0) , f1b.GetParError(1) , f1b.GetParError(2) , f1b.GetParError(3)]
+##                 elif ((f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and f1b_Chi2 < (f1d_Chi2*chioffset) and not f1b_BadMinimum and len(VX)>1):
+##                     print '%-*s | cube | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1b.GetParameter(0) , f1b.GetParError(0) , f1b.GetParameter(1) , f1b.GetParError(1) , f1b.GetParameter(2), f1b.GetParError(2) ,f1b.GetParameter(3), f1b.GetParError(3), f1b.GetChisquare() , f1b.GetNDF() , f1b_Chi2)
+##                     f1b.SetLineColor(1)
+##                     priot(wp_bool,print_trigger,meanps,f1d,f1b,"cubic",av_rte)
+##                     sigma = CalcSigma(VX, VY, f1b)*math.sqrt(num_ls)                                        
+##                     OutputFit[print_trigger] = ["poly", f1b.GetParameter(0) , f1b.GetParameter(1) , f1b.GetParameter(2) , f1b.GetParameter(3) , sigma , meanrawrate, f1b.GetParError(0) , f1b.GetParError(1) , f1b.GetParError(2) , f1b.GetParError(3)]
 
-                elif (f1a_Chi2 < (f1d_Chi2*chioffset)):
-                    print '%-*s | quad | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a_Chi2)                    
-                    f1a.SetLineColor(1)
-                    priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
-                    sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
-                    OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
+##                 elif (f1a_Chi2 < (f1d_Chi2*chioffset)):
+##                     print '%-*s | quad | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a_Chi2)                    
+##                     f1a.SetLineColor(1)
+##                     priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
+##                     sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
+##                     OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
 
-                else:
-                    print '%-*s | line | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1d.GetParameter(0) , f1d.GetParError(0) , f1d.GetParameter(1) , f1d.GetParError(1) , 0                  , 0                  , 0                  , 0                 , f1d.GetChisquare() , f1d.GetNDF() , f1d_Chi2)                    
-                    f1d.SetLineColor(1)
-                    priot(wp_bool,print_trigger,meanps,f1d,f1d,"line",av_rte)
-                    sigma = CalcSigma(VX, VY, f1d)*math.sqrt(num_ls)
-                    OutputFit[print_trigger] = ["poly", f1d.GetParameter(0) , f1d.GetParameter(1) , 0.0 , 0.0 , sigma , meanrawrate, f1d.GetParError(0) , f1d.GetParError(1) , 0.0 , 0.0]
-            else:
-                print '%-*s | quad | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a_Chi2)                    
-                f1a.SetLineColor(1)
-                #priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
-                sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
-                OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
+##                 else:
+##                     print '%-*s | line | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1d.GetParameter(0) , f1d.GetParError(0) , f1d.GetParameter(1) , f1d.GetParError(1) , 0                  , 0                  , 0                  , 0                 , f1d.GetChisquare() , f1d.GetNDF() , f1d_Chi2)                    
+##                     f1d.SetLineColor(1)
+##                     priot(wp_bool,print_trigger,meanps,f1d,f1d,"line",av_rte)
+##                     sigma = CalcSigma(VX, VY, f1d)*math.sqrt(num_ls)
+##                     OutputFit[print_trigger] = ["poly", f1d.GetParameter(0) , f1d.GetParameter(1) , 0.0 , 0.0 , sigma , meanrawrate, f1d.GetParError(0) , f1d.GetParError(1) , 0.0 , 0.0]
+##             else:
+##                 print '%-*s | quad | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, f1a.GetParameter(0) , f1a.GetParError(0) , f1a.GetParameter(1) , f1a.GetParError(1) , f1a.GetParameter(2), f1a.GetParError(2), 0                  , 0                 , f1a.GetChisquare() , f1a.GetNDF() , f1a_Chi2)                    
+##                 f1a.SetLineColor(1)
+##                 #priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
+##                 sigma = CalcSigma(VX, VY, f1a)*math.sqrt(num_ls)
+##                 OutputFit[print_trigger] = ["poly", f1a.GetParameter(0) , f1a.GetParameter(1) , f1a.GetParameter(2) , 0.0 , sigma , meanrawrate, f1a.GetParError(0) , f1a.GetParError(1) , f1a.GetParError(2) , 0.0]
  
         if save_root or save_png:
             gr1.Draw("APZ")
@@ -1543,7 +1453,7 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
         else: ##Slope is negative or flat 
             f1d.SetParLimits(1,1.5*sloperate,-0.1*sloperate)
         gr1.Fit("f1d","QN","rob=0.90")
-        f1d_Chi2 = f1d.GetChisquare()/f1d.GetNDF()
+        
         
         f1a=0
         f1a = TF1("f1a","pol2",0,8000)#quadratic
@@ -1557,13 +1467,11 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
         f1a.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
         f1a.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
         gr1.Fit("f1a","QN","rob=0.90")
-        f1a_Chi2 = f1a.GetChisquare()/f1a.GetNDF()
-        f1a_BadMinimum = (f1a.GetMinimumX(5,7905,10)>2000 and f1a.GetMinimumX(5,7905,10)<7000) ##Don't allow minimum between 2000 and 7000
+        
         
         f1b = 0
         f1c = 0
-        meanps = median(Rates[print_trigger]["ps"])
-        av_rte = mean(VY)
+        
         
         if True:
             f1b = TF1("f1b","pol3",0,8000)#cubic
@@ -1575,13 +1483,9 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
             f1b.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
             f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX))) ##Reasonable bounds
             gr1.Fit("f1b","QN","rob=0.90")
-            try:
-                f1b_Chi2 = f1b.GetChisquare()/f1b.GetNDF()
-            except ZeroDivisionError:
-                f1b_Chi2=10.0
-                print "Zero ndf for ",print_trigger
+            
                         
-            f1b_BadMinimum = (f1b.GetMinimumX(5,7905,10)>2000 and f1b.GetMinimumX(5,7905,10)<7000)                
+            
             f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
             f1c.SetLineColor(3)
             f1c.SetLineWidth(2)
@@ -1591,8 +1495,8 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
             f1c.SetParLimits(2,0.0,0.0000000001)
             f1c.SetParLimits(3,2.0/max(VX),15.0/max(VX))
             gr1.Fit("f1c","QN","rob=0.90")
-            f1c_Chi2 = f1c.GetChisquare()/f1c.GetNDF()
-            f1c_BadMinimum = ((f1c.GetMinimumX(5,7905,10)>2000 and f1c.GetMinimumX(5,7905,10)<7000)) or f1c.GetMaximum(min(VX),max(VX),10)/max(VY) > 2.0
+            
+            
             ##Some fits are so exponential, the graph ends early and returns a false low Chi2 value
                     
         else: ##If this is not a rate plot
@@ -1613,10 +1517,88 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
                 print '%-50s %4s  x0             x1                    x2                    x3                   chi2     ndf chi2/ndf' % ('trigger', 'type')
                 first_trigger=False
             try:
-                print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a_Chi2)
+                print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a_GetChisquare()/f1a.GetNDF())
             except:
                 pass
-    return [f1a,f1b,f1c,f1d,first_trigger,f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]        
+    return [f1a,f1b,f1c,f1d,first_trigger]
+
+def more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates):
+
+    meanps = median(Rates[print_trigger]["ps"])
+    av_rte = mean(VY)
+
+    #except ZeroDivisionError:
+    f1a_Chi2 = f1a.GetChisquare()/f1a.GetNDF()
+    f1b_Chi2 = f1b.GetChisquare()/f1b.GetNDF()
+    
+    #f1b_Chi2=10.0
+    #print "Zero ndf for ",print_trigger
+    f1c_Chi2 = f1c.GetChisquare()/f1c.GetNDF()
+    f1d_Chi2 = f1d.GetChisquare()/f1d.GetNDF()    
+    f1a_BadMinimum = (f1a.GetMinimumX(5,7905,10)>2000 and f1a.GetMinimumX(5,7905,10)<7000) ##Don't allow minimum between 2000 and 7000
+    f1b_BadMinimum = (f1b.GetMinimumX(5,7905,10)>2000 and f1b.GetMinimumX(5,7905,10)<7000)                
+    f1c_BadMinimum = ((f1c.GetMinimumX(5,7905,10)>2000 and f1c.GetMinimumX(5,7905,10)<7000)) or f1c.GetMaximum(min(VX),max(VX),10)/max(VY) > 2.0
+
+    return [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]
+    
+def output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,first_trigger,Rates,width,chioffset,wp_bool,num_ls,meanrawrate,OutputFit):
+    [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte]=more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
+    OutputFit[print_trigger] = {}
+
+    if not do_fit:
+        failure_comment= "Can't have save_fits = True and do_fit = False"
+        [OutputFit,first_trigger]
+        failed_paths.append([print_trigger,failure_comment])
+        OutputFit[print_trigger] = ["fit failed",failure_comment]
+        return [OutputFit,first_trigger]
+    if min([f1a_Chi2,f1b_Chi2,f1c_Chi2,f1d_Chi2]) > 500:#require a minimum chi^2/nDOF of 500
+        failure_comment = "There were events for this path in the runs specified during the creation of the fit file, but the fit failed to converge"
+        failed_paths.append([print_trigger,failure_comment])
+        OutputFit[print_trigger] = ["fit failed",failure_comment]
+        return [OutputFit,first_trigger]
+    if "rate" in varY and not linear:
+        if first_trigger:
+            print '\n%-*s | TYPE | %-8s | %-11s |  %-7s | %-10s |  %-7s | %-10s | %-8s | %-10s | %-6s | %-4s |%-7s|' % (width,"TRIGGER", "X0","X0 ERROR","X1","X1 ERROR","X2","X2 ERROR","X3","X3 ERROR","CHI^2","DOF","CHI2/DOF")
+            first_trigger = False
+
+        if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and ((f1c_Chi2 < f1b_Chi2) or f1b_BadMinimum) and f1c_Chi2 < (f1d_Chi2*chioffset) and not f1c_BadMinimum and len(VX)>1):
+            graph_fit_type="expo"
+            [f1c,OutputFit]=graph_output_info(f1c,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit)
+            priot(wp_bool,print_trigger,meanps,f1d,f1c,graph_fit_type,av_rte)                    
+            
+
+        elif ((f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and f1b_Chi2 < (f1d_Chi2*chioffset) and not f1b_BadMinimum and len(VX)>1):
+            graph_fit_type="cube"
+            [f1b,OutputFit]=graph_output_info(f1b,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit)
+            priot(wp_bool,print_trigger,meanps,f1d,f1b,graph_fit_type,av_rte)
+            
+
+        elif (f1a_Chi2 < (f1d_Chi2*chioffset)):
+            graph_fit_type="quad"
+            [f1a,OutputFit]=graph_output_info(f1a,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit)
+            priot(wp_bool,print_trigger,meanps,f1d,f1a,graph_fit_type,av_rte)
+            
+
+        else:
+            graph_fit_type="line"
+            [f1d,OutputFit]=graph_output_info(f1d,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit)
+            priot(wp_bool,print_trigger,meanps,f1d,f1d,graph_fit_type,av_rte)
+            
+    else:
+        graph_fit_type="quad"
+        [f1a,OutputFit]=graph_output_info(f1a,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit)
+        #priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
+        
+    return [OutputFit,first_trigger]
+def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,meanrawrate,OutputFit):
+    print '%-*s | %s | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.1f | ' % (width,print_trigger, graph_fit_type,graph1.GetParameter(0) , graph1.GetParError(0) , graph1.GetParameter(1) , graph1.GetParError(1) , graph1.GetParameter(2), graph1.GetParError(2) ,graph1.GetParameter(3), graph1.GetParError(3) ,graph1.GetChisquare() , graph1.GetNDF() , graph1.GetChisquare()/graph1.GetNDF())
+    graph1.SetLineColor(1)                    
+    #priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)                    
+    sigma = CalcSigma(VX, VY, graph1)*math.sqrt(num_ls)                    
+    OutputFit[print_trigger] = [graph_fit_type, graph1.GetParameter(0) , graph1.GetParameter(1) , graph1.GetParameter(2) ,graph1.GetParameter(3) , sigma , meanrawrate, graph1.GetParError(0) , graph1.GetParError(1) , graph1.GetParError(2) , graph1.GetParError(3)]
+    return [graph1,OutputFit]
+
+    
 if __name__=='__main__':
     global thisyear
     main()
