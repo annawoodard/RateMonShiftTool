@@ -974,7 +974,44 @@ class DatabaseParser:
            
         return L1RatesNames
 
-    
+
+    def GetL1PSbyseed(self):
+        #for name in self.L1IndexNameMap.iterkeys():
+        #    print name, self.L1IndexNameMap[name], self.L1PrescaleTable[self.L1IndexNameMap[name]]
+        #self.HLTSeed[name]
+
+        #for name in self.HLTSeed:
+        #    print name, self.HLTSeed[name]
+        #self.L1PrescaleTable[self.L1IndexNameMap[self.HLTSeed[name]]][psi]
+        L1HLTSeeds=self.GetL1HLTseeds()
+        HLTL1PS={}
+        for HLTkey in L1HLTSeeds.iterkeys():
+            #print HLTkey, L1HLTSeeds[HLTkey]
+            dict={}
+            for L1seed in L1HLTSeeds[HLTkey]:
+                
+                #try:
+                #    print L1seed, L1HLTSeeds[HLTkey], self.L1PrescaleTable[self.L1IndexNameMap[L1seed]]
+                #except:
+                #    print 'fail'
+                
+                try:
+                    dict[L1seed]=self.L1PrescaleTable[self.L1IndexNameMap[L1seed]]
+                    
+                except:
+                    
+                    dummylist=[]
+                    for i in range(0,len(self.L1PrescaleTable[0])):
+                        dummylist.append(1)
+                    dict[L1seed]=dummylist
+                    
+                    #exit(2)
+            #print HLTkey, dict    
+            
+            HLTL1PS[HLTkey]=dict
+        #for HLTkey in HLTL1PS.iterkeys():
+        #    print HLTkey, HLTL1PS[HLTkey]
+        return HLTL1PS    
 
     def GetL1Rates(self,LSRange):
 

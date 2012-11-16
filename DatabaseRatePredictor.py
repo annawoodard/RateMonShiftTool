@@ -113,7 +113,7 @@ def main():
         TMDerr=False
         wp_bool=False
         all_triggers=False
-        DoL1=True
+        DoL1=False
         UsePSCol=-1
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
@@ -335,7 +335,7 @@ def main():
         [Rates,LumiPageInfo, L1_trig_list]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol)
         if DoL1:
             trig_list=L1_trig_list
-        rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers)
+        ##rootFileName = MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers)
 
     except KeyboardInterrupt:
         print "Wait... come back..."
@@ -439,7 +439,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
             continue
         
         print "calculating rates and green lumis for run ",RefRunNum
-       
+        
         if True: ##Placeholder
             if True: #May replace with "try" - for now it's good to know when problems happen
                 RefParser = DatabaseParser()
@@ -449,8 +449,10 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 RefLumiArray = RefParser.GetLumiInfo() ##Gets array of all existing LS and their lumi info
                 RefLumiRange = []
                 RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit
+                L1HLTseeds=RefParser.GetL1HLTseeds()
+                HLTL1PS=RefParser.GetL1PSbyseed()
                 if DoL1:
-                    L1HLTseeds=RefParser.GetL1HLTseeds()
+                    
                     for HLTkey in trig_list:
                         #print name
                         if "L1" in HLTkey:
@@ -494,7 +496,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             LSRange[nls].append(iterator)
                             counter += 1
                     nls = LSRange[nls][-1]+1
-                ###checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes   
+                checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes   
                 #print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
                 for nls in sorted(LSRange.iterkeys()):
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
