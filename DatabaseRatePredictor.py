@@ -499,7 +499,9 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             LSRange[nls].append(iterator)
                             counter += 1
                     nls = LSRange[nls][-1]+1
-                [HLTL1_seedchanges,nps]=checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes   
+                [HLTL1_seedchanges,nps]=checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes
+                #print HLTL1_seedchanges
+                #print "nps=",nps
                 #print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
                 for nls in sorted(LSRange.iterkeys()):
                     TriggerRates = RefParser.GetHLTRates(LSRange[nls])
@@ -634,6 +636,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         
         if L1SeedChangeFit and do_fit:
             dummyPSColslist=Rates[print_trigger]["L1seedchange"][0]
+            print print_trigger, dummyPSColslist
             if len(dummyPSColslist)!=1: 
                 dummyPSColslist.append(range(0,nps))
         else:
@@ -687,11 +690,17 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     if not OutputFitPS[PSI][print_trigger]:
                         OutputFitPS[PSI][print_trigger]=OutputFit[print_trigger]
             
-            
+            PSlist=deque(PSColslist)
+            PSmin=PSlist.popleft()
+            if not PSlist:
+                PSmax=PSmin
+            else:
+                PSmax=PSlist.pop()
+
             first_trigger=False        
             if save_root or save_png:
                 c1 = TCanvas(str(varX),str(varY))
-                c1.SetName(str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX))
+                c1.SetName(str(print_trigger)+"_ps"+str(PSmin)+"_"+str(PSmax)+"_"+str(varY)+"_vs_"+str(varX))
             gr1.Draw("APZ")    
             if not do_fit:
                 gr3.Draw("P3")
@@ -702,6 +711,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             if save_root:
                 myfile = TFile( RootFile, 'UPDATE' )
                 c1.Write()
+
+                
                 myfile.Close()
             if save_png:
                 c1.SaveAs(str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX)+".png")
@@ -924,7 +935,7 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
         X0err= InputFit[print_trigger][7]
         fitparams=[FitType, X0, X1, X2, X3, sigma, X0err]
 
-    print "Geting fit for trigger",print_trigger   
+    
     if L1SeedChangeFit:
             
         for psi in range(0,nps):
@@ -950,7 +961,7 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
                 X0errPS[psi]= InputFitPS[psi][print_trigger][7]
                 fitparamsPS=[FitTypePS, X0PS, X1PS, X2PS, X3PS, sigmaPS, X0errPS]
         
-        print "L1SeedChangeFit in get fit"
+        
         
     return [fitparams, passed, failed_paths, fitparamsPS]        
 
@@ -972,7 +983,7 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
             continue
         if not Rates[print_trigger]["psi"][iterator] in PSColslist:
             continue
-        [FitType, X0, X1, X2, X3, sigma, X0err]=GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,print_trigger)
+                
         #else:
             #print iterator, Rates[print_trigger]["psi"][iterator], PSColslist
         ##Old Spike-killer: used average-xsec method, too clumsy, esp. for nonlinear triggers
@@ -1031,6 +1042,7 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
                     e_rawxsec_t.append(0.)
                     e_xsec_t.append(0.)
             if not do_fit:
+                [FitType, X0, X1, X2, X3, sigma, X0err]=GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,print_trigger)
                 if not do_inst:
                     if FitType == "expo":
                         rate_prediction = X0 + X1*math.exp(X2+X3*delivered_t[-1])
@@ -1443,13 +1455,17 @@ def checkL1seedChangeALLPScols(trig_list,HLTL1PS):
             #print "nps=",nps
             for PScol in range(0,len(dict[L1seed])):
                 PScoldummy=PScol+1
-                if PScoldummy>(len(dict)-1):
-                    PScoldummy=len(dict)-1
+                #print "PScoldummy=",PScoldummy
+                if PScoldummy>(len(dict[L1seed])-1):
+                    PScoldummy=len(dict[L1seed])-1
+                    #print "changed PScoldummy=",PScoldummy
                 #print PScol, PScoldummy, dummy[PScol]    
                 
                 if dummy[PScol]==dummy[PScoldummy]:
+                    #print PScol, "same"
                     L1seedchangedummy.append(PScol)
                 else:
+                    #print PScol, PScoldummy, "diff", dummy[PScol], dummy[PScoldummy]
                     L1seedchangedummy.append(PScol)
                     for ps in L1seedchangedummy:
                         L1fulldummy.append(L1seedchangedummy)
@@ -1475,8 +1491,8 @@ def commonL1PS(HLTL1dummy, nps):
         while len(L1seedslist)>0:
             L1tupletmp2=set(tuple(HLTL1dummy[L1seedslist.pop()][PScol]))
             L1tupletmp=L1tupletmp & L1tupletmp2
-        if list(tuple(L1tupletmp)) not in HLTL1_seedchanges:       
-            HLTL1_seedchanges.append(list(tuple(L1tupletmp)))    
+        if sorted(list(tuple(L1tupletmp))) not in HLTL1_seedchanges:       
+            HLTL1_seedchanges.append(sorted(list(tuple(L1tupletmp))))    
         #print HLTL1_seedchanges
     return HLTL1_seedchanges
 
