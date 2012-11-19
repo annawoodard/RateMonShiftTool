@@ -632,7 +632,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         ####START OF L1 SEED LOOP####
         #print "LIST L1 seed changes",Rates[print_trigger]["L1seedchange"][0]
         
-        if L1SeedChangeFit:
+        if L1SeedChangeFit and do_fit:
             dummyPSColslist=Rates[print_trigger]["L1seedchange"][0]
             if len(dummyPSColslist)!=1: 
                 dummyPSColslist.append(range(0,nps))
@@ -662,7 +662,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 continue
         
             
-            AllPlotArrays=DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, TMDerr, L1SeedChangeFit, PSColslist)
+            AllPlotArrays=DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, fitparamsPS, TMDerr, L1SeedChangeFit, PSColslist, first_trigger)
             [VX, VXE, x_label, VY, VYE, y_label, VF, VFE] = GetVXVY(plot_properties, fit_file, AllPlotArrays, L1SeedChangeFit)
         
         
@@ -686,24 +686,25 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 for PSI in PSColslist:
                     if not OutputFitPS[PSI][print_trigger]:
                         OutputFitPS[PSI][print_trigger]=OutputFit[print_trigger]
-                    
-                    
-            ## if save_root or save_png:
-##                 c1 = TCanvas(str(varX),str(varY))
-##                 c1.SetName(str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX))
-##             gr1.Draw("APZ")    
-##             if not do_fit:
-##                 gr3.Draw("P3")
-##                 c1.Update()
-##             else:    
-##                 c1=DrawFittedCurve(f1a, f1b,f1c, f1d, chioffset,do_fit,c1,VX ,VY,print_trigger,Rates)
             
-##             if save_root:
-##                 myfile = TFile( RootFile, 'UPDATE' )
-##                 c1.Write()
-##                 myfile.Close()
-##             if save_png:
-##                 c1.SaveAs(str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX)+".png")
+            
+            first_trigger=False        
+            if save_root or save_png:
+                c1 = TCanvas(str(varX),str(varY))
+                c1.SetName(str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX))
+            gr1.Draw("APZ")    
+            if not do_fit:
+                gr3.Draw("P3")
+                c1.Update()
+            else:    
+                c1=DrawFittedCurve(f1a, f1b,f1c, f1d, chioffset,do_fit,c1,VX ,VY,print_trigger,Rates)
+            
+            if save_root:
+                myfile = TFile( RootFile, 'UPDATE' )
+                c1.Write()
+                myfile.Close()
+            if save_png:
+                c1.SaveAs(str(print_trigger)+"_"+str(varY)+"_vs_"+str(varX)+".png")
         
 
                 
@@ -927,7 +928,7 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
     if L1SeedChangeFit:
             
         for psi in range(0,nps):
-            print psi, print_trigger, InputFitPS[psi][print_trigger]
+            #print psi, print_trigger, InputFitPS[psi][print_trigger]
             try:
                 FitTypePS[psi] = InputFitPS[psi][print_trigger][0]
             except:
@@ -954,11 +955,15 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
     return [fitparams, passed, failed_paths, fitparamsPS]        
 
 ## we are 2 lumis off when we start! -gets worse when we skip lumis
-def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, TMDerr, L1SeedChangeFit, PSColslist):
+def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, fitparamsPS, TMDerr, L1SeedChangeFit, PSColslist, first_trigger):
 
     ###init arrays ###
     [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t] = MakePlotArrays()
-    [FitType, X0, X1, X2, X3, sigma, X0err]=fitparams
+    #[FitType, X0, X1, X2, X3, sigma, X0err]=fitparams
+
+    #[FitTypePS, X0PS, X1PS, X2PS, X3PS, sigmaPS, X0errPS]=fitparamsPS
+    
+    
     
     it_offset=0
     ###loop over each LS ###
@@ -967,6 +972,7 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
             continue
         if not Rates[print_trigger]["psi"][iterator] in PSColslist:
             continue
+        [FitType, X0, X1, X2, X3, sigma, X0err]=GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,print_trigger)
         #else:
             #print iterator, Rates[print_trigger]["psi"][iterator], PSColslist
         ##Old Spike-killer: used average-xsec method, too clumsy, esp. for nonlinear triggers
@@ -989,7 +995,7 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
             prediction = Rates[print_trigger]["rate"][iterator]
             realvalue = Rates[print_trigger]["rate"][iterator]
             
-        if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff,max_dt,print_info, trig_list):
+        if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff,max_dt,print_info, trig_list, first_trigger):
                 
             run_t.append(Rates[print_trigger]["run"][iterator])
             ls_t.append(Rates[print_trigger]["ls"][iterator])
@@ -1089,7 +1095,14 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
     ## End "for iterator in range(len(Rates[print_trigger]["rate"])):" loop
     return [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t]           
 
-
+def GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,print_trigger):
+    if not L1SeedChangeFit:
+        return fitparams
+    else:
+        psi=Rates[print_trigger]["psi"][iterator]
+        [FitTypePS, X0PS, X1PS, X2PS, X3PS, sigmaPS, X0errPS]=fitparamsPS
+        return [FitTypePS[psi], X0PS[psi], X1PS[psi], X2PS[psi], X3PS[psi], sigmaPS[psi], X0errPS[psi]]
+#[FitType, X0, X1, X2, X3, sigma, X0err]
 
 
 def CalcSigma(var_x, var_y, func):
@@ -1279,7 +1292,7 @@ def GetVXVY(plot_properties, fit_file, AllPlotArrays, L1SeedChangeFit):
 
     return [VX, VXE, x_label, VY, VYE, y_label, VF, VFE]
 
-def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff, max_dt, print_info, trig_list):
+def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff, max_dt, print_info, trig_list, first_trigger):
     it_offset=0
     Passed=True
     subsystemfailed=[]
@@ -1298,7 +1311,7 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
         lumidict=LumiPageInfo[LS]
             
         if print_info:
-            if (iterator==0 and print_trigger==trig_list[0]):
+            if (iterator==0 and print_trigger==trig_list[0] and first_trigger):
                 print '%10s%10s%10s%10s%10s%10s%10s%15s%20s%15s' % ("Status", "Run", "LS", "Physics", "Active", "Deadtime", " MaxDeadTime", " Passed all subsystems?", " List of Subsystems", " Spike killing")
             
         ## if SubSystemOff["All"]:
@@ -1355,7 +1368,7 @@ def pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger,
             ##print '%-50s%10s%10s%10s%10s%10s%10s%10s%15s%20s' % (print_trigger,"Passed", Rates[print_trigger]["run"][iterator], LS, Rates[print_trigger]["physics"][iterator], Rates[print_trigger]["active"][iterator], round(Rates[print_trigger]["deadtime"][iterator],2), max_dt, Passed, subsystemfailed)
         return True
     else:
-        if (print_info and print_trigger==trig_list[0] and num_ls==1):
+        if (print_info and print_trigger==trig_list[0] and num_ls==1 and first_trigger):
             prediction_match=True
             if (realvalue >0.6*prediction and realvalue<1.5*prediction):
                 prediction_match=False
