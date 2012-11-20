@@ -163,13 +163,12 @@ class RateMonConfig:
             else:
                 return [0.0,0.0,"Exception error"]
 
-        try:    
-            if Input[TrigName][0] == "poly":
+        try:
+            if Input[TrigName][0] == "line" or Input[TrigName][0] == "quad" or Input[TrigName][0] == "cube":
                 return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma,""]
             elif Input[TrigName][0] == "expo":
                 return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), sigma,""]
         except:
-            ##RefRun = True
             return [0.0,0.0,"Exception error"]
 
         if RefRun:

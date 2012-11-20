@@ -477,9 +477,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
         
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
+            PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive)
+            VC = PSCorrectedExpectedRate[2]
             try:
-                PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive)
-                VC = PSCorrectedExpectedRate[2]                
                 sigma = PSCorrectedExpectedRate[1]/(sqrt(len(HeadLumiRange))* HeadUnprescaledRates[HeadName][1])
                 ExpectedRate = round((PSCorrectedExpectedRate[0] / HeadUnprescaledRates[HeadName][1]),2)                
             except:
