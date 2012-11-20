@@ -147,7 +147,7 @@ class RateMonConfig:
             return False
         return True
 
-    def GetExpectedRate(self,TrigName,Input,Rates,live,delivered,deadtime):
+    def GetExpectedRate(self,TrigName,Input,InputPS,Rates,live,delivered,deadtime,L1SeedChangeFit,HeadLumiRange,PSColumnByLS):
         RefRun = False
         #replaced live/delivered with deadtimebeamactive
         if self.NoVersion:
@@ -155,21 +155,50 @@ class RateMonConfig:
         if TrigName not in Input.keys():
             return [0.0,0.0,"No prediction (fit missing)"]
 
-        try:
-            sigma = Input[TrigName][5]
-        except:
-            if Input[TrigName][0] == "fit failed":
-                return [0.0,0.0,"No prediction (fit missing)"]
-            else:
+        if not L1SeedChangeFit:
+            try:
+                sigma = Input[TrigName][5]
+            except:
+                if Input[TrigName][0] == "fit failed":
+                    return [0.0,0.0,"No prediction (fit missing)"]
+                else:
+                    return [0.0,0.0,"Exception error"]
+            try:
+            
+                if Input[TrigName][0] == "line" or Input[TrigName][0] == "quad" or Input[TrigName][0] == "cube":
+                    return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma,""]
+                elif Input[TrigName][0] == "expo":
+                    return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), sigma,""]
+            except:
                 return [0.0,0.0,"Exception error"]
 
-        try:
-            if Input[TrigName][0] == "line" or Input[TrigName][0] == "quad" or Input[TrigName][0] == "cube":
-                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma,""]
-            elif Input[TrigName][0] == "expo":
-                return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*math.exp(Input[TrigName][3]+Input[TrigName][4]*delivered)), sigma,""]
-        except:
-            return [0.0,0.0,"Exception error"]
+        ###L1SeedChangeFit    
+        else:
+                        
+            firstLS=min(HeadLumiRange)
+            
+            psi=PSColumnByLS[firstLS]
+                
+            try:
+                sigma = InputPS[psi][TrigName][5]
+            except:
+                #print psi, TrigName
+                
+                #if InputPS[psi][TrigName][0] == "fit failed":
+                #    return [0.0,0.0,"No prediction (fit missing)"]
+                #else:
+                return [0.0,0.0,"Exception error"]
+            try:
+            
+                if InputPS[psi][TrigName][0] == "line" or InputPS[psi][TrigName][0] == "quad" or InputPS[psi][TrigName][0] == "cube":
+                    return [(1-deadtime)*(InputPS[psi][TrigName][1]+InputPS[psi][TrigName][2]*delivered+InputPS[psi][TrigName][3]*delivered*delivered+InputPS[psi][TrigName][4]*delivered*delivered*delivered), sigma,""]
+                elif InputPS[psi][TrigName][0] == "expo":
+                    return [(1-deadtime)*(InputPS[psi][TrigName][1]+InputPS[psi][TrigName][2]*math.exp(InputPS[psi][TrigName][3]+InputPS[psi][TrigName][4]*delivered)), sigma,""]
+            except:
+                return [0.0,0.0,"Exception error"]
+            
+              
+
 
         if RefRun:
             num_compare = 0

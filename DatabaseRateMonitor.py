@@ -420,7 +420,22 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     except:
         print "No fit file specified"
         sys.exit(2)
+
+    ###fitfile by L1seedchange
+    if Config.L1SeedChangeFit:    
+        try:
+            PSfitfile=Config.FitFileName.replace("HLT_NoV","HLT_NoV_ByPS")
+            print "Opening", PSfitfile
+            pkl_filePS = open(PSfitfile, 'rb')
+            FitInputPS = pickle.load(pkl_filePS)
+            pkl_filePS.close()
+            ##print "fit file name=",Config.FitFileName
         
+        except:
+            print "No fit file by L1seed change specified"
+            sys.exit(2)
+    else:
+        FitInputPS={} ##define empty dict when not in use
     try:    
         refrunfile="RefRuns/%s/Rates_HLT_10LS_JPAP.pkl" % (thisyear)
         pkl_file = open(refrunfile, 'rb')
@@ -475,9 +490,10 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
 
         skipTrig=False
         TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
-        
+
+                
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
-            PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive)
+            PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,FitInputPS,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive,Config.L1SeedChangeFit,HeadLumiRange,PSColumnByLS)
             VC = PSCorrectedExpectedRate[2]
             try:
                 sigma = PSCorrectedExpectedRate[1]/(sqrt(len(HeadLumiRange))* HeadUnprescaledRates[HeadName][1])
