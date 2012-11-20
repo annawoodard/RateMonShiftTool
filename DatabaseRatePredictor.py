@@ -454,6 +454,22 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                 RefMoreLumiArray = RefParser.GetMoreLumiInfo()#dict with keys as bits from lumisections WBM page and values are dicts with key=LS:value=bit
                 L1HLTseeds=RefParser.GetL1HLTseeds()
                 HLTL1PS=RefParser.GetL1PSbyseed()
+                ###Add all triggers to list if all trigger
+                try:
+                    TriggerRatesCheck = RefParser.GetHLTRates([1])##just grab from 1st LS
+                except:
+                    print "ERROR: unable to get HLT triggers for this run"
+                    exit(2)
+                for HLTkey in TriggerRatesCheck:
+                    if NoVersion:
+                        name = StripVersion(HLTkey)
+                    else:
+                        name=HLTkey
+                    if not name in trig_list:
+                        if all_triggers:
+                            trig_list.append(name)
+                
+                ###add L1 triggers to list if Do L1
                 if DoL1:
                     
                     for HLTkey in trig_list:
@@ -500,6 +516,7 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                             counter += 1
                     nls = LSRange[nls][-1]+1
                 [HLTL1_seedchanges,nps]=checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes
+                
                 #print HLTL1_seedchanges
                 #print "nps=",nps
                 #print "Run "+str(RefRunNum)+" contains LS from "+str(min(LSRange))+" to "+str(max(LSRange))
@@ -516,6 +533,12 @@ def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,
                         core_a_rates = stream_mon.getStreamACoreRatesByLS(RefParser,LSRange[nls],config).values()
                         avg_core_a_rate = sum(core_a_rates)/len(LSRange[nls])
                         TriggerRates['HLT_Stream_A'] = [1,1,avg_core_a_rate,avg_core_a_rate]
+                        dummylist=[]
+                        for pscol in range(0,nps):
+                            doubledummylist=[]
+                            doubledummylist.append(pscol)
+                            dummylist.append(doubledummylist)
+                        HLTL1_seedchanges["HLT_Stream_A"]=dummylist
                     
                     if DoL1:
                         L1RatesALL=RefParser.GetL1RatesALL(LSRange[nls])
