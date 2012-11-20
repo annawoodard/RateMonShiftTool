@@ -976,13 +976,17 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
                 passed=0
                 fitparamsPS=[FitTypePS, X0PS, X1PS, X2PS, X3PS, sigmaPS, X0errPS]
             else:
-                X0PS[psi] = InputFitPS[psi][print_trigger][1]
-                X1PS[psi] = InputFitPS[psi][print_trigger][2]
-                X2PS[psi] = InputFitPS[psi][print_trigger][3]
-                X3PS[psi] = InputFitPS[psi][print_trigger][4]
-                sigmaPS[psi] = InputFitPS[psi][print_trigger][5]/math.sqrt(num_ls)*3#Display 3 sigma band to show outliers more clearly
-                X0errPS[psi]= InputFitPS[psi][print_trigger][7]
-                fitparamsPS=[FitTypePS, X0PS, X1PS, X2PS, X3PS, sigmaPS, X0errPS]
+                try:
+                    X0PS[psi] = InputFitPS[psi][print_trigger][1]
+                    X1PS[psi] = InputFitPS[psi][print_trigger][2]
+                    X2PS[psi] = InputFitPS[psi][print_trigger][3]
+                    X3PS[psi] = InputFitPS[psi][print_trigger][4]
+                    sigmaPS[psi] = InputFitPS[psi][print_trigger][5]/math.sqrt(num_ls)*3#Display 3 sigma band to show outliers more clearly
+                    X0errPS[psi]= InputFitPS[psi][print_trigger][7]
+                    fitparamsPS=[FitTypePS, X0PS, X1PS, X2PS, X3PS, sigmaPS, X0errPS]
+                except:
+                    #print "ERROR: unable to get fits by PS for",print_trigger," in col",psi, "skipping."
+                    pass
         
         
         
