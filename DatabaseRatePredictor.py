@@ -57,6 +57,7 @@ def pickYear():
     print "Year set to ",thisyear
 
 def main():
+    gROOT.SetBatch(True)
     try:
         ##set year to 2012
         pickYear()
