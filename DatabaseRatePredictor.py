@@ -115,7 +115,7 @@ def main():
         TMDerr=False
         wp_bool=False
         all_triggers=False
-        DoL1=False
+        DoL1=True
         UsePSCol=-1
         SubSystemOff={'All':False,'Mu':False,'HCal':False,'ECal':False,'Tracker':False,'EndCap':False,'Beam':False}
         for o,a in opt:
@@ -334,6 +334,7 @@ def main():
         print " "
         L1SeedChangeFit=True
         ########  END PARAMETERS - CALL FUNCTIONS ##########
+        #[Rates,LumiPageInfo, L1_trig_list,nps]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol,L1SeedChangeFit)
         [Rates, LumiPageInfo, L1_trig_list, nps]= GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff, NoVersion, all_triggers, DoL1,UsePSCol,L1SeedChangeFit, save_fits)
         if DoL1:
             trig_list=L1_trig_list
@@ -344,6 +345,7 @@ def main():
         print "Wait... come back..."
 
 
+#def GetDBRates(run_list,trig_name,trig_list, num_ls, max_dt, physics_active_psi,JSON,debug_print, force_new, SubSystemOff,NoVersion,all_triggers, DoL1,UsePSCol,L1SeedChangeFit):
 def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_psi, JSON, debug_print, force_new, SubSystemOff, NoVersion, all_triggers, DoL1,UsePSCol, L1SeedChangeFit, save_fits):
     
     Rates = {}
@@ -474,7 +476,9 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
                     
                     for HLTkey in trig_list:
                         #print name
-                        if "L1" in HLTkey:
+#                         if "L1" in HLTkey:
+#                             continue
+                        if not HLTkey.startswith('HLT'):
                             continue
                         else:
                             try:
@@ -482,6 +486,7 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
                                     if L1seed not in trig_list:
                                         trig_list.append(L1seed)
                             except:
+                                print "Failed on trigger "+str(HLTkey)
                                 pass
                 for iterator in RefLumiArray[0]: ##Makes array of LS with proper PAP and JSON properties
                     ##cheap way of getting PSCol None-->0
@@ -507,15 +512,16 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
                 if num_ls > len(RefLumiRange):
                     print "Run "+str(RefRunNum)+" is too short: from "+str(nls)+" to "+str(RefLumiRange[-1])+", while num_ls = "+str(num_ls)
                     continue
-                while nls < RefLumiRange[-1] - num_ls:
+                while nls < RefLumiRange[-1]-num_ls:
                     LSRange[nls] = []
                     counter = 0
                     for iterator in RefLumiRange:
                         if iterator >= nls and counter < num_ls:
                             LSRange[nls].append(iterator)
                             counter += 1
-                    nls = LSRange[nls][-1] + 1
-                [HLTL1_seedchanges,nps] = checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes
+                    nls = LSRange[nls][-1]+1
+                [HLTL1_seedchanges,nps]=checkL1seedChangeALLPScols(trig_list,HLTL1PS) #for L1prescale changes
+                    
                 
                 #print HLTL1_seedchanges
                 #print "nps=",nps
@@ -534,11 +540,18 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
                         avg_core_a_rate = sum(core_a_rates)/len(LSRange[nls])
                         TriggerRates['HLT_Stream_A'] = [1,1,avg_core_a_rate,avg_core_a_rate]
                         HLTL1_seedchanges["HLT_Stream_A"] = [[ps_col] for ps_col in range(0,nps)]
+#                         dummylist=[]
+#                         for pscol in range(0,nps):
+#                             doubledummylist=[]
+#                             doubledummylist.append(pscol)
+#                             dummylist.append(doubledummylist)
+#                         HLTL1_seedchanges["HLT_Stream_A"]=dummylist
                     
                     if DoL1:
-                        L1RatesALL = RefParser.GetL1RatesALL(LSRange[nls])
+                        L1RatesALL=RefParser.GetL1RatesALL(LSRange[nls])
+                        
                         for L1seed in L1RatesALL.iterkeys():
-                            TriggerRates[L1seed] = L1RatesALL[L1seed]
+                            TriggerRates[L1seed]=L1RatesALL[L1seed]
 
                     [inst, live, delivered, dead, pscols] = RefParser.GetAvLumiInfo(LSRange[nls])
                     deadtimebeamactive=RefParser.GetDeadTimeBeamActive(LSRange[nls])
@@ -546,10 +559,8 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
                     physics = 1
                     active = 1
                     psi = 99
-
                     if save_fits and (max(pscols) != min(pscols)):#kick out points which average over two ps columns if doing running in fit making mode
                         continue
-                    
                     for iterator in LSRange[nls]: ##Gets lowest value of physics, active, and psi in the set of lumisections
                         if RefLumiArray[5][iterator] == 0:
                             physics = 0
@@ -564,15 +575,16 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
                     LumiPageInfo[nls] = LumiRangeGreens(RefMoreLumiArray,LSRange,nls,RefRunNum,deadtimebeamactive)
 
                     for key in TriggerRates:
+
                         if NoVersion:
                             name = StripVersion(key)
                         else:
                             name=key
                             
                         if not name in trig_list:
-                            if all_triggers:
-                                trig_list.append(name)
-                            else:
+                            if all_triggers and name.startswith('HLT_Stream_A'):
+                                trig_list.append(name) ##Only triggers in trig_list have HLTL1_seedchanges filled
+                            else:    
                                 continue
                         
                         if not Rates.has_key(name):
@@ -624,17 +636,18 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
     pickle.dump(LumiPageInfo,LumiOutput, 2)
     LumiOutput.close()
     
-    return [Rates, LumiPageInfo, trig_list, nps]
+    return [Rates,LumiPageInfo,trig_list,nps]
 
 def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst, TMDerr,wp_bool,all_triggers,L1SeedChangeFit,nps):
     
     [min_run, max_run, priot, InputFit, OutputFit, OutputFitPS, failed_paths, first_trigger, varX, varY, do_fit, save_root, save_png, fit_file, RootNameTemplate, RootFile, InputFitPS]=InitMakePlots(run_list, trig_name, num_ls, plot_properties, nps, L1SeedChangeFit)
     ##modify for No Version and check the trigger list
-    trig_list = InitTrigList(trig_list, save_fits, NoVersion, InputFit)
+    trig_list=InitTrigList(trig_list, save_fits, NoVersion, InputFit)
 
     for print_trigger in sorted(Rates):
-        [trig_list, passchecktriglist, meanrawrate] = CheckTrigList(trig_list, print_trigger, all_triggers, masked_triggers, min_rate, Rates, run_list, trig_name)
+        [trig_list, passchecktriglist, meanrawrate]=CheckTrigList(trig_list, print_trigger, all_triggers, masked_triggers, min_rate, Rates, run_list, trig_name)
         if not passchecktriglist:
+            print str(print_trigger)+" did not passchecktriglist"
             continue
         
         [meanrate, meanxsec, meanlumi, sloperate, slopexsec, nlow, nhigh, lowrate, lowxsec, lowlumi, highrate, highxsec, highlumi]=GetMeanRates(Rates, print_trigger, max_dt)
@@ -649,7 +662,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         if L1SeedChangeFit and do_fit:
             dummyPSColslist=Rates[print_trigger]["L1seedchange"][0]
             print print_trigger, dummyPSColslist
-            if len(dummyPSColslist) != 1: 
+            if len(dummyPSColslist)!=1: 
                 dummyPSColslist.append(range(0,nps))
         else:
             dummyPSColslist=[]
@@ -659,6 +672,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         if not do_fit:
             [fitparams, passedGetFit, failed_paths, fitparamsPS]=GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls,L1SeedChangeFit, InputFitPS,nps)
             if not passedGetFit:
+                print str(print_trigger)+" did not passedGetFit"
                 continue
         else:
             fitparams=["unset",0,0,0,0,0,0]
@@ -667,7 +681,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         for PSColslist in dummyPSColslist:
             #print print_trigger, PSColslist
             passPSinCol=0
-            for iterator in range(len(Rates[print_trigger]["run"])):
+            for iterator in range (len(Rates[print_trigger]["run"])):
                 if Rates[print_trigger]["psi"][iterator] in PSColslist:
                     passPSinCol=1
                     #print PSColslist, Rates[print_trigger]["run"][iterator], Rates[print_trigger]["psi"][iterator]
@@ -677,21 +691,23 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 continue
         
             
-            AllPlotArrays = DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, fitparamsPS, TMDerr, L1SeedChangeFit, PSColslist, first_trigger)
+            AllPlotArrays=DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, fitparamsPS, TMDerr, L1SeedChangeFit, PSColslist, first_trigger)
             [VX, VXE, x_label, VY, VYE, y_label, VF, VFE] = GetVXVY(plot_properties, fit_file, AllPlotArrays, L1SeedChangeFit)
         
         
             ####defines gr1 and failure if no graph in OutputFit ####
-            [OutputFit,gr1, gr3, failed_paths, defgrapass] = DefineGraphs(print_trigger, OutputFit, do_fit, varX, varY, x_label, y_label, VX, VY, VXE, VYE, VF, VFE, fit_file, failed_paths, PSColslist)
+            defgrapass = False
+            if len(VX) > 0:
+                [OutputFit,gr1, gr3, failed_paths, defgrapass]=DefineGraphs(print_trigger,OutputFit,do_fit,varX,varY,x_label,y_label,VX,VY,VXE,VYE,VF,VFE,fit_file, failed_paths,PSColslist)
             if not defgrapass:
                 continue
             if do_fit:
-                [f1a,f1b,f1c,f1d,first_trigger] = Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate)
+                [f1a,f1b,f1c,f1d,first_trigger]= Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate)
                         
         
             if print_table or save_fits:
-                ###additional info from f1 params
-                [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte, passmorefitinfo] = more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
+                ###aditional info from f1 params
+                [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte, passmorefitinfo]=more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
                 if not passmorefitinfo:
                     OutputFit[print_trigger] = ["fit failed","Zero NDF"]
                 ###output fit params
@@ -938,6 +954,8 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
         failed_paths.append([print_trigger, failure_comment])
         passed=0
         fitparams=[FitType, 0, 0, 0, 0, 0, 0]
+    elif FitType == "parse failed":
+        failure_comment = "This path did not exist in the monitorlist used to create the fit"
     else:
         X0 = InputFit[print_trigger][1]
         X1 = InputFit[print_trigger][2]
@@ -986,6 +1004,8 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
 
     ###init arrays ###
     [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t] = MakePlotArrays()
+    
+    
     
     it_offset=0
     ###loop over each LS ###
@@ -1433,18 +1453,24 @@ def checkLS(Rates, PageLumiInfo,trig_list):
 
 
 def checkL1seedChangeALLPScols(trig_list,HLTL1PS):
-
+    
     nps=0
     HLTL1_seedchanges={}
+    
     for HLTkey in trig_list:
         if HLTkey=='HLT_Stream_A':
             continue
         #print HLTkey
+        if not HLTkey.startswith('HLT'):
+            nps=9
+            HLTL1_seedchanges[HLTkey]=[[0, 1, 2, 3, 4, 5, 6, 7, 8]]
+            continue
+
         try:
             dict=HLTL1PS[StripVersion(HLTkey)]
             #print "dict=",dict
         except:
-            #print HLTkey, StripVersion(HLTkey)
+            print HLTkey, StripVersion(HLTkey)
             print "exception, in getting dict"
             exit(2)
             
@@ -1520,7 +1546,8 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
         else: ##Slope is negative or flat 
             f1d.SetParLimits(1,1.5*sloperate,-0.1*sloperate)
         gr1.Fit("f1d","QN","rob=0.90")
-                
+        
+        
         f1a=0
         f1a = TF1("f1a","pol2",0,8000)#quadratic
         f1a.SetParameters(f1d.GetParameter(0),f1d.GetParameter(1),0) ##Initial values from linear fit
@@ -1533,9 +1560,12 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
         f1a.SetParLimits(1,-2.0*(max(VY)-min(VY))/(max(VX)-min(VX)),2.0*(max(VY)-min(VY))/(max(VX)-min(VX))) ##Reasonable bounds
         f1a.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
         gr1.Fit("f1a","QN","rob=0.90")
-                
+        
+        
         f1b = 0
-        f1c = 0        
+        f1c = 0
+        
+        
         if True:
             f1b = TF1("f1b","pol3",0,8000)#cubic
             f1b.SetParameters(f1a.GetParameter(0),f1a.GetParameter(1),f1a.GetParameter(2),0) ##Initial values from quadratic fit
@@ -1546,7 +1576,9 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
             f1b.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
             f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX))) ##Reasonable bounds
             gr1.Fit("f1b","QN","rob=0.90")
+            
                         
+            
             f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
             f1c.SetLineColor(3)
             f1c.SetLineWidth(2)
@@ -1670,6 +1702,7 @@ def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,me
 
 def DrawFittedCurve(f1a, f1b,f1c, f1d, chioffset,do_fit,c1,VX,VY,print_trigger,Rates):
     [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte, passed]=more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
+    
                     
     if do_fit:
         try:
@@ -1679,6 +1712,7 @@ def DrawFittedCurve(f1a, f1b,f1c, f1d, chioffset,do_fit,c1,VX,VY,print_trigger,R
                 f1b.Draw("same")
             else:
                 f1a.Draw("same")
+                
                 f1d.Draw("same")
         except:
             True
