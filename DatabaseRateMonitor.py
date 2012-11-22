@@ -582,9 +582,43 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     #check for triggers above the warning threshold
     Warn=[]
     core_data=[]
+    core_L1Seeds=[]
     nBadRates = 0
+    #Loop for HLT triggers
     for entry in SortedData:
-        bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff)
+        if not entry[0].startswith('HLT'):
+            continue
+        bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff )
+        if entry[0] in trig_list or ListIgnoredPaths:
+            core_data.append(entry)
+            if bad_rate and nBadRates < MaxBadRates:
+                entry[6]=L1HLTseeds[entry[0]] ##Appends L1 names as warning message
+                for seed in L1HLTseeds[entry[0]]:
+                    if not seed in core_L1Seeds:
+                        core_L1Seeds.append(seed)
+                        print seed
+                Warn.append(True)
+                nBadRates += 1
+            else:
+                Warn.append(False)
+        else:
+            if bad_rate and ShowAllBadRates and nBadRates < MaxBadRates:
+                core_data.append(entry)
+                entry[6]=L1HLTseeds[entry[0]] ##Appends L1 names as warning message
+                for seed in L1HLTseeds[entry[0]]: 
+                    if not seed in core_L1Seeds:
+                        core_L1Seeds.append(seed)
+                        print seed
+                    core_L1Seeds.append(L1HLTseeds[entry[0]])
+                    print L1HLTseeds[entry[0]]
+                Warn.append(True)
+                nBadRates += 1
+
+    ##Loop for L1 seeds of HLT triggers with warnings            
+    for entry in SortedData:
+        if not entry[0] in core_L1Seeds:
+            continue
+        bad_rate = (abs(entry[3]) > AllowedRatePercDiff)
         if entry[0] in trig_list or ListIgnoredPaths:
             core_data.append(entry)
             if bad_rate and nBadRates < MaxBadRates:
