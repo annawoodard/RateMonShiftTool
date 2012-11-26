@@ -585,7 +585,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         if not entry[0].startswith('HLT'):
             continue
         bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and RefParser.RunNumber > 0)
-        if entry[0] in trig_list or ListIgnoredPaths:
+        if entry[0] in trig_list or ListIgnoredPaths or (bad_rate and ShowAllBadRates):
             core_data.append(entry)
             if bad_rate and nBadRates < MaxBadRates:
 #                entry[6]=L1HLTseeds[entry[0]] ##Appends L1 names as warning message
@@ -597,24 +597,11 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                         bad_seeds_string += seed
                     if not seed in core_L1Seeds:
                         core_L1Seeds.append(seed)
-                        ##print seed
                 entry[6] = bad_seeds_string
                 Warn.append(True)
                 nBadRates += 1
             else:
                 Warn.append(False)
-        else:
-            if bad_rate and ShowAllBadRates and nBadRates < MaxBadRates:
-                core_data.append(entry)
-                entry[6]=L1HLTseeds[entry[0]] ##Appends L1 names as warning message
-                for seed in L1HLTseeds[entry[0]]: 
-                    if not seed in core_L1Seeds:
-                        core_L1Seeds.append(seed)
-                        print seed
-                    core_L1Seeds.append(L1HLTseeds[entry[0]])
-                    print L1HLTseeds[entry[0]]
-                Warn.append(True)
-                nBadRates += 1
 
     ##Loop for L1 seeds of HLT triggers with warnings            
     for entry in SortedData:
