@@ -147,8 +147,7 @@ class RateMonConfig:
             return False
         return True
 
-    def GetExpectedRate(self,TrigName,Input,InputPS,Rates,live,delivered,deadtime,L1SeedChangeFit,HeadLumiRange,PSColumnByLS):
-        RefRun = False
+    def GetExpectedRate(self,TrigName,Input,InputPS,live,delivered,deadtime,L1SeedChangeFit,HeadLumiRange,PSColumnByLS):
         #replaced live/delivered with deadtimebeamactive
         if self.NoVersion:
             TrigName=StripVersion(TrigName)
@@ -163,8 +162,8 @@ class RateMonConfig:
                     return [0.0,0.0,"No prediction (fit missing)"]
                 else:
                     return [0.0,0.0,"Exception error"]
+
             try:
-            
                 if Input[TrigName][0] == "line" or Input[TrigName][0] == "quad" or Input[TrigName][0] == "cube":
                     return [(1-deadtime)*(Input[TrigName][1]+Input[TrigName][2]*delivered+Input[TrigName][3]*delivered*delivered+Input[TrigName][4]*delivered*delivered*delivered), sigma,""]
                 elif Input[TrigName][0] == "expo":
@@ -174,11 +173,9 @@ class RateMonConfig:
 
         ###L1SeedChangeFit    
         else:
-                        
             firstLS=min(HeadLumiRange)
-            
             psi=PSColumnByLS[firstLS]
-                
+
             try:
                 sigma = InputPS[psi][TrigName][5]
             except:
@@ -188,32 +185,14 @@ class RateMonConfig:
                 #    return [0.0,0.0,"No prediction (fit missing)"]
                 #else:
                 return [0.0,0.0,"Exception error"]
+
             try:
-            
                 if InputPS[psi][TrigName][0] == "line" or InputPS[psi][TrigName][0] == "quad" or InputPS[psi][TrigName][0] == "cube":
                     return [(1-deadtime)*(InputPS[psi][TrigName][1]+InputPS[psi][TrigName][2]*delivered+InputPS[psi][TrigName][3]*delivered*delivered+InputPS[psi][TrigName][4]*delivered*delivered*delivered), sigma,""]
                 elif InputPS[psi][TrigName][0] == "expo":
                     return [(1-deadtime)*(InputPS[psi][TrigName][1]+InputPS[psi][TrigName][2]*math.exp(InputPS[psi][TrigName][3]+InputPS[psi][TrigName][4]*delivered)), sigma,""]
             except:
                 return [0.0,0.0,"Exception error"]
-            
-              
-
-
-        if RefRun:
-            num_compare = 0
-            pred_rate = 0
-            for iterator in range(len(Rates[TrigName]["rate"])):
-                delivered_lumi = Rates[TrigName]["delivered_lumi"][iterator]
-                if delivered_lumi > delivered - 100 and delivered_lumi < delivered + 100:
-                    live_lumi = Rates[TrigName]["live_lumi"][iterator]
-                    rate = Rates[TrigName]["rate"][iterator]
-                    pred_rate += (live/delivered)*rate*(delivered_lumi/live_lumi)
-                    num_compare += 1
-
-            pred_rate = pred_rate/num_compare
-            Chi2 = pred_rate/math.sqrt(num_compare)
-            return [pred_rate, Chi2]
 
         return -1
                     

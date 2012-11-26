@@ -208,7 +208,7 @@ def main():
                 print "PROBLEM GETTING REFERNCE RUN"
                 raise  
         else:
-            RefParser = pickle.load( open( RefRunFile ) )
+            RefParser = pickle.load(open(RefRunFile))
             
     # OK, Got the Reference Run
     # Now get the most recent run
@@ -216,11 +216,9 @@ def main():
     SaveRun = False
     if CompareRunNum=="":  # if no run # specified on the CL, get the most recent run
         CompareRunNum,isCol,isGood = GetLatestRunNumber()
-        
             
         if not isGood:
             print "NO TRIGGER KEY FOUND for run ",CompareRunNum
-
             ##sys.exit(0)
 
         if not isCol:
@@ -237,7 +235,6 @@ def main():
             print "NO TRIGGER KEY FOUND for run ", CompareRunNum
             ##sys.exit(0)
 
-    
     HeadParser = DatabaseParser()
     HeadParser.RunNumber = CompareRunNum
         
@@ -247,9 +244,8 @@ def main():
         LastGoodLS=HeadParser.GetLastLS(isCol)+1
         tempLastGoodLS=LastGoodLS
         CurrRun=CompareRunNum
-        #print "done good"
+
     except:
-        #print "exception"
         HeadLumiRange=[]
         LastGoodLS=-1
         tempLastGoodLS=LastGoodLS-1
@@ -422,17 +418,17 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         sys.exit(2)
 
     ###fitfile by L1seedchange
-    if Config.L1SeedChangeFit:    
+    if Config.L1SeedChangeFit:
         try:
             PSfitfile=Config.FitFileName.replace("HLT_NoV","HLT_NoV_ByPS")
-            ##print "Opening", PSfitfile
+            #print "Opening", PSfitfile
             pkl_filePS = open(PSfitfile, 'rb')
             FitInputPS = pickle.load(pkl_filePS)
             pkl_filePS.close()
-            ##print "fit file name=",Config.FitFileName
+            #print "fit file name=",Config.FitFileName
         
         except:
-            print "No fit file by L1seed change specified"
+            print "No fit file by L1seed change specified.  Have you run DatabaseRatePredictor with DoL1 in defaults.cfg set to true?"
             sys.exit(2)
     else:
         FitInputPS={} ##define empty dict when not in use
@@ -454,7 +450,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         for trigger in Config.MonitorList:
             trig_list.append(StripVersion(trigger))
         
-        L1HLTseeds=HeadParser.GetL1HLTseeds()
+        L1HLTseeds = HeadParser.GetL1HLTseeds()
         if Config.DoL1:
             for HLTkey in trig_list:
                 if "L1" in HLTkey:
@@ -465,21 +461,20 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                             if L1seed not in trig_list:
                                 trig_list.append(L1seed)
                     except:
-                        pass    
+                        pass
         for trigger in FitInput.iterkeys():
-            FitInput[StripVersion(trigger)]=FitInput.pop(trigger)
+            FitInput[StripVersion(trigger)] = FitInput.pop(trigger)
         for trigger in HeadUnprescaledRates:
-            HeadUnprescaledRates[StripVersion(trigger)]=HeadUnprescaledRates.pop(trigger)
+            HeadUnprescaledRates[StripVersion(trigger)] = HeadUnprescaledRates.pop(trigger)
                 
     else:
-        trig_list=Config.MonitorList
+        trig_list = Config.MonitorList
         
     for HeadName in HeadUnprescaledRates:
-        if RefParser.RunNumber == 0: ##  If not ref run then just use trigger list
-            if HeadName not in trig_list and not ListIgnoredPaths and not ShowAllBadRates:
-                continue
-            if HeadName not in FitInput.keys() and not ListIgnoredPaths and not ShowAllBadRates:
-                continue           
+        if HeadName not in trig_list and not ListIgnoredPaths and not ShowAllBadRates:
+            continue
+        if HeadName not in FitInput.keys() and not ListIgnoredPaths and not ShowAllBadRates:
+            continue                   
 
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero","HLT_BeamHalo"]
         masked_trig = False
@@ -491,10 +486,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
 
         skipTrig=False
         TriggerRate = round(HeadUnprescaledRates[HeadName][2],2)
-
                 
         if RefParser.RunNumber == 0:  ## Use rate prediction functions
-            PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,FitInputPS,RefRatesInput,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive,Config.L1SeedChangeFit,HeadLumiRange,PSColumnByLS)
+            PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,FitInputPS,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive,Config.L1SeedChangeFit,HeadLumiRange,PSColumnByLS)
             VC = PSCorrectedExpectedRate[2]
             try:
                 sigma = PSCorrectedExpectedRate[1]/(sqrt(len(HeadLumiRange))* HeadUnprescaledRates[HeadName][1])
@@ -533,16 +527,18 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             RefInstLumi = 0
             RefIterator = 0
             RefStartIndex = ClosestIndex(HeadAvInstLumi,RefParser.GetAvLumiPerRange())
-            RefLen   = -10
-            
+            RefLen = -10
             
             RefUnprescaledRates = RefParser.UpdateRun(RefParser.GetLSRange(RefStartIndex,RefLen))
             [RefAvInstLumi,RefAvLiveLumi,RefAvDeliveredLumi,RefAvDeadTime,RefPSCols] = RefParser.GetAvLumiInfo(RefParser.GetLSRange(RefStartIndex,RefLen))
-            deadtimebeamactive=RefParser.GetDeadTimeBeamActive(RefParser.GetLSRange(RefStartIndex,RefLen))
-            
+            if Config.DoL1:
+                RefL1RatesALL = RefParser.GetL1RatesALL(HeadLumiRange)
+                for L1seed in RefL1RatesALL.iterkeys():
+                    RefUnprescaledRates[L1seed]=RefL1RatesALL[L1seed]
+                        
             RefRate = -1
             for k,v in RefUnprescaledRates.iteritems():
-                if HeadName==k:
+                if HeadName == StripVersion(k):
                     RefRate = RefUnprescaledRates[k][2]
                     
             try:
@@ -561,13 +557,11 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                 continue
 
             VC = ""
-            Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,SigmaDiff,round((HeadUnprescaledRates[HeadName][1]),0),VC])    
+            Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,SigmaDiff,round((HeadUnprescaledRates[HeadName][1]),0),VC])
 
     SortedData = []
     if SortBy == "":
-        SortedData = Data # don't do any sorting
-        if RefParser.RunNumber>0:
-            SortedData=sorted(Data, key=lambda entry: abs(entry[3]),reverse=True) 
+        SortedData=sorted(Data, key=lambda entry: abs(entry[3]),reverse=True) 
     elif SortBy == "name":
         SortedData=sorted(Data, key=lambda entry: entry[0])
     elif SortBy == "rate":
@@ -587,17 +581,24 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     nBadRates = 0
     #Loop for HLT triggers
     for entry in SortedData:
+        bad_seeds_string = ""
         if not entry[0].startswith('HLT'):
             continue
-        bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff )
+        bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and RefParser.RunNumber > 0)
         if entry[0] in trig_list or ListIgnoredPaths:
             core_data.append(entry)
             if bad_rate and nBadRates < MaxBadRates:
-                entry[6]=L1HLTseeds[entry[0]] ##Appends L1 names as warning message
+#                entry[6]=L1HLTseeds[entry[0]] ##Appends L1 names as warning message
                 for seed in L1HLTseeds[entry[0]]:
+                    seed_rate = [line[3] for line in SortedData if line[0] == seed]
+                    if abs(seed_rate[0]) > AllowedRatePercDiff:
+                        if bad_seeds_string != "":
+                            bad_seeds_string += ", "
+                        bad_seeds_string += seed
                     if not seed in core_L1Seeds:
                         core_L1Seeds.append(seed)
                         ##print seed
+                entry[6] = bad_seeds_string
                 Warn.append(True)
                 nBadRates += 1
             else:
@@ -620,42 +621,46 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         if not entry[0] in core_L1Seeds:
             continue
         bad_rate = (abs(entry[3]) > AllowedRatePercDiff)
-        if entry[0] in trig_list or ListIgnoredPaths:
+        if (entry[0] in trig_list and bad_rate and nBadRates < MaxBadRates) or ListIgnoredPaths or ShowAllBadRates:
             core_data.append(entry)
-            if bad_rate and nBadRates < MaxBadRates:
+            if bad_rate:
                 Warn.append(True)
                 nBadRates += 1
             else:
                 Warn.append(False)
-        else:
-            if bad_rate and ShowAllBadRates and nBadRates < MaxBadRates:
-                core_data.append(entry)
-                Warn.append(True)
-                nBadRates += 1
 
     for index,entry in enumerate(core_data):#Dont show 0s if we don't actually have a prediction; it's confusing
         if entry[6] == "No prediction (fit missing)":
             core_data[index] = [entry[0],entry[1],"--","--","--",entry[5],entry[6]]
+        if entry[0].startswith('L1'):
+            core_data[index] = [entry[0],entry[1],entry[2],entry[3],"--",entry[5],entry[6]]
 
-    if ShowSigmaAndPercDiff == 1:
+    comment_width = max([30,max([len(col[6]) for col in core_data])+1])
+    if RefParser.RunNumber > 0:
+        Header = ["Trigger Name", "Actual", "Ref Run", "% Diff", "Cur PS", "Comments"]
+        table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in core_data]
+        PrettyPrintTable(Header,table_data,[80,10,10,10,10,comment_width],Warn)        
+    elif ShowSigmaAndPercDiff == 1:
         Header = ["Trigger Name", "Actual", "Expected","% Diff","Deviation", "Cur PS", "Comments"]
         table_data=core_data
-        PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,30],Warn)
+        PrettyPrintTable(Header,table_data,[80,10,10,10,11,10,comment_width],Warn)
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'
     elif WarnOnSigmaDiff == 1:
         Header = ["Trigger Name", "Actual", "Expected","Deviation", "Cur PS", "Comments"]
         table_data = [[col[0], col[1], col[2], col[4], col[5], col[6]] for col in core_data]
-        PrettyPrintTable(Header,table_data,[80,10,10,10,10,10,30],Warn)
+        PrettyPrintTable(Header,table_data,[80,10,10,10,11,10,comment_width],Warn)
         print 'Deviation is the difference between the actual and expected rates, in units of the expected standard deviation.'
     else:
         Header = ["Trigger Name", "Actual", "Expected", "% Diff", "Cur PS", "Comments"]
         table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in core_data]
-        PrettyPrintTable(Header,table_data,[80,10,10,10,10,30],Warn)
+        PrettyPrintTable(Header,table_data,[80,10,10,10,10,comment_width],Warn)
 
     if writeb:
-        prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,30],Header,core_data,Warn)
+        prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,comment_width],Header,core_data,Warn)
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config,True)
+    if RefParser.RunNumber > 0:
+        print "The average instantaneous lumi for the reference run is: %s e30\n" % (round(RefAvInstLumi,1))
 
     if nBadRates == MaxBadRates:
         write(bcolors.WARNING)
