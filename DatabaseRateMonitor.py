@@ -425,7 +425,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     if Config.L1SeedChangeFit:    
         try:
             PSfitfile=Config.FitFileName.replace("HLT_NoV","HLT_NoV_ByPS")
-            print "Opening", PSfitfile
+            ##print "Opening", PSfitfile
             pkl_filePS = open(PSfitfile, 'rb')
             FitInputPS = pickle.load(pkl_filePS)
             pkl_filePS.close()
@@ -453,8 +453,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         
         for trigger in Config.MonitorList:
             trig_list.append(StripVersion(trigger))
+        
+        L1HLTseeds=HeadParser.GetL1HLTseeds()
         if Config.DoL1:
-            L1HLTseeds=HeadParser.GetL1HLTseeds()
             for HLTkey in trig_list:
                 if "L1" in HLTkey:
                     continue
@@ -596,7 +597,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                 for seed in L1HLTseeds[entry[0]]:
                     if not seed in core_L1Seeds:
                         core_L1Seeds.append(seed)
-                        print seed
+                        ##print seed
                 Warn.append(True)
                 nBadRates += 1
             else:
