@@ -622,7 +622,11 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         if entry[0].startswith('L1'):
             core_data[index] = [entry[0],entry[1],entry[2],entry[3],"--",entry[5],entry[6]]
 
-    comment_width = max([30,max([len(col[6]) for col in core_data])+1])
+    try:
+        comment_width = max([30,max([len(col[6]) for col in core_data])+1])
+    except:
+        comment_width = 30
+        
     if RefParser.RunNumber > 0:
         Header = ["Trigger Name", "Actual", "Ref Run", "% Diff", "Cur PS", "Comments"]
         table_data = [[col[0], col[1], col[2], col[3], col[5], col[6]] for col in core_data]
