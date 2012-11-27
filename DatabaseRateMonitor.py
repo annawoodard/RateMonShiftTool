@@ -462,14 +462,12 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
                                 trig_list.append(L1seed)
                     except:
                         pass
+
         for trigger in FitInput.iterkeys():
             FitInput[StripVersion(trigger)] = FitInput.pop(trigger)
         for trigger in HeadUnprescaledRates:
             HeadUnprescaledRates[StripVersion(trigger)] = HeadUnprescaledRates.pop(trigger)
                 
-    else:
-        trig_list = Config.MonitorList
-        
     for HeadName in HeadUnprescaledRates:
         if HeadName not in trig_list and not ListIgnoredPaths and not ShowAllBadRates:
             continue
@@ -577,7 +575,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
     #check for triggers above the warning threshold
     Warn=[]
     core_data=[]
-    core_L1Seeds=[]
+    core_l1_seeds=[]
     nBadRates = 0
     #Loop for HLT triggers
     for entry in SortedData:
@@ -585,41 +583,41 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         if not entry[0].startswith('HLT'):
             continue
         bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and RefParser.RunNumber > 0)
-        if entry[0] in trig_list or ListIgnoredPaths or (bad_rate and ShowAllBadRates):
+        if entry[0] in trig_list or ListIgnoredPaths or (bad_rate and ShowAllBadRates and nBadRates < MaxBadRates):
             core_data.append(entry)
             if bad_rate and nBadRates < MaxBadRates:
-#                entry[6]=L1HLTseeds[entry[0]] ##Appends L1 names as warning message
-                for seed in L1HLTseeds[entry[0]]:
-                    seed_rate = [line[3] for line in SortedData if line[0] == seed]
-                    if abs(seed_rate[0]) > AllowedRatePercDiff:
-                        if bad_seeds_string != "":
-                            bad_seeds_string += ", "
-                        bad_seeds_string += seed
-                    if not seed in core_L1Seeds:
-                        core_L1Seeds.append(seed)
-                entry[6] = bad_seeds_string
+                if Config.DoL1:
+                    for seed in L1HLTseeds[entry[0]]:
+                        seed_rate = [line[3] for line in SortedData if line[0] == seed]
+                        if not seed in core_l1_seeds:
+                            core_l1_seeds.append(seed)
+                        bad_seed_rate = (abs(seed_rate[0]) > AllowedRatePercDiff)
+                        if bad_seed_rate:
+                            if bad_seeds_string != "":
+                                bad_seeds_string += ", "
+                            bad_seeds_string += seed
+                    entry[6] = bad_seeds_string
                 Warn.append(True)
                 nBadRates += 1
             else:
                 Warn.append(False)
 
-    ##Loop for L1 seeds of HLT triggers with warnings            
-    for entry in SortedData:
-        if not entry[0] in core_L1Seeds:
-            continue
-        bad_rate = (abs(entry[3]) > AllowedRatePercDiff)
-        if (entry[0] in trig_list and bad_rate and nBadRates < MaxBadRates) or ListIgnoredPaths or ShowAllBadRates:
+    ##Loop for L1 seeds of HLT triggers with warnings
+    if Config.DoL1:
+        for entry in SortedData:
+            if not entry[0] in core_l1_seeds:
+                continue
             core_data.append(entry)
-            if bad_rate:
-                Warn.append(True)
-                nBadRates += 1
+            bad_seed_rate = (abs(entry[3]) > AllowedRatePercDiff)
+            if bad_seed_rate:
+                Warn.append(True) #Currently, number of bad rates to show refers to bad HLT triggers (no limit on the number of bad L1 seeds to show)
             else:
                 Warn.append(False)
 
-    for index,entry in enumerate(core_data):#Dont show 0s if we don't actually have a prediction; it's confusing
-        if entry[6] == "No prediction (fit missing)":
+    for index,entry in enumerate(core_data): 
+        if entry[6] == "No prediction (fit missing)": #Dont show 0s if we don't actually have a prediction; it's confusing
             core_data[index] = [entry[0],entry[1],"--","--","--",entry[5],entry[6]]
-        if entry[0].startswith('L1'):
+        if entry[0].startswith('L1'): #Don't show sigma value for L1 since we don't trust them
             core_data[index] = [entry[0],entry[1],entry[2],entry[3],"--",entry[5],entry[6]]
 
     try:
