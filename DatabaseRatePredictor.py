@@ -316,7 +316,7 @@ def main():
             print_table = False
             data_clean = True
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            plot_properties = [["ls", "rate", False, True, False,fitFile]]            
+            plot_properties = [["delivered", "rate", False, True, False,fitFile]]            
             ## rate is calculated as: (measured rate, deadtime corrected) * prescale [prediction not dt corrected]
             ## rawrate is calculated as: measured rate [prediction is dt corrected]
 
@@ -712,7 +712,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                     OutputFit[print_trigger] = ["fit failed","Zero NDF"]
                 ###output fit params
                 else:    
-                    [OutputFit,first_trigger, failed_paths]=output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,first_trigger,Rates,width,chioffset,wp_bool,num_ls,meanrawrate,OutputFit, failed_paths, PSColslist)
+                    [OutputFit,first_trigger, failed_paths]=output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,first_trigger,Rates,width,chioffset,wp_bool,num_ls,meanrawrate,OutputFit, failed_paths, PSColslist, dummyPSColslist)
             if do_fit:        
                 for PSI in PSColslist:
                     if not OutputFitPS[PSI][print_trigger]:
@@ -1148,16 +1148,44 @@ def GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,pri
 #[FitType, X0, X1, X2, X3, sigma, X0err]
 
 
-def CalcSigma(var_x, var_y, func):
+def CalcSigma(var_x, var_y, func, do_high_lumi):
     residuals = []
+    residuals_high_lumi = []
+    res_frac = []
+    res_frac_high_lumi = []
     for x, y in zip(var_x,var_y):
         residuals.append(y - func.Eval(x,0,0))
+        res_frac.append((y - func.Eval(x,0,0))/math.sqrt(func.Eval(x,0,0)))
+        if x > 6000:
+            residuals_high_lumi.append(y - func.Eval(x,0,0))
+            res_frac_high_lumi.append((y - func.Eval(x,0,0))/math.sqrt(func.Eval(x,0,0)))
 
     res_squared = [i*i for i in residuals]
+    res_frac_squared = [i*i for i in res_frac]
+    res_high_lumi_squared = [i*i for i in residuals_high_lumi]
+    res_frac_high_lumi_squared = [i*i for i in res_frac_high_lumi]
+    dev_high_lumi_squared = [i*fabs(i) for i in residuals_high_lumi]
+    dev_frac_high_lumi_squared = [i*fabs(i) for i in res_frac_high_lumi]
+    
     if len(res_squared) > 2:
-        sigma = math.sqrt(sum(res_squared)/(len(res_squared)-2))
+        sigma = math.sqrt(sum(res_squared)/(1.0*len(res_squared)-2.0))
+        sigma_frac = math.sqrt(sum(res_frac_squared)/(1.0*len(res_frac_squared)-2.0))
     else:
         sigma = 0
+
+    if len(res_high_lumi_squared) > 10 and do_high_lumi:
+        high_lumi_sigma_frac = math.sqrt(sum(res_frac_high_lumi_squared)/(1.0*len(res_frac_high_lumi_squared))) ##Statistics limited, don't subtract 2
+        high_lumi_dev_frac = math.sqrt( fabs( sum(dev_frac_high_lumi_squared)/(1.0*len(dev_frac_high_lumi_squared)) ) ) ##Statistics limited, don't subtract 2
+        if high_lumi_sigma_frac > 1.25*sigma_frac: 
+            #print "high_lumi_sigma_frac is higher by "+str(100*round((high_lumi_sigma_frac/sigma_frac)-1,2))+"% than sigma_frac ("+str(round(sigma_frac,2))+")"
+            sigma = sigma*( 0.5 + 0.5*(high_lumi_sigma_frac/sigma_frac) )
+            sigma_frac = sigma_frac*( 0.5 + 0.5*(high_lumi_sigma_frac/sigma_frac) )
+        if high_lumi_dev_frac > 4.0*math.sqrt(1.0/(1.0*len(res_frac_high_lumi_squared)-2.0))*sigma_frac:
+            #print "Total points: "+str(len(res_frac_squared))
+            #print "High lumi points: "+str(len(res_frac_high_lumi_squared))
+            #print "high_lumi_dev_frac is "+str(100*round(high_lumi_dev_frac/sigma_frac,2))+"% of sigma_frac ("+str(round(sigma_frac,2))+")"
+            sigma = sigma*(1.0 + 0.5*(high_lumi_dev_frac/sigma_frac) )
+        
     return sigma
 
 def GetJSON(json_file):
@@ -1635,7 +1663,7 @@ def more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates):
 
     return [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte, passed]
     
-def output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,first_trigger,Rates,width,chioffset,wp_bool,num_ls,meanrawrate,OutputFit, failed_paths, PSColslist):
+def output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,first_trigger,Rates,width,chioffset,wp_bool,num_ls,meanrawrate,OutputFit, failed_paths, PSColslist, dummyPSColslist):
     [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte,passed]=more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
     OutputFit[print_trigger] = {}
 
@@ -1657,34 +1685,31 @@ def output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,
 
         if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and ((f1c_Chi2 < f1b_Chi2) or f1b_BadMinimum) and f1c_Chi2 < (f1d_Chi2*chioffset) and not f1c_BadMinimum and len(VX)>1):
             graph_fit_type="expo"
-            [f1c,OutputFit]=graph_output_info(f1c,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist)
-            priot(wp_bool,print_trigger,meanps,f1d,f1c,graph_fit_type,av_rte)                    
+            [f1c,OutputFit]=graph_output_info(f1c,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
+            priot(wp_bool,print_trigger,meanps,f1d,f1c,graph_fit_type,av_rte)
             
-
         elif ((f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and f1b_Chi2 < (f1d_Chi2*chioffset) and not f1b_BadMinimum and len(VX)>1):
             graph_fit_type="cube"
-            [f1b,OutputFit]=graph_output_info(f1b,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist)
+            [f1b,OutputFit]=graph_output_info(f1b,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
             priot(wp_bool,print_trigger,meanps,f1d,f1b,graph_fit_type,av_rte)
-            
 
         elif (f1a_Chi2 < (f1d_Chi2*chioffset)):
             graph_fit_type="quad"
-            [f1a,OutputFit]=graph_output_info(f1a,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist)
+            [f1a,OutputFit]=graph_output_info(f1a,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
             priot(wp_bool,print_trigger,meanps,f1d,f1a,graph_fit_type,av_rte)
-            
 
         else:
             graph_fit_type="line"
-            [f1d,OutputFit]=graph_output_info(f1d,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist)
+            [f1d,OutputFit]=graph_output_info(f1d,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
             priot(wp_bool,print_trigger,meanps,f1d,f1d,graph_fit_type,av_rte)
             
     else:
         graph_fit_type="quad"
-        [f1a,OutputFit]=graph_output_info(f1a,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist)
+        [f1a,OutputFit]=graph_output_info(f1a,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
         #priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
         
     return [OutputFit,first_trigger, failed_paths]
-def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,meanrawrate,OutputFit,PSColslist):
+def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist):
     PSlist=deque(PSColslist)
     PSmin=PSlist.popleft()
     if not PSlist:
@@ -1694,8 +1719,9 @@ def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,me
     
     print '%-*s | %s | %-8.1f | +/-%-8.1f | %8.1e | +/-%.1e | %8.1e | +/-%.1e | %-8.1e | +/-%.1e | %6.0f | %4.0f | %5.2f | %d-%d' % (width,print_trigger, graph_fit_type,graph1.GetParameter(0) , graph1.GetParError(0) , graph1.GetParameter(1) , graph1.GetParError(1) , graph1.GetParameter(2), graph1.GetParError(2) ,graph1.GetParameter(3), graph1.GetParError(3) ,graph1.GetChisquare() , graph1.GetNDF() , graph1.GetChisquare()/graph1.GetNDF(), PSmin, PSmax)
     graph1.SetLineColor(1)                    
-    #priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)                    
-    sigma = CalcSigma(VX, VY, graph1)*math.sqrt(num_ls)                    
+    #priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)
+    do_high_lumi = print_trigger.startswith('HLT_') and ((len(dummyPSColslist)==1 or ( max(PSColslist)>=5 and min(PSColslist)==3) ))
+    sigma = CalcSigma(VX, VY, graph1, do_high_lumi)*math.sqrt(num_ls)                    
     OutputFit[print_trigger] = [graph_fit_type, graph1.GetParameter(0) , graph1.GetParameter(1) , graph1.GetParameter(2) ,graph1.GetParameter(3) , sigma , meanrawrate, graph1.GetParError(0) , graph1.GetParError(1) , graph1.GetParError(2) , graph1.GetParError(3)]
     return [graph1,OutputFit]
 
