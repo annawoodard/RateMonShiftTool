@@ -489,7 +489,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             PSCorrectedExpectedRate = Config.GetExpectedRate(HeadName,FitInput,FitInputPS,HeadAvLiveLumi,HeadAvDeliveredLumi,deadtimebeamactive,Config.L1SeedChangeFit,HeadLumiRange,PSColumnByLS)
             VC = PSCorrectedExpectedRate[2]
             try:
-                sigma = PSCorrectedExpectedRate[1]/(sqrt(len(HeadLumiRange))* HeadUnprescaledRates[HeadName][1])
+                sigma = PSCorrectedExpectedRate[1]*sqrt(PSCorrectedExpectedRate[0])/(sqrt(len(HeadLumiRange))* HeadUnprescaledRates[HeadName][1])
                 ExpectedRate = round((PSCorrectedExpectedRate[0] / HeadUnprescaledRates[HeadName][1]),2)                
             except:
                 sigma = 0.0

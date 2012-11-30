@@ -1103,15 +1103,15 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
                         rawrate_fit_t.append(0.0)
                         
                     rate_fit_t.append(rate_prediction)                        
-                    e_rate_fit_t.append(sigma)
+                    e_rate_fit_t.append(sigma*math.sqrt(rate_prediction))
                     rawxsec_fit_t.append(rawrate_fit_t[-1]/live_t[-1])
                     xsec_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/live_t[-1])
                     try:
                             
                         if not TMDerr:
-                            e_rawrate_fit_t.append(sigma*rawrate_fit_t[-1]/rate_fit_t[-1])
-                            e_rawxsec_fit_t.append(sigma*rawxsec_fit_t[-1]/rate_fit_t[-1])
-                            e_xsec_fit_t.append(sigma*xsec_fit_t[-1]/rate_fit_t[-1])
+                            e_rawrate_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*rawrate_fit_t[-1]/rate_fit_t[-1])
+                            e_rawxsec_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*rawxsec_fit_t[-1]/rate_fit_t[-1])
+                            e_xsec_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*xsec_fit_t[-1]/rate_fit_t[-1])
 
                             ###error from TMD predictions, calculated at 5e33
                             
@@ -1172,6 +1172,7 @@ def CalcSigma(var_x, var_y, func, do_high_lumi):
         sigma_frac = math.sqrt(sum(res_frac_squared)/(1.0*len(res_frac_squared)-2.0))
     else:
         sigma = 0
+        sigma_frac = 0
 
     if len(res_high_lumi_squared) > 10 and do_high_lumi:
         high_lumi_sigma_frac = math.sqrt(sum(res_frac_high_lumi_squared)/(1.0*len(res_frac_high_lumi_squared))) ##Statistics limited, don't subtract 2
@@ -1185,8 +1186,9 @@ def CalcSigma(var_x, var_y, func, do_high_lumi):
             #print "High lumi points: "+str(len(res_frac_high_lumi_squared))
             #print "high_lumi_dev_frac is "+str(100*round(high_lumi_dev_frac/sigma_frac,2))+"% of sigma_frac ("+str(round(sigma_frac,2))+")"
             sigma = sigma*(1.0 + 0.5*(high_lumi_dev_frac/sigma_frac) )
+            sigma_frac = sigma_frac*(1.0 + 0.5*(high_lumi_dev_frac/sigma_frac) )
         
-    return sigma
+    return sigma_frac
 
 def GetJSON(json_file):
 
