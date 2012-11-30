@@ -41,7 +41,7 @@ def usage():
     print "--NumberLS=<#>                       Specify the last lumisection to consider. Make sure LastLS > LSSlidingWindow"
     print "                                        or set LSSlidingWindow = -1"  
     print "--IgnoreLowRate=<rate>               Ignore triggers with an actual and expected rate below <rate>"
-    print "--ListIgnoredPaths                   Prints the paths that are not compared by this script and their rate in the CompareRun"
+    print "--AllTriggers                   Prints the paths that are not compared by this script and their rate in the CompareRun"
     print "--PrintLumi                          Prints Instantaneous, Delivered, and Live lumi by LS for the run"
     print "--RefRun=<Run #>                     Specifies <Run #> as the reference run to use (Default in defaults.cfg)"
     print "--ShowPSTriggers                     Show prescaled triggers in rate comparison"
@@ -60,7 +60,7 @@ def main():
     pickYear()
     try:
         opt, args = getopt.getopt(sys.argv[1:],"",["AllowedPercDiff=","AllowedSigmaDiff=","CompareRun=","FindL1Zeros",\
-                                                   "FirstLS=","NumberLS=","IgnoreLowRate=","ListIgnoredPaths",\
+                                                   "FirstLS=","NumberLS=","IgnoreLowRate=","AllTriggers",\
                                                    "PrintLumi","RefRun=","ShowPSTriggers","force","sortBy=","write","ShowAllBadRates","help"])
     except getopt.GetoptError, err:
         print str(err)
@@ -87,7 +87,7 @@ def main():
     FirstLS           = 9999
     NumLS             = -10
     IgnoreThreshold   = Config.DefAllowIgnoreThresh
-    ListIgnoredPaths  = Config.ListIgnoredPaths
+    AllTriggers  = Config.AllTriggers
     PrintLumi         = False
     RefRunNum         = int(Config.ReferenceRun)
     ShowPSTriggers    = True
@@ -118,8 +118,8 @@ def main():
             NumLS = int(a)
         elif o=="--IgnoreLowRate":
             IgnoreThreshold = float(a)
-        elif o=="--ListIgnoredPaths":
-            ListIgnoredPaths=True
+        elif o=="--AllTriggers":
+            AllTriggers=True
             ShifterMode = False
         elif o=="--PrintLumi":
             PrintLumi = True
@@ -303,7 +303,6 @@ def main():
                             isBeams=False
 
                     if not (isCol and isBeams):
-                    ##clear()
                         MoreTableInfo(HeadParser,HeadLumiRange,Config,False)
                     else:
                         if (len(HeadLumiRange)>0):
@@ -311,19 +310,18 @@ def main():
                                 print "Some lumisections have been skipped. Averaging over most recent sequential lumisections..."
                                 sequential_chunk = getSequential(HeadLumiRange)
                                 HeadLumiRange = sequential_chunk                                
-                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates,MaxBadRates)
+                            RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,AllTriggers,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates,MaxBadRates)
                             if FindL1Zeros:
                                 CheckL1Zeros(HeadParser,RefRunNum,RefRates,RefLumis,LastSuccessfulIterator,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config)
                         else:
                             print "No lumisections that are taking physics data 1"
-            if ShifterMode:
-                #print "Shifter Mode. Continuing"
-                pass
-            else:
+
+            if not ShifterMode:
                 print "Expert Mode. Quitting."
                 sys.exit(0)
 
             print "Sleeping for 1 minute before repeating  "
+
             for iSleep in range(20):
                 write(".")
                 sys.stdout.flush()
@@ -380,7 +378,6 @@ def main():
                             isGood=1
                             isCol=0
                     #LastGoodLS=HeadParser.GetLastLS(isCol)
-                
                 except:
                     isGood=0
                     isCol=0
@@ -392,7 +389,7 @@ def main():
         print "Quitting. Peace Out."
 
             
-def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,ListIgnoredPaths,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates,MaxBadRates):
+def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRatePercDiff,AllowedRateSigmaDiff,IgnoreThreshold,Config,AllTriggers,SortBy,WarnOnSigmaDiff,ShowSigmaAndPercDiff,writeb,ShowAllBadRates,MaxBadRates):
     Data   = []
     Warn   = []
     IgnoredRates=[]
@@ -469,9 +466,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             HeadUnprescaledRates[StripVersion(trigger)] = HeadUnprescaledRates.pop(trigger)
                 
     for HeadName in HeadUnprescaledRates:
-        if HeadName not in trig_list and not ListIgnoredPaths and not ShowAllBadRates:
+        if HeadName not in trig_list and not AllTriggers and not ShowAllBadRates:
             continue
-        if HeadName not in FitInput.keys() and not ListIgnoredPaths and not ShowAllBadRates:
+        if HeadName not in FitInput.keys() and not AllTriggers and not ShowAllBadRates:
             continue                   
 
         masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero","HLT_BeamHalo"]
@@ -583,19 +580,20 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         if not entry[0].startswith('HLT'):
             continue
         bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and RefParser.RunNumber > 0)
-        if entry[0] in trig_list or ListIgnoredPaths or (bad_rate and ShowAllBadRates and nBadRates < MaxBadRates):
+        if entry[0] in trig_list or AllTriggers or (bad_rate and ShowAllBadRates and nBadRates < MaxBadRates):
             core_data.append(entry)
             if bad_rate and nBadRates < MaxBadRates:
                 if Config.DoL1:
                     for seed in L1HLTseeds[entry[0]]:
-                        seed_rate = [line[3] for line in SortedData if line[0] == seed]
                         if not seed in core_l1_seeds:
-                            core_l1_seeds.append(seed)
-                        bad_seed_rate = (abs(seed_rate[0]) > AllowedRatePercDiff)
-                        if bad_seed_rate:
-                            if bad_seeds_string != "":
-                                bad_seeds_string += ", "
-                            bad_seeds_string += seed
+                            core_l1_seeds.append(seed)                        
+                        seed_rate = [line[3] for line in SortedData if line[0] == seed]
+                        if seed_rate:
+                            bad_seed_rate = (abs(seed_rate[0]) > AllowedRatePercDiff)
+                            if bad_seed_rate:
+                                if bad_seeds_string != "":
+                                    bad_seeds_string += ", "
+                                bad_seeds_string += seed 
                     entry[6] = bad_seeds_string
                 Warn.append(True)
                 nBadRates += 1
