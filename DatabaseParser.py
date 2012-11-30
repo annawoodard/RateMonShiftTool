@@ -618,6 +618,7 @@ class DatabaseParser:
         self.curs.execute(L1PrescalesQuery)
         ## This is pretty horrible, but this how you get them!!
         tmp = self.curs.fetchall()
+        self.L1PrescaleTable = []
         for ps in tmp[0]: #build the prescale table initially
             self.L1PrescaleTable.append([ps])
         for line in tmp[1:]: # now fill it
@@ -761,7 +762,6 @@ class DatabaseParser:
         self.GetLumiInfo()
         self.LastLSParsed=-1
         self.GetMoreLumiInfo()
-        self.LastLsParsed=-1
         #self.GetDeadTimeBeamActive()
 
     def UpdateRun(self,LSRange):
