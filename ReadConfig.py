@@ -19,7 +19,7 @@ class RateMonConfig:
         self.MonitorSlope=[]
         self.MonitorQuad=[]
         self.L1Predictions=[]
-        self.ListIgnoredPaths=0
+        self.AllTriggers=0
         self.MonTargetLumi=0
         self.FindL1Zeros=0
         self.LSWindow=-1
@@ -104,8 +104,8 @@ class RateMonConfig:
                         print "Cannot parse Forbidden Cols parameter"
             elif par=="L1CrossSection":
                 self.L1Predictions = self.ReadList(arg)
-            elif par =="ListIgnoredPaths":
-                self.ListIgnoredPaths=int(arg)
+            elif par =="AllTriggers":
+                self.AllTriggers=int(arg)
             elif par=="MonitorTargetLumi":
                 self.MonTargetLumi=float(arg)
             elif par=="FindL1Zeros":
@@ -138,6 +138,7 @@ class RateMonConfig:
                 self.L1SeedChangeFit=int(arg)
             else:
                 print "Invalid Option : "+strippedLine
+
         f.close()
                 
     def AnalyzeTrigger(self,TrigName): ## Have to pass this a version number stripped Trigger
