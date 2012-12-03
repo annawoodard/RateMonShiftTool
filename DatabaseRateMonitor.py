@@ -463,7 +463,9 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             FitInput[StripVersion(trigger)] = FitInput.pop(trigger)
         for trigger in HeadUnprescaledRates:
             HeadUnprescaledRates[StripVersion(trigger)] = HeadUnprescaledRates.pop(trigger)
-                
+
+    RefAvInstLumi = 0
+    found_ref_rates = True
     for HeadName in HeadUnprescaledRates:
         if HeadName not in trig_list and not AllTriggers and not ShowAllBadRates:
             continue
@@ -514,21 +516,24 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             Data.append([HeadName, TriggerRate, ExpectedRate, PerDiff, SigmaDiff, round(HeadUnprescaledRates[HeadName][1],0),VC])
 
         else:  ## Use a reference run
-            ## cheap trick to only get triggers in list when in shifter mode
-            #print "shifter mode=",int(Config.ShifterMode)
-            ##    continue
-            
             RefInstLumi = 0
             RefIterator = 0
             RefStartIndex = ClosestIndex(HeadAvInstLumi,RefParser.GetAvLumiPerRange())
             RefLen = -10
-            
-            RefUnprescaledRates = RefParser.UpdateRun(RefParser.GetLSRange(RefStartIndex,RefLen))
-            [RefAvInstLumi,RefAvLiveLumi,RefAvDeliveredLumi,RefAvDeadTime,RefPSCols] = RefParser.GetAvLumiInfo(RefParser.GetLSRange(RefStartIndex,RefLen))
-            if Config.DoL1:
-                RefL1RatesALL = RefParser.GetL1RatesALL(HeadLumiRange)
+            RefLSRange = RefParser.GetLSRange(RefStartIndex,RefLen)
+
+            RefUnprescaledRates = RefParser.UpdateRun(RefLSRange)
+
+            [RefAvInstLumi,RefAvLiveLumi,RefAvDeliveredLumi,RefAvDeadTime,RefPSCols] = RefParser.GetAvLumiInfo(RefLSRange)
+            if Config.DoL1 and RefUnprescaledRates != {}:
+                RefL1RatesALL = RefParser.GetL1RatesALL(RefLSRange)
                 for L1seed in RefL1RatesALL.iterkeys():
                     RefUnprescaledRates[L1seed]=RefL1RatesALL[L1seed]
+
+            if RefUnprescaledRates == {}:
+                found_ref_rates = False
+                for path in HeadUnprescaledRates.iterkeys():
+                    RefUnprescaledRates[path] = [0.0,0.0,0.0,0.0]
                         
             RefRate = -1
             for k,v in RefUnprescaledRates.iteritems():
@@ -553,6 +558,12 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
             VC = ""
             Data.append([HeadName,TriggerRate,ScaledRefRate,PerDiff,SigmaDiff,round((HeadUnprescaledRates[HeadName][1]),0),VC])
 
+    if not found_ref_rates:
+        print '\n*****************************************************************************************************************************************************'
+        print 'COULD NOT PARSE REFERENCE RUN! MOST LIKELY THIS IS BECAUSE THE REFERENCE RUN DOES NOT PASS THE QUALITY CUTS (DEADTIME < 100%, PHYSICS DECALRED, ETC.)'
+        print 'Setting all reference rates to zero...'
+        print '*****************************************************************************************************************************************************'        
+        
     SortedData = []
     if SortBy == "":
         SortedData=sorted(Data, key=lambda entry: abs(entry[3]),reverse=True) 
@@ -581,7 +592,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and RefParser.RunNumber > 0)
         if entry[0] in trig_list or AllTriggers or (bad_rate and ShowAllBadRates and nBadRates < MaxBadRates):
             core_data.append(entry)
-            if bad_rate and nBadRates < MaxBadRates:
+            if bad_rate or (ShowAllBadRates and nBadRates < MaxBadRates):
                 if Config.DoL1:
                     for seed in L1HLTseeds[entry[0]]:
                         if not seed in core_l1_seeds:
@@ -645,7 +656,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         prettyCSVwriter("rateMon_newmenu.csv",[80,10,10,10,10,20,comment_width],Header,core_data,Warn)
 
     MoreTableInfo(HeadParser,HeadLumiRange,Config,True)
-    if RefParser.RunNumber > 0:
+    if RefParser.RunNumber > 0 and RefAvInstLumi > 0:
         print "The average instantaneous lumi for the reference run is: %s e30\n" % (round(RefAvInstLumi,1))
 
     if nBadRates == MaxBadRates:

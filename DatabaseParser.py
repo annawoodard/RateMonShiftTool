@@ -371,6 +371,7 @@ class DatabaseParser:
             pastLSCol=ls
             if ls>self.LastLSParsed:
                 self.LastLSParsed=ls
+                
         self.LumiInfo = [self.PSColumnByLS, self.InstLumiByLS, self.DeliveredLumiByLS, self.LiveLumiByLS, self.DeadTime, self.Physics, self.Active]
 
         return self.LumiInfo
@@ -762,6 +763,7 @@ class DatabaseParser:
         self.GetLumiInfo()
         self.LastLSParsed=-1
         self.GetMoreLumiInfo()
+        self.LastLsParsed=-1
         #self.GetDeadTimeBeamActive()
 
     def UpdateRun(self,LSRange):
@@ -908,8 +910,6 @@ class DatabaseParser:
         return L1Rate
 
     def GetL1RatesALL(self,LSRange):
-
-
         ##ANCIENT COMMANDS THAT DO WHO KNOWS WHAT
         ##sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, RATE_HZ, SCALER_INDEX FROM CMS_GT_MON.V_SCALERS_TCS_TRIGGER WHERE RUN_NUMBER=%s AND LUMI_SECTION IN %s and SCALER_INDEX=9"
         ##sqlquery = "SELECT RUN_NUMBER, LUMI_SECTION, RATE_HZ, SCALER_INDEX FROM CMS_GT_MON.V_SCALERS_FDL_ALGO WHERE RUN_NUMBER=%s AND LUMI_SECTION IN %s and SCALER_INDEX IN (9,13, 71)"
@@ -949,8 +949,6 @@ class DatabaseParser:
         for line in self.L1PrescaleTable:
             L1PSdict[counter]=line
             counter=counter+1
-        for LS in LSRange:    
-            self.PSColumnByLS[LS]    
 
         ###av ps dict
         L1PSbits={}    
@@ -959,8 +957,9 @@ class DatabaseParser:
         for bit in L1PSdict.iterkeys():
             for LS in LSRange:
                 L1PSbits[bit]=L1PSbits[bit]+L1PSdict[bit][self.PSColumnByLS[LS]]
-        for bit in L1PSdict.iterkeys():
+        for bit in L1PSbits.iterkeys():            
             L1PSbits[bit]=L1PSbits[bit]/len(LSRange)
+
         
         ###convert dict of L1 bits to dict of L1 names        
         L1RatesNames={}
