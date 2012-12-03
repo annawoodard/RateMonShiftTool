@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-#from AndrewGetRun import GetRun
 from ReadConfig import RateMonConfig
 import sys
 import os
@@ -706,6 +705,7 @@ def getSequential(range):
     for i,j in zip(range[-2::-1],range[::-1]):
         if j-i != 1:
             range = range[range.index(j):]
+            break
     return range
 
 
