@@ -1038,7 +1038,23 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
             realvalue = Rates[print_trigger]["rate"][iterator]
             
         if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff,max_dt,print_info, trig_list, first_trigger):
-                
+            if not do_fit:
+                [FitType, X0, X1, X2, X3, sigma, X0err] = GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,print_trigger)
+                if not do_inst:
+                    if FitType == "expo":
+                        rate_prediction = X0 + X1*math.exp(X2+X3*delivered_t[-1])
+                    else:
+                        rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1] + X3*delivered_t[-1]*delivered_t[-1]*delivered_t[-1]
+                        
+                else:
+                    if FitType == "expo":
+                        rate_prediction = X0 + X1*math.exp(X2+X3*inst_t[-1])
+                    else:
+                        rate_prediction = X0 + X1*inst_t[-1] + X2*inst_t[-1]*inst_t[-1] + X3*inst_t[-1]*inst_t[-1]*inst_t[-1]
+
+                if rate_prediction != abs(rate_prediction):
+                    continue
+            
             run_t.append(Rates[print_trigger]["run"][iterator])
             ls_t.append(Rates[print_trigger]["ls"][iterator])
             ps_t.append(Rates[print_trigger]["ps"][iterator])
@@ -1062,6 +1078,7 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
             e_rawrate_t.append(math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3)))
             e_rate_t.append(Rates[print_trigger]["ps"][iterator]*math.sqrt(Rates[print_trigger]["rawrate"][iterator]/(num_ls*23.3)))
             e_psi_t.append(0.0)
+
             if live_t[-1] == 0:
                 e_rawxsec_t.append(0)
                 e_xsec_t.append(0)
@@ -1072,22 +1089,8 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
                 except:
                     e_rawxsec_t.append(0.)
                     e_xsec_t.append(0.)
+
             if not do_fit:
-                [FitType, X0, X1, X2, X3, sigma, X0err]=GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,print_trigger)
-                if not do_inst:
-                    if FitType == "expo":
-                        rate_prediction = X0 + X1*math.exp(X2+X3*delivered_t[-1])
-                    else:
-                        rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1] + X3*delivered_t[-1]*delivered_t[-1]*delivered_t[-1]
-                        
-                else:
-                    if FitType == "expo":
-                        rate_prediction = X0 + X1*math.exp(X2+X3*inst_t[-1])
-                    else:
-                        rate_prediction = X0 + X1*inst_t[-1] + X2*inst_t[-1]*inst_t[-1] + X3*inst_t[-1]*inst_t[-1]*inst_t[-1]
-
-                rate_prediction = abs(rate_prediction)
-
                 if live_t[-1] == 0:
                     rawrate_fit_t.append(0)
                     rate_fit_t.append(0)
@@ -1156,11 +1159,12 @@ def CalcSigma(var_x, var_y, func, do_high_lumi):
     res_frac = []
     res_frac_high_lumi = []
     for x, y in zip(var_x,var_y):
-        residuals.append(y - func.Eval(x,0,0))
-        res_frac.append((y - func.Eval(x,0,0))/math.sqrt(func.Eval(x,0,0)))
-        if x > 6000:
-            residuals_high_lumi.append(y - func.Eval(x,0,0))
-            res_frac_high_lumi.append((y - func.Eval(x,0,0))/math.sqrt(func.Eval(x,0,0)))
+        if (func.Eval(x,0,0) == abs(func.Eval(x,0,0))): 
+            residuals.append(y - func.Eval(x,0,0))
+            res_frac.append((y - func.Eval(x,0,0))/math.sqrt(func.Eval(x,0,0)))
+            if x > 6000:
+                residuals_high_lumi.append(y - func.Eval(x,0,0))
+                res_frac_high_lumi.append((y - func.Eval(x,0,0))/math.sqrt(func.Eval(x,0,0)))
 
     res_squared = [i*i for i in residuals]
     res_frac_squared = [i*i for i in res_frac]
@@ -1713,6 +1717,7 @@ def output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,
         #priot(wp_bool,print_trigger,meanps,f1d,f1a,"quad",av_rte)
         
     return [OutputFit,first_trigger, failed_paths]
+
 def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist):
     PSlist=deque(PSColslist)
     PSmin=PSlist.popleft()
@@ -1725,8 +1730,9 @@ def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,me
     graph1.SetLineColor(1)                    
     #priot(wp_bool,print_trigger,meanps,f1d,f1c,"expo",av_rte)
     do_high_lumi = print_trigger.startswith('HLT_') and ((len(dummyPSColslist)==1 or ( max(PSColslist)>=5 and min(PSColslist)==3) ))
-    sigma = CalcSigma(VX, VY, graph1, do_high_lumi)*math.sqrt(num_ls)                    
+    sigma = CalcSigma(VX, VY, graph1, do_high_lumi)*math.sqrt(num_ls)
     OutputFit[print_trigger] = [graph_fit_type, graph1.GetParameter(0) , graph1.GetParameter(1) , graph1.GetParameter(2) ,graph1.GetParameter(3) , sigma , meanrawrate, graph1.GetParError(0) , graph1.GetParError(1) , graph1.GetParError(2) , graph1.GetParError(3)]
+        
     return [graph1,OutputFit]
 
 
@@ -1777,7 +1783,7 @@ def EndMkrootfile(failed_paths, save_fits, save_root, fit_file, RootFile, Output
         print "Output fit file is "+str(fit_file)
     if save_fits and L1SeedChangeFit:
         PSfitfile=fit_file.replace("HLT_NoV","HLT_NoV_ByPS")
-        print "PS fit_file=",PSfitfile
+        print "A corresponding PS fit file has been saved."
         if os.path.exists(PSfitfile):
             os.remove(PSfitfile)
         FitOutputFilePS= open(PSfitfile, 'wb')
