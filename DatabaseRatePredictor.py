@@ -1086,6 +1086,8 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
                     else:
                         rate_prediction = X0 + X1*inst_t[-1] + X2*inst_t[-1]*inst_t[-1] + X3*inst_t[-1]*inst_t[-1]*inst_t[-1]
 
+                rate_prediction = abs(rate_prediction)
+
                 if live_t[-1] == 0:
                     rawrate_fit_t.append(0)
                     rate_fit_t.append(0)
