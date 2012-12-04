@@ -35,6 +35,7 @@ class RateMonConfig:
         self.DoL1=0
         self.DefaultMaxBadRatesToShow=500
         self.L1SeedChangeFit=0
+        self.ShowAllBadRates=0
         
     def ReadList(self,filename):
         filename=self.BasePath+'/'+filename
@@ -136,6 +137,8 @@ class RateMonConfig:
                 self.DefaultMaxBadRatesToShow=int(arg)
             elif par=="L1SeedChangeFit":
                 self.L1SeedChangeFit=int(arg)
+            elif par=="ShowAllBadRates":
+                self.ShowAllBadRates=int(arg)                
             else:
                 print "Invalid Option : "+strippedLine
 
