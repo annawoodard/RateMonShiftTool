@@ -66,7 +66,7 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
         expressRates = parser.GetTriggerRatesByLS("ExpressOutput")
     else:
         if len(parser.GetTriggerRatesByLS("ExpressOutput"))>0:
-            expressRates=parser.GetTriggerRatesByLS("else")
+            expressRates=parser.GetTriggerRatesByLS("ExpressOutput")
         else:
             expressRates = parser.GetTriggerRatesByLS("ExpressForCosmicsOutput")
 
