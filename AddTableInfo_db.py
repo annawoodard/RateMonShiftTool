@@ -34,23 +34,22 @@ def MoreTableInfo(parser,LumiRange,config,isCol=True):
             write(colored("Check with Shift Leader if this is expected\n",'red',attrs=['reverse']))
             write(colored("If not, HFLUMI needs to be red-recycled\n\n\n",'red',attrs=['reverse']))
             write(colored("If in doubt, call Lumi DOC\n\n\n",'red',attrs=['reverse']))
-            #return
                                                                                                                                                                                                                                                                     
     try:
-        #print "trying v3"
         lograte=parser.GetTriggerRatesByLS("HLT_LogMonitor_v3")
-        #print lograte
         if not len(lograte):
-            #print "trying v4"
             lograte=parser.GetTriggerRatesByLS("HLT_LogMonitor_v4")
-            
-        #print lograte
-        for lumi in lograte.iterkeys():
-            #print lumi, lograte[lumi]
-            if lograte[lumi]>config.MaxLogMonRate:
-                write(bcolors.WARNING)
-                print lograte[lumi], "post to elog. LogMonitor rate is high."
-                write(bcolors.ENDC+"\n")
+
+        for ls in LumiRange: 
+            current_lograte = lograte.get(ls,0)
+            lograte_sum =+ current_lograte
+
+        lograte_average = lograte_sum/len(LumiRange)
+        if lograte_average > config.MaxLogMonRate:
+            write(bcolors.WARNING)
+            print "Post to elog. LogMonitor rate is high: %.2f" % (lograte_average)
+            write(bcolors.ENDC+"\n")              
+
     except:
         write(bcolors.WARNING)
         print "problem getting log monitor rates"
