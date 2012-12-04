@@ -316,7 +316,7 @@ def main():
             print_table = False
             data_clean = True
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            plot_properties = [["delivered", "rate", False, True, False,fitFile]]            
+            plot_properties = [["ls", "rate", False, True, False,fitFile]]            
             ## rate is calculated as: (measured rate, deadtime corrected) * prescale [prediction not dt corrected]
             ## rawrate is calculated as: measured rate [prediction is dt corrected]
 
@@ -973,7 +973,7 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
             try:
                 FitTypePS[psi] = InputFitPS[psi][print_trigger][0]
             except:
-                failed_paths.append([print_trigger+str(psi),"This path did not exist in the monitorlist used to create the fit"])
+                failed_paths.append([print_trigger+'_PS_'+str(psi),"This path did not exist in the monitorlist used to create the fit"])
                 FitTypePS[psi] = "parse failed"
                 passed=0
                 fitparamsPS=[FitTypePS, X0PS, X1PS, X2PS, X3PS, sigmaPS, X0errPS]
@@ -1038,23 +1038,6 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
             realvalue = Rates[print_trigger]["rate"][iterator]
             
         if pass_cuts(data_clean, realvalue, prediction, meanxsec, Rates, print_trigger, iterator, num_ls,LumiPageInfo,SubSystemOff,max_dt,print_info, trig_list, first_trigger):
-            if not do_fit:
-                [FitType, X0, X1, X2, X3, sigma, X0err] = GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,print_trigger)
-                if not do_inst:
-                    if FitType == "expo":
-                        rate_prediction = X0 + X1*math.exp(X2+X3*delivered_t[-1])
-                    else:
-                        rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1] + X3*delivered_t[-1]*delivered_t[-1]*delivered_t[-1]
-                        
-                else:
-                    if FitType == "expo":
-                        rate_prediction = X0 + X1*math.exp(X2+X3*inst_t[-1])
-                    else:
-                        rate_prediction = X0 + X1*inst_t[-1] + X2*inst_t[-1]*inst_t[-1] + X3*inst_t[-1]*inst_t[-1]*inst_t[-1]
-
-                if rate_prediction != abs(rate_prediction):
-                    continue
-            
             run_t.append(Rates[print_trigger]["run"][iterator])
             ls_t.append(Rates[print_trigger]["ls"][iterator])
             ps_t.append(Rates[print_trigger]["ps"][iterator])
@@ -1089,8 +1072,25 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
                 except:
                     e_rawxsec_t.append(0.)
                     e_xsec_t.append(0.)
-
+                    
             if not do_fit:
+                [FitType, X0, X1, X2, X3, sigma, X0err] = GetCorrectFitParams(fitparams,fitparamsPS,Rates,L1SeedChangeFit,iterator,print_trigger)
+                if not do_inst:
+                    if FitType == "expo":
+                        rate_prediction = X0 + X1*math.exp(X2+X3*delivered_t[-1])
+                    else:
+                        rate_prediction = X0 + X1*delivered_t[-1] + X2*delivered_t[-1]*delivered_t[-1] + X3*delivered_t[-1]*delivered_t[-1]*delivered_t[-1]
+                        
+                else:
+                    if FitType == "expo":
+                        rate_prediction = X0 + X1*math.exp(X2+X3*inst_t[-1])
+                    else:
+                        rate_prediction = X0 + X1*inst_t[-1] + X2*inst_t[-1]*inst_t[-1] + X3*inst_t[-1]*inst_t[-1]*inst_t[-1]
+
+                if rate_prediction != abs(rate_prediction):
+                    rate_prediction = 0
+                    print 'Problem calculating rate prediction.  Setting to 0 for '+print_trigger+': lumisection '+ls_t[-1]
+                    
                 if live_t[-1] == 0:
                     rawrate_fit_t.append(0)
                     rate_fit_t.append(0)
