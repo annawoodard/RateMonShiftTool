@@ -661,7 +661,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
         
         if L1SeedChangeFit and do_fit:
             dummyPSColslist=Rates[print_trigger]["L1seedchange"][0]
-            print print_trigger, dummyPSColslist
+            #print print_trigger, dummyPSColslist
             if len(dummyPSColslist)!=1: 
                 dummyPSColslist.append(range(0,nps))
         else:
