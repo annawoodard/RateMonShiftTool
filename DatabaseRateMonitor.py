@@ -94,7 +94,7 @@ def main():
     writeb            = False
     SortBy            = "rate"
     ShifterMode       = int(Config.ShifterMode) # get this from the config, but can be overridden by other options
-    ShowAllBadRates   = False
+    ShowAllBadRates   = Config.ShowAllBadRates
     MaxBadRates       = Config.DefaultMaxBadRatesToShow
     
     if Config.LSWindow > 0:
@@ -592,7 +592,7 @@ def RunComparison(HeadParser,RefParser,HeadLumiRange,ShowPSTriggers,AllowedRateP
         bad_rate = (abs(entry[4]) > AllowedRateSigmaDiff and WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and not WarnOnSigmaDiff) or (abs(entry[3]) > AllowedRatePercDiff and RefParser.RunNumber > 0)
         if entry[0] in trig_list or AllTriggers or (bad_rate and ShowAllBadRates and nBadRates < MaxBadRates):
             core_data.append(entry)
-            if bad_rate or (ShowAllBadRates and nBadRates < MaxBadRates):
+            if bad_rate or (bad_rate and ShowAllBadRates and nBadRates < MaxBadRates):
                 if Config.DoL1:
                     for seed in L1HLTseeds[entry[0]]:
                         if not seed in core_l1_seeds:
