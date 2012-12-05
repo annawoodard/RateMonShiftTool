@@ -1159,12 +1159,14 @@ def CalcSigma(var_x, var_y, func, do_high_lumi):
     res_frac = []
     res_frac_high_lumi = []
     for x, y in zip(var_x,var_y):
-        if (func.Eval(x,0,0) == abs(func.Eval(x,0,0))): 
-            residuals.append(y - func.Eval(x,0,0))
-            res_frac.append((y - func.Eval(x,0,0))/math.sqrt(func.Eval(x,0,0)))
-            if x > 6000:
-                residuals_high_lumi.append(y - func.Eval(x,0,0))
-                res_frac_high_lumi.append((y - func.Eval(x,0,0))/math.sqrt(func.Eval(x,0,0)))
+        y_predicted = func.Eval(x,0,0)
+        if y_predicted != abs(y_predicted):
+            y_predicted = 0
+        residuals.append(y - y_predicted)
+        res_frac.append((y - y_predicted)/math.sqrt(y_predicted))
+        if x > 6000:
+            residuals_high_lumi.append(y - y_predicted)
+            res_frac_high_lumi.append((y - y_predicted)/math.sqrt(y_predicted))
 
     res_squared = [i*i for i in residuals]
     res_frac_squared = [i*i for i in res_frac]
