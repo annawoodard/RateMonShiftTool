@@ -316,7 +316,7 @@ def main():
             print_table = False
             data_clean = True
             ##plot_properties = [varX, varY, do_fit, save_root, save_png, fit_file]
-            plot_properties = [["ls", "rate", False, True, False,fitFile]]            
+            plot_properties = [["ls", "rawrate", False, True, False,fitFile]]            
             ## rate is calculated as: (measured rate, deadtime corrected) * prescale [prediction not dt corrected]
             ## rawrate is calculated as: measured rate [prediction is dt corrected]
 
@@ -1160,13 +1160,11 @@ def CalcSigma(var_x, var_y, func, do_high_lumi):
     res_frac_high_lumi = []
     for x, y in zip(var_x,var_y):
         y_predicted = func.Eval(x,0,0)
-        if y_predicted != abs(y_predicted):
-            y_predicted = 0
         residuals.append(y - y_predicted)
-        res_frac.append((y - y_predicted)/math.sqrt(y_predicted))
+        res_frac.append((y - y_predicted)/math.sqrt(abs(y_predicted))) #QUICK FIX, WE NEED TO DECIDE HOW TO HANDLE NEGATIVE
         if x > 6000:
             residuals_high_lumi.append(y - y_predicted)
-            res_frac_high_lumi.append((y - y_predicted)/math.sqrt(y_predicted))
+            res_frac_high_lumi.append((y - y_predicted)/math.sqrt(abs(y_predicted)))
 
     res_squared = [i*i for i in residuals]
     res_frac_squared = [i*i for i in res_frac]
