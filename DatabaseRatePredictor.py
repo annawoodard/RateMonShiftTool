@@ -287,7 +287,7 @@ def main():
             else:
                 plot_properties = [["inst", "rate", True, True, False, fitFile]]
         
-            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
+            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero", "HLT_BeamGas", "HLT_Activity", "L1_BeamGas", "L1_ZeroBias"]            
             save_fits = True
             if max_dt==-1.0:
                 max_dt=0.08 ## no deadtime cutuse 2.0
@@ -311,7 +311,7 @@ def main():
             ## rate is calculated as: (measured rate, deadtime corrected) * prescale [prediction not dt corrected]
             ## rawrate is calculated as: measured rate [prediction is dt corrected]
 
-            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero"]
+            masked_triggers = ["AlCa_", "DST_", "HLT_L1", "HLT_Zero", "HLT_BeamGas", "HLT_Activity", "L1_BeamGas", "L1_ZeroBias"]
             save_fits = False
             if max_dt==-1.0:
                 max_dt=2.0 ## no deadtime cut=2.0
@@ -464,7 +464,6 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
                 
                 ###add L1 triggers to list if Do L1
                 if DoL1:
-                    
                     for HLTkey in trig_list:
                         #print name
 #                         if "L1" in HLTkey:
@@ -636,9 +635,8 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
     trig_list=InitTrigList(trig_list, save_fits, NoVersion, InputFit)
 
     for print_trigger in sorted(Rates):
-        [trig_list, passchecktriglist, meanrawrate]=CheckTrigList(trig_list, print_trigger, all_triggers, masked_triggers, min_rate, Rates, run_list, trig_name)
-        if not passchecktriglist:
-            print str(print_trigger)+" did not passchecktriglist"
+        [trig_list, passchecktriglist, meanrawrate] = CheckTrigList(trig_list, print_trigger, all_triggers, masked_triggers, min_rate, Rates, run_list, trig_name, failed_paths)
+        if not passchecktriglist: #failed_paths is modified by CheckTrigList to include output messages explaining why a trigger failed
             continue
         
         [meanrate, meanxsec, meanlumi, sloperate, slopexsec, nlow, nhigh, lowrate, lowxsec, lowlumi, highrate, highxsec, highlumi]=GetMeanRates(Rates, print_trigger, max_dt)
@@ -820,48 +818,43 @@ def InitTrigList(trig_list, save_fits, NoVersion, InputFit):
                 trig_list = goodtrig_list
     return trig_list            
 
-def CheckTrigList(trig_list, print_trigger, all_triggers, masked_triggers, min_rate, Rates, run_list, trig_name):
 ##Limits Rates[] to runs in run_list
+def CheckTrigList(trig_list, print_trigger, all_triggers, masked_triggers, min_rate, Rates, run_list, trig_name, failed_paths):
+
     NewTrigger = {}
-    Passed=1 ##to replace continue
-    meanrawrate=0    
+    passed = 1 ##to replace continue
+    mean_raw_rate = 0
     if not print_trigger in trig_list:
         if all_triggers:
             trig_list.append(print_trigger)
         else:
-            print "not in trig_list:",print_trigger, trig_list
-            Passed=0
-            return [trig_list, Passed, meanrawrate]
+            failed_paths.append([print_trigger,"The monitorlist did not include these paths"])
+            passed = 0
+            return [trig_list, passed, mean_raw_rate]
         
     for key in Rates[print_trigger]:
         NewTrigger[key] = []
-    for iterator in range (len(Rates[print_trigger]["run"])):
+        
+    for iterator in range(len(Rates[print_trigger]["run"])):
         if Rates[print_trigger]["run"][iterator] in run_list:
             for key in Rates[print_trigger]:
                 NewTrigger[key].append(Rates[print_trigger][key][iterator])
+
     Rates[print_trigger] = NewTrigger
-    
-    #print print_trigger, Rates[print_trigger]
-    meanrawrate = sum(Rates[print_trigger]["rawrate"])/len(Rates[print_trigger]["rawrate"])
-    
-    if not trig_name in print_trigger:
-        #print "failed does not contain HLT",trig_name, print_trigger
-        pass
-        
-    if meanrawrate < min_rate:
-        Passed=0
-        return [trig_list, Passed, meanrawrate]
-            
-        
+    mean_raw_rate = sum(Rates[print_trigger]["rawrate"])/len(Rates[print_trigger]["rawrate"])
+    if mean_raw_rate < min_rate:
+        failed_paths.append([print_trigger,"The rate of these paths did not exceed the minimum"])        
+        passed = 0
+
     masked_trig = False
     for mask in masked_triggers:
         if str(mask) in print_trigger:
             masked_trig = True
     if masked_trig:
-        Passed=0
-        return [trig_list, Passed, meanrawrate]
+        failed_paths.append([print_trigger,"These paths were masked"])        
+        passed = 0
             
-    return [trig_list, Passed, meanrawrate]
+    return [trig_list, passed, mean_raw_rate]
 
 
 
@@ -936,7 +929,7 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
     try:
         FitType = InputFit[print_trigger][0]
     except:
-        failed_paths.append([print_trigger,"This path did not exist in the monitorlist used to create the fit"])
+        failed_paths.append([print_trigger,"These paths did not exist in the monitorlist used to create the fit"])
         FitType = "parse failed"
         passed=0
         fitparams=[FitType, 0, 0, 0, 0, 0, 0]
@@ -946,7 +939,7 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
         passed=0
         fitparams=[FitType, 0, 0, 0, 0, 0, 0]
     elif FitType == "parse failed":
-        failure_comment = "This path did not exist in the monitorlist used to create the fit"
+        failure_comment = "These paths did not exist in the monitorlist used to create the fit"
     else:
         X0 = InputFit[print_trigger][1]
         X1 = InputFit[print_trigger][2]
@@ -964,7 +957,7 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
             try:
                 FitTypePS[psi] = InputFitPS[psi][print_trigger][0]
             except:
-                failed_paths.append([print_trigger+'_PS_'+str(psi),"This path did not exist in the monitorlist used to create the fit"])
+                failed_paths.append([print_trigger+'_PS_'+str(psi),"These paths did not exist in the monitorlist used to create the fit"])
                 FitTypePS[psi] = "parse failed"
                 passed=0
                 fitparamsPS=[FitTypePS, X0PS, X1PS, X2PS, X3PS, sigmaPS, X0errPS]
@@ -1486,7 +1479,7 @@ def checkL1seedChangeALLPScols(trig_list,HLTL1PS):
             dict=HLTL1PS[StripVersion(HLTkey)]
             #print "dict=",dict
         except:
-            print "Trigger %s appears in the trigger list but does not exist in the HLT menu and is being skipped."
+            print "%s appears in the trigger list but does not exist in the HLT menu and is being skipped." % (StripVersion(HLTkey),)
             continue
             
         HLTL1dummy={}
@@ -1656,7 +1649,7 @@ def output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,
         OutputFit[print_trigger] = ["fit failed",failure_comment]
         return [OutputFit,first_trigger]
     if min([f1a_Chi2,f1b_Chi2,f1c_Chi2,f1d_Chi2]) > 500:#require a minimum chi^2/nDOF of 500
-        failure_comment = "There were events for this path in the runs specified during the creation of the fit file, but the fit failed to converge"
+        failure_comment = "There were events for these paths in the runs specified during the creation of the fit file, but the fit failed to converge"
         failed_paths.append([print_trigger+str(PSColslist),failure_comment])
         OutputFit[print_trigger] = ["fit failed",failure_comment]
         return [OutputFit,first_trigger]
@@ -1711,7 +1704,6 @@ def graph_output_info(graph1,graph_fit_type,print_trigger,width,num_ls,VX, VY,me
         
     return [graph1,OutputFit]
 
-
 def DrawFittedCurve(f1a, f1b,f1c, f1d, chioffset,do_fit,c1,VX,VY,print_trigger,Rates):
     [f1a_Chi2, f1b_Chi2, f1c_Chi2,f1d_Chi2, f1a_BadMinimum, f1b_BadMinimum, f1c_BadMinimum, meanps, av_rte, passed]=more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates)
     
@@ -1742,8 +1734,9 @@ def EndMkrootfile(failed_paths, save_fits, save_root, fit_file, RootFile, Output
             print "\n***************THE FOLLOWING PATHS HAVE BEEN SKIPPED BECAUSE THE FIT WAS MISSING***************"        
         sorted_failed_paths = sorted(failed_paths, key=itemgetter(1))
         for error_comment, entries in groupby(sorted_failed_paths, key=itemgetter(1)):
-            error_comment = error_comment.replace('this path','these paths')
-            print '\n'+error_comment+'.'
+            print '\n'+error_comment+':'
+            if 'not enough datapoints' in error_comment:
+                print "(For a given trigger, if a group of PS columns has been skipped, the fit to all PS columns will be used in that region.)"
             for entry in entries:
                 print entry[0]
 
@@ -1803,8 +1796,8 @@ def DefineGraphs(print_trigger,OutputFit,do_fit,varX,varY,x_label,y_label,VX,VY,
     
         
     if (len(VX)<10 and do_fit):
-        failure_comment = "In runs specified during creation of the fit file, there were not enough datapoints for this path: probably due to high deadtime or low raw (prescaled) rate"
-        failed_paths.append([print_trigger+str(PSColslist),failure_comment])
+        failure_comment = "In runs specified during creation of the fit file, there were not enough datapoints for these paths (probably due to high deadtime or low raw (prescaled) rate)"
+        failed_paths.append([print_trigger+" PS columns: "+str(PSColslist),failure_comment])
         OutputFit[print_trigger] = ["fit failed",failure_comment]
         gr1 = TGraphErrors(1, VX, VY, VXE, VYE)
         ###replaces continue in main fucntion
