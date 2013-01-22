@@ -24,29 +24,28 @@ from selectionParser import selectionParser
 def usage():
     print sys.argv[0]+" [options] <list of runs>"
     print "This script is used to generate fits and do secondary shifter validation"
+    print "For more information, see https://twiki.cern.ch/twiki/bin/view/CMS/RateMonitoringScriptWithReferenceComparison"
     print "<list of runs>                       this is a list of the form: a b c-d e f-g, specifying individual runs and/or run ranges"
     print "                                     be careful with using ranges (c-d), it is highly recommended to use a JSON in this case"
     print "options: "
     print "--makeFits                           run in fit making mode"
     print "--secondary                          run in secondary shifter mode"
-    print "--TMD                                put in TMD predictions"
     print "--fitFile=<path>                     path to the fit file"
     print "--json=<path>                        path to the JSON file"
     print "--TriggerList=<path>                 path to the trigger list (without versions!)"
+    print "--AllTriggers                        Run for all triggers instead of specifying a trigger list"    
     print "--maxdt=<max deadtime>               Mask LS above max deadtime threshold"
     print "--All                                Mask LS with any red LS on WBM LS page (not inc castor zdc etc)"
-    print "--Mu                                 Mask LS with Mu off"
+    print "--Mu                                 Mask LS with Mu (RPC, DT+, DT-, DT0, CSC+ and CSC-) off"
     print "--HCal                               Mask LS with HCal barrel off"
     print "--Tracker                            Mask LS with Tracker barrel off"
     print "--ECal                               Mask LS with ECal barrel off"
     print "--EndCap                             Mask LS with EndCap sys off, used in combination with other subsys"
     print "--Beam                               Mask LS with Beam off"
-    print "--NoVersion                          Ignore version numbers"
-    print "--linear                             Force Linear fits"
-    print "--inst                               Fits using inst not delivered"
-    print "--TMDerr                             Use errors from TMD predictions"
+    print "--UseVersionNumbers                  Don't ignore path version numbers"
+    print "--linear                             Force linear fits"
+    print "--inst                               Make fits using instantaneous luminosity instead of delivered"
     print "--write                              Writes fit info into csv, for ranking nonlinear triggers"
-    print "--AllTriggers                        Run for all triggers instead of specifying a trigger list"
     
 class Modes:
     none,fits,secondary = range(3)
@@ -63,7 +62,7 @@ def main():
         pickYear()
         
         try:
-            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","NoVersion","linear","inst","TMDerr","write","AllTriggers","UsePSCol="])
+            opt, args = getopt.getopt(sys.argv[1:],"",["makeFits","secondary","fitFile=","json=","TriggerList=","maxdt=","All","Mu","HCal","Tracker","ECal","EndCap","Beam","UseVersionNumbers","linear","inst","write","AllTriggers","UsePSCol="])
             
         except getopt.GetoptError, err:
             print str(err)
@@ -112,7 +111,6 @@ def main():
         NoVersion=True
         linear=False
         do_inst=False
-        TMDerr=False
         wp_bool=False
         all_triggers=False
         DoL1=True
@@ -150,14 +148,12 @@ def main():
             elif o=="--Beam":
                 SubSystemOff["Beam"]=True
                 subsys=1
-            elif o=="--NoVersion":
-                NoVersion=True
+            elif o=="--UseVersionNumbers":
+                NoVersion=False
             elif o=="--linear":
                 linear=True
             elif o=="--inst":
                 do_inst=True
-            elif o=="--TMDerr":
-                TMDerr=True
             elif o=="--write":
                 wp_bool=True
             elif o=="--AllTriggers":
@@ -184,8 +180,8 @@ def main():
                 sys.exit(2)
 
         print "\n\n"
-###### MODES #########
         
+###### MODES #########
         if mode == Modes.none: ## no mode specified
             print "\nNo operation mode specified!\n"
             modeinput=raw_input("Enter mode, --makeFits or --secondary:")
@@ -196,7 +192,7 @@ def main():
                 sys.exit(0)
             elif modeinput == "--makeFits":
                 mode=Modes.fits
-            elif modeinput =="--secondary":
+            elif modeinput == "--secondary":
                 mode=Modes.secondary
             else:
                 print "FATAL ERROR: No Mode specified"
@@ -230,10 +226,8 @@ def main():
         if "NoV" in fitFile:
             NoVersion=True
 
-###### TRIGGER LIST #######
-        
+###### TRIGGER LIST #######        
         if trig_list == [] and not all_triggers:
-        
             print "\nPlease specify list of triggers\n"
             print "Available lists are:"
             dirList=os.listdir(".")
@@ -243,9 +237,11 @@ def main():
                     extension = entry[entry.find('.'):]   ## We can point this to the existing monitor list, just remove everything after ':'!
                     if extension==".list":
                         print fname
-            trig_input=raw_input("\nEnter triggers in format HLT_IsoMu30_eta2p1 or a .list file: ")
-        
-            if trig_input.find('.')!=-1:
+            trig_input=raw_input("\nEnter triggers in format HLT_IsoMu30_eta2p1 or a .list file, or enter AllTriggers to run over all triggers in the menu: ")
+
+            if trig_input.find('AllTriggers') != -1:
+                all_triggers = True
+            elif trig_input.find('.') != -1:
                 extension = trig_input[trig_input.find('.'):]
                 if extension==".list":
                     try:
@@ -259,8 +255,7 @@ def main():
                         if line.startswith('#'):
                             continue
                         if len(line)<1:
-                            continue
-                                        
+                            continue                                        
                         if len(line)>=2:
                             arg=line.rstrip('\n').rstrip(' ').lstrip(' ')
                             trig_list.append(arg)
@@ -269,9 +264,6 @@ def main():
                 else:
                     trig_list.append(trig_input)
         
-    ## Can use any combination of LowestRunNumber, HighestRunNumber, and NumberOfRuns -
-    ## just modify "ExistingRuns.sort" and for "run in ExistingRuns" accordingly
-
         if jsonfile=="":
             JSON=[]
         else:
@@ -283,7 +275,6 @@ def main():
             trig_name = "HLT"
             num_ls = 10
             physics_active_psi = True ##Requires that physics and active be on, and that the prescale column is not 0
-            #JSON = [] ##To not use a JSON file, just leave the array empty
             debug_print = False
             no_versions=False
             min_rate = 0.0
@@ -339,7 +330,7 @@ def main():
         if DoL1:
             trig_list=L1_trig_list
         
-        MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst, TMDerr,wp_bool,all_triggers,L1SeedChangeFit,nps)
+        MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print,SubSystemOff, print_info,NoVersion, linear, do_inst,wp_bool,all_triggers,L1SeedChangeFit,nps)
 
     except KeyboardInterrupt:
         print "Wait... come back..."
@@ -638,7 +629,7 @@ def GetDBRates(run_list, trig_name, trig_list, num_ls, max_dt, physics_active_ps
     
     return [Rates,LumiPageInfo,trig_list,nps]
 
-def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst, TMDerr,wp_bool,all_triggers,L1SeedChangeFit,nps):
+def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_rate, max_dt, print_table, data_clean, plot_properties, masked_triggers, save_fits, debug_print, SubSystemOff, print_info,NoVersion, linear,do_inst,wp_bool,all_triggers,L1SeedChangeFit,nps):
     
     [min_run, max_run, priot, InputFit, OutputFit, OutputFitPS, failed_paths, first_trigger, varX, varY, do_fit, save_root, save_png, fit_file, RootNameTemplate, RootFile, InputFitPS]=InitMakePlots(run_list, trig_name, num_ls, plot_properties, nps, L1SeedChangeFit)
     ##modify for No Version and check the trigger list
@@ -691,7 +682,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
                 continue
         
             
-            AllPlotArrays=DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, fitparamsPS, TMDerr, L1SeedChangeFit, PSColslist, first_trigger)
+            AllPlotArrays=DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, fitparamsPS, L1SeedChangeFit, PSColslist, first_trigger)
             [VX, VXE, x_label, VY, VYE, y_label, VF, VFE] = GetVXVY(plot_properties, fit_file, AllPlotArrays, L1SeedChangeFit)
         
         
@@ -702,7 +693,7 @@ def MakePlots(Rates, LumiPageInfo, run_list, trig_name, trig_list, num_ls, min_r
             if not defgrapass:
                 continue
             if do_fit:
-                [f1a,f1b,f1c,f1d,first_trigger]= Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate)
+                [f1a,f1b,f1c,f1d,first_trigger]= Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,lowrate)
                         
         
             if print_table or save_fits:
@@ -1000,7 +991,7 @@ def GetFit(do_fit, InputFit, failed_paths, print_trigger, num_ls, L1SeedChangeFi
     return [fitparams, passed, failed_paths, fitparamsPS]        
 
 ## we are 2 lumis off when we start! -gets worse when we skip lumis
-def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, fitparamsPS, TMDerr, L1SeedChangeFit, PSColslist, first_trigger):
+def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls, LumiPageInfo, SubSystemOff, max_dt, print_info, trig_list, do_fit, do_inst, debug_print, fitparams, fitparamsPS, L1SeedChangeFit, PSColslist, first_trigger):
 
     ###init arrays ###
     [run_t,ls_t,ps_t,inst_t,live_t,delivered_t,deadtime_t,rawrate_t,rate_t,rawxsec_t,xsec_t,psi_t,e_run_t,e_ls_t,e_ps_t,e_inst_t,e_live_t,e_delivered_t,e_deadtime_t,e_rawrate_t,e_rate_t,e_rawxsec_t,e_xsec_t,e_psi_t,rawrate_fit_t,rate_fit_t,rawxsec_fit_t,xsec_fit_t,e_rawrate_fit_t,e_rate_fit_t,e_rawxsec_fit_t,e_xsec_fit_t] = MakePlotArrays()
@@ -1112,20 +1103,9 @@ def DoAllPlotArrays(Rates, print_trigger, run_list, data_clean, meanxsec, num_ls
                     rawxsec_fit_t.append(rawrate_fit_t[-1]/live_t[-1])
                     xsec_fit_t.append(rate_prediction*(1.0-deadtime_t[-1])/live_t[-1])
                     try:
-                            
-                        if not TMDerr:
-                            e_rawrate_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*rawrate_fit_t[-1]/rate_fit_t[-1])
-                            e_rawxsec_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*rawxsec_fit_t[-1]/rate_fit_t[-1])
-                            e_xsec_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*xsec_fit_t[-1]/rate_fit_t[-1])
-
-                            ###error from TMD predictions, calculated at 5e33
-                            
-                        else:
-                            e_rawrate_fit_t.append(X0err*inst_t[-1]/5000.)
-                            e_rawxsec_fit_t.append(X0err/live_t[-1]*inst_t[-1]/5000.)
-                            e_xsec_fit_t.append(X0err/live_t[-1]*inst_t[-1]/5000.)
-                            
-                                
+                        e_rawrate_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*rawrate_fit_t[-1]/rate_fit_t[-1])
+                        e_rawxsec_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*rawxsec_fit_t[-1]/rate_fit_t[-1])
+                        e_xsec_fit_t.append(sigma*math.sqrt(rate_fit_t[-1])*xsec_fit_t[-1]/rate_fit_t[-1])
                     except:
                         print print_trigger, "has no fitted rate for LS", Rates[print_trigger]["ls"][iterator]
                         e_rawrate_fit_t.append(sigma)
@@ -1506,9 +1486,8 @@ def checkL1seedChangeALLPScols(trig_list,HLTL1PS):
             dict=HLTL1PS[StripVersion(HLTkey)]
             #print "dict=",dict
         except:
-            print HLTkey, StripVersion(HLTkey)
-            print "exception, in getting dict"
-            exit(2)
+            print "Trigger %s appears in the trigger list but does not exist in the HLT menu and is being skipped."
+            continue
             
         HLTL1dummy={}
         for L1seed in dict.iterkeys():
@@ -1563,9 +1542,13 @@ def commonL1PS(HLTL1dummy, nps):
         #print HLTL1_seedchanges
     return HLTL1_seedchanges
 
-def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, varY,linear,lowrate):
-    if "rate" in varY and not linear:
-        f1d=0
+def Fitter(gr1, VX, VY, sloperate, nlow, Rates, print_trigger, first_trigger, varX, varY, lowrate):
+
+    f1a = 0
+    f1b = 0
+    f1c = 0
+    f1d = 0
+    if "rate" in varY:
         f1d = TF1("f1d","pol1",0,8000)#linear
         f1d.SetParameters(0.01,min(sum(VY)/sum(VX),sloperate)) ##Set Y-intercept near 0, slope either mean_rate/mean_lumi or est. slope (may be negative)
         f1d.SetLineColor(4)
@@ -1581,10 +1564,9 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
                 f1d.SetParLimits(1,-0.1*sloperate,1.5*sum(VY)/sum(VX))
         else: ##Slope is negative or flat 
             f1d.SetParLimits(1,1.5*sloperate,-0.1*sloperate)
+
         gr1.Fit("f1d","QN","rob=0.90")
         
-        
-        f1a=0
         f1a = TF1("f1a","pol2",0,8000)#quadratic
         f1a.SetParameters(f1d.GetParameter(0),f1d.GetParameter(1),0) ##Initial values from linear fit
         f1a.SetLineColor(6)
@@ -1597,11 +1579,6 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
         f1a.SetParLimits(2,-2.0*max(VY)/(max(VX)*max(VX)),2.0*max(VY)/(max(VX)*max(VX))) ##Reasonable bounds
         gr1.Fit("f1a","QN","rob=0.90")
         
-        
-        f1b = 0
-        f1c = 0
-        
-        
         if True:
             f1b = TF1("f1b","pol3",0,8000)#cubic
             f1b.SetParameters(f1a.GetParameter(0),f1a.GetParameter(1),f1a.GetParameter(2),0) ##Initial values from quadratic fit
@@ -1613,8 +1590,6 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
             f1b.SetParLimits(3,0,2.0*max(VY)/(max(VX)*max(VX)*max(VX))) ##Reasonable bounds
             gr1.Fit("f1b","QN","rob=0.90")
             
-                        
-            
             f1c = TF1("f1c","[0]+[1]*expo(2)",0,8000)
             f1c.SetLineColor(3)
             f1c.SetLineWidth(2)
@@ -1624,10 +1599,8 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
             f1c.SetParLimits(2,0.0,0.0000000001)
             f1c.SetParLimits(3,2.0/max(VX),15.0/max(VX))
             gr1.Fit("f1c","QN","rob=0.90")
-            
-            
             ##Some fits are so exponential, the graph ends early and returns a false low Chi2 value
-                    
+
         else: ##If this is not a rate plot
             f1a = TF1("f1a","pol1",0,8000)
             f1a.SetLineColor(4)
@@ -1649,6 +1622,7 @@ def Fitter(gr1,VX,VY,sloperate,nlow,Rates,print_trigger, first_trigger, varX, va
                 print '%-50s | line | % .2f | +/-%.2f |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   % .2e | +/-%.1e |   %7.0f |   %4.0f |   %5.2f | ' % (print_trigger, f1a.GetParameter(0), f1a.GetParError(0), f1a.GetParameter(1), f1a.GetParError(1), 0                  , 0                 , 0                  , 0                 , f1a.GetChisquare(), f1a.GetNDF(), f1a_GetChisquare()/f1a.GetNDF())
             except:
                 pass
+
     return [f1a,f1b,f1c,f1d,first_trigger]
 
 def more_fit_info(f1a,f1b,f1c,f1d,VX,VY,print_trigger,Rates):
@@ -1690,27 +1664,29 @@ def output_fit_info(do_fit,f1a,f1b,f1c,f1d,varX,varY,VX,VY,linear,print_trigger,
         if first_trigger:
             print '\n%-*s | TYPE | %-8s | %-11s |  %-7s | %-10s |  %-7s | %-10s | %-8s | %-10s | %-6s | %-4s |%-7s| %-6s |' % (width,"TRIGGER", "X0","X0 ERROR","X1","X1 ERROR","X2","X2 ERROR","X3","X3 ERROR","CHI^2","DOF","CHI2/DOF","PScols")
             first_trigger = False
-
         if ((f1c_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and ((f1c_Chi2 < f1b_Chi2) or f1b_BadMinimum) and f1c_Chi2 < (f1d_Chi2*chioffset) and not f1c_BadMinimum and len(VX)>1):
             graph_fit_type="expo"
             [f1c,OutputFit]=graph_output_info(f1c,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
             priot(wp_bool,print_trigger,meanps,f1d,f1c,graph_fit_type,av_rte)
-            
         elif ((f1b_Chi2 < (f1a_Chi2*chioffset) or f1a_BadMinimum) and f1b_Chi2 < (f1d_Chi2*chioffset) and not f1b_BadMinimum and len(VX)>1):
             graph_fit_type="cube"
             [f1b,OutputFit]=graph_output_info(f1b,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
             priot(wp_bool,print_trigger,meanps,f1d,f1b,graph_fit_type,av_rte)
-
         elif (f1a_Chi2 < (f1d_Chi2*chioffset)):
             graph_fit_type="quad"
             [f1a,OutputFit]=graph_output_info(f1a,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
             priot(wp_bool,print_trigger,meanps,f1d,f1a,graph_fit_type,av_rte)
-
         else:
             graph_fit_type="line"
             [f1d,OutputFit]=graph_output_info(f1d,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
             priot(wp_bool,print_trigger,meanps,f1d,f1d,graph_fit_type,av_rte)
-            
+    elif "rate" in varY and linear:
+        if first_trigger:
+            print '\n%-*s | TYPE | %-8s | %-11s |  %-7s | %-10s |  %-7s | %-10s | %-8s | %-10s | %-6s | %-4s |%-7s| %-6s |' % (width,"TRIGGER", "X0","X0 ERROR","X1","X1 ERROR","X2","X2 ERROR","X3","X3 ERROR","CHI^2","DOF","CHI2/DOF","PScols")
+            first_trigger = False        
+        graph_fit_type="line"
+        [f1d,OutputFit]=graph_output_info(f1d,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
+        priot(wp_bool,print_trigger,meanps,f1d,f1d,graph_fit_type,av_rte)            
     else:
         graph_fit_type="quad"
         [f1a,OutputFit]=graph_output_info(f1a,graph_fit_type,print_trigger,width,num_ls,VX,VY,meanrawrate,OutputFit,PSColslist,dummyPSColslist)
@@ -1827,7 +1803,7 @@ def DefineGraphs(print_trigger,OutputFit,do_fit,varX,varY,x_label,y_label,VX,VY,
     
         
     if (len(VX)<10 and do_fit):
-        failure_comment = "In runs specified during creation of the fit file, there were few datapoints for this path: probably due to high deadtime or low raw (prescaled) rate"
+        failure_comment = "In runs specified during creation of the fit file, there were not enough datapoints for this path: probably due to high deadtime or low raw (prescaled) rate"
         failed_paths.append([print_trigger+str(PSColslist),failure_comment])
         OutputFit[print_trigger] = ["fit failed",failure_comment]
         gr1 = TGraphErrors(1, VX, VY, VXE, VYE)
