@@ -2,7 +2,6 @@ import sys
 import csv
 import array
 import math
-from ROOT import TFile, TF1, TGraph, TGraphErrors
 from colors import *
 write = sys.stdout.write
 
@@ -38,7 +37,7 @@ def PrintLine(line,ColWidths,Warn,border):
       write(bcolors.FAIL)
    else:
       write(bcolors.OKGREEN)
-   if "Trigger" in line[0]:
+   if "Trigger" in str(line[0]):
       write(bcolors.ENDC)
        
    for [width, entry] in zip(ColWidths,line):
